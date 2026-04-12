@@ -96,8 +96,8 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .nav-links{display:flex;gap:28px;align-items:center;}
 .nav-links a{color:var(--fg2);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:color 0.2s;}
 .nav-links a:hover{color:var(--green);}
-.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none;}
-.hamburger span{display:block;width:22px;height:2px;background:var(--fg);transition:all 0.2s;}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:none;border:none;min-width:40px;min-height:40px;align-items:center;justify-content:center;z-index:101;}
+.hamburger span{display:block;width:22px;height:2px;background:var(--fg);border-radius:1px;}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
   font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;
@@ -275,7 +275,7 @@ footer a:hover{color:var(--green);}
   .nav-links.open{display:flex !important;}
   .nav-links a{padding:10px 0;border-bottom:1px solid rgba(0,255,106,0.06);}
   .nav-links .btn{width:100%;justify-content:center;border-bottom:none;}
-  .hamburger{display:flex !important;}
+  .hamburger{display:flex !important;flex-shrink:0;}
   nav .wrap{position:relative;}
   .hero{padding:100px 0 60px;}
   .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
