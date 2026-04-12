@@ -712,7 +712,7 @@
     .top-bar .logo .icon{width:26px;height:26px;font-size:14px;}
     .top-bar .top-actions{gap:6px;}
     .top-bar .btn{padding:6px 10px;font-size:10px;letter-spacing:1px;}
-    .ticker-bar{position:sticky;top:64px;z-index:99;flex-wrap:wrap;padding:0 12px;gap:8px;}
+    .ticker-bar{position:relative;top:auto;z-index:auto;flex-wrap:wrap;padding:8px 12px;gap:8px;}
     .ticker-group{gap:10px;}
     .ticker-group.pos-group{margin-left:0;gap:6px;}
     .ticker-divider{margin:0 8px;}
@@ -725,12 +725,15 @@
       border-bottom:1px solid var(--rust);
       overflow-y:auto;flex:1;
       display:none;
+      padding-bottom:70px;
     }
     .left-panel.mobile-active,.center-panel.mobile-active,.right-panel.mobile-active{
       display:block;
     }
     .center-panel::before{display:none;}
-    .center-panel{padding:12px;}
+    .center-panel{padding:12px 12px 70px 12px;}
+    .left-panel{padding:12px 12px 70px 12px;}
+    .right-panel{padding:12px 12px 70px 12px;}
     .filter-row{flex-wrap:wrap;}
     .search-field{min-width:100px;flex:1 1 100px;}
     .pool-table{font-size:11px;}
