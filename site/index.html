@@ -87,12 +87,12 @@ nav{
 nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;}
 .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:1px;text-transform:uppercase;}
 .logo-mark{
-  width:28px;height:28px;border:2px solid var(--green);border-radius:4px;
+  width:30px;height:30px;border:2px solid var(--green);border-radius:4px;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green);
-  position:relative;
+  font-family:var(--mono);font-size:16px;font-weight:700;line-height:1;color:var(--green);
+  position:relative;flex-shrink:0;
 }
-.logo-mark::before{content:'';position:absolute;inset:-4px;border:1px solid rgba(0,255,106,0.15);border-radius:6px;}
+.logo-mark::before{content:'';position:absolute;inset:-5px;border:1px solid rgba(0,255,106,0.15);border-radius:7px;pointer-events:none;}
 .nav-links{display:flex;gap:28px;align-items:center;}
 .nav-links a{color:var(--fg2);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:color 0.2s;}
 .nav-links a:hover{color:var(--green);}
@@ -311,7 +311,7 @@ footer a:hover{color:var(--green);}
       <div class="logo-mark">Δ</div>
       OVERADP
     </div>
-    <a href="/app/" class="btn btn-go mobile-launch" style="display:none;margin-left:auto;">LAUNCH →</a>
+    <a href="/app/" class="btn btn-go mobile-launch" style="display:none;margin-left:auto;">LAUNCH</a>
     <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">MENU</button>
     <div class="nav-links">
       <a href="#proof" onclick="document.querySelector('.nav-links').classList.remove('open')">Proof</a>

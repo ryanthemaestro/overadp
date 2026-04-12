@@ -104,28 +104,30 @@
     gap: 10px;
   }
   .logo .icon {
-    width: 28px; height: 28px;
+    width: 30px; height: 30px;
     border: 2px solid var(--wr);
     border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 14px; font-weight: 600;
+    font-size: 16px; font-weight: 700; line-height: 1;
     color: var(--wr);
     position: relative;
     box-shadow: 0 0 12px var(--wr-glow);
     animation: pulse-ring 2s ease-in-out infinite;
+    flex-shrink: 0;
   }
   .logo .icon::before {
     content: '';
-    position: absolute; inset: -4px;
+    position: absolute; inset: -5px;
     border: 1px solid rgba(16,185,129,0.15);
-    border-radius: 6px;
+    border-radius: 7px;
+    pointer-events: none;
   }
   @keyframes pulse-ring {
     0%, 100% { box-shadow: 0 0 8px var(--wr-glow); }
     50% { box-shadow: 0 0 20px var(--wr-glow); }
   }
-  .top-actions { display: flex; gap: 10px; align-items: center; }
+  .top-actions { display: flex; gap: 10px; align-items: center; margin-left: auto; }
   .btn {
     font-family: 'Oswald', sans-serif;
     font-size: 12px;
