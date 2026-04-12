@@ -684,7 +684,7 @@
       <button class="btn btn-kill" onclick="resetDraft()" aria-label="Reset all draft picks">RESET</button>
       <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works" aria-label="Information about how WAR ROOM works">ⓘ</button>
     </div>
-  </div>
+  </header>
 
   <!-- TICKER BAR -->
   <div class="ticker-bar">
@@ -710,7 +710,7 @@
       <div class="total-label">Projected Total</div>
       <div class="total-val" id="totalPts">0.0</div>
     </div>
-  </div>
+  </aside>
 
   <!-- CENTER — PLAYER POOL -->
   <main class="center-panel" role="main">
@@ -730,7 +730,7 @@
         <p>Click INITIALIZE to fetch NFL stats<br>and train prediction models.</p>
       </div>
     </div>
-  </div>
+  </main>
 
   <!-- RIGHT — INTEL -->
   <aside class="right-panel" role="complementary" aria-label="Draft intelligence">
@@ -760,7 +760,7 @@
     <div id="opponentPicks">
       <div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>
     </div>
-  </div>
+  </aside>
 </div>
 
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
