@@ -698,8 +698,12 @@
     .search-field{min-width:120px;flex:1 1 120px;}
     .pool-table{font-size:11px;}
     .pool-table th,.pool-table td{padding:6px 8px;}
+    .pool-table th:nth-child(4),.pool-table td:nth-child(4),
+    .pool-table th:nth-child(5),.pool-table td:nth-child(5),
     .pool-table th:nth-child(6),.pool-table td:nth-child(6),
-    .pool-table th:nth-child(7),.pool-table td:nth-child(7){display:none;}
+    .pool-table th:nth-child(7),.pool-table td:nth-child(7),
+    .pool-table th:nth-child(8),.pool-table td:nth-child(8),
+    .pool-table th:nth-child(9),.pool-table td:nth-child(9){display:none;}
     .info-modal{width:95vw;padding:20px;max-height:90vh;overflow-y:auto;}
     .loading-overlay{position:fixed;}
     /* Mobile tab toggle for sidebars */
@@ -767,8 +771,7 @@
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" aria-label="Search players by name or team">
-      <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
+      <input class="search-field" type="text" placeholder="SEARCH PLAYER..." oninput="searchPlayers(this.value)" aria-label="Search players by name or team">
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -899,7 +902,7 @@ let opponentIds = [];
 let recommendedIds = new Set();
 let currentFilter = 'ALL';
 let searchQuery = '';
-let vbdMode = false;
+let vbdMode = true;
 let vbdPlayers = [];
 let byeWeeks = {};
 let scarcityData = [];
@@ -1380,18 +1383,7 @@ function toggleInfo(){
   overlay.classList.toggle('active');
 }
 
-function toggleVBD(){
-  const btn=document.getElementById('vbdToggle');
-  vbdMode=!vbdMode;
-  if(vbdMode){
-    btn.classList.add('on');
-    // Sort all players by VBD
-    vbdPlayers=[...allPlayers].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
-  }else{
-    btn.classList.remove('on');
-  }
-  renderPlayerPool();
-}
+// VBD always on — removed toggle
 
 function loadScarcity(){
   const c=document.getElementById('scarcityPanel');
