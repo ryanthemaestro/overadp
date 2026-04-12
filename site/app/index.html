@@ -14,7 +14,7 @@
     --steel: #141a24;
     --iron: #1c2433;
     --rust: #2a3548;
-    --smoke: #4a5568;
+    --smoke: #6a7588;
     --ash: #7a8599;
     --chalk: #c8cdd8;
     --white: #eef0f4;
@@ -53,6 +53,16 @@
     );
     pointer-events: none;
     z-index: 9999;
+  }
+
+  /* Accessibility */
+  .skip-link{position:absolute;top:-100%;left:16px;background:var(--wr);color:var(--void);padding:8px 16px;font-size:14px;z-index:10000;text-decoration:none;border-radius:0 0 4px 4px;}
+  .skip-link:focus{top:0;}
+  :focus-visible{outline:2px solid var(--wr);outline-offset:2px;}
+  button:focus-visible{outline:2px solid var(--wr);outline-offset:2px;}
+  @media(prefers-reduced-motion:reduce){
+    *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;}
+    body::after{display:none;}
   }
 
   /* === LAYOUT === */
@@ -661,17 +671,18 @@
 </style>
 </head>
 <body>
+<a href="#playerPool" class="skip-link">Skip to player pool</a>
 <div class="war-room">
   <!-- TOP BAR -->
-  <div class="top-bar">
+  <header class="top-bar" role="banner">
     <div class="logo">
       <div class="icon">◈</div>
       WAR ROOM
     </div>
     <div class="top-actions">
-      <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
-      <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
-      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
+      <button class="btn btn-activate" onclick="loadData()" aria-label="Initialize draft data">INITIALIZE</button>
+      <button class="btn btn-kill" onclick="resetDraft()" aria-label="Reset all draft picks">RESET</button>
+      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works" aria-label="Information about how WAR ROOM works">ⓘ</button>
     </div>
   </div>
 
@@ -692,7 +703,7 @@
   </div>
 
   <!-- LEFT — MY ROSTER -->
-  <div class="left-panel">
+  <aside class="left-panel" role="complementary" aria-label="My roster">
     <div class="panel-title">My Roster</div>
     <div id="myTeamSlots"></div>
     <div class="total-bar">
@@ -702,14 +713,14 @@
   </div>
 
   <!-- CENTER — PLAYER POOL -->
-  <div class="center-panel">
+  <main class="center-panel" role="main">
     <div class="filter-row">
       <button class="pos-filter on" data-pos="ALL" onclick="filterPos('ALL', this)">ALL</button>
       <button class="pos-filter" data-pos="QB" onclick="filterPos('QB', this)">QB</button>
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)">
+      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" aria-label="Search players by name or team">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
     </div>
     <div id="playerPool">
@@ -722,7 +733,7 @@
   </div>
 
   <!-- RIGHT — INTEL -->
-  <div class="right-panel">
+  <aside class="right-panel" role="complementary" aria-label="Draft intelligence">
     <div class="panel-title">Target Intel</div>
     <div id="recommendations">
       <div class="empty-state" style="padding:20px 8px;">
@@ -907,7 +918,7 @@
   </div>
 </div>
 
-<div class="loading-overlay hidden" id="loadingOverlay">
+<div class="loading-overlay hidden" id="loadingOverlay" role="status" aria-live="polite">
   <div class="load-spinner"></div>
   <div class="load-text" id="loadingText">ACQUIRING DATA...</div>
   <div class="load-bar"><div class="load-bar-inner"></div></div>

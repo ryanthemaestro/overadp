@@ -26,7 +26,7 @@
   --bg4:#141c22;
   --fg:#d4dce4;
   --fg2:#7a8a9a;
-  --fg3:#4a5a6a;
+  --fg3:#6a7a8a;
   --green:#00ff6a;
   --green2:#00cc55;
   --green3:#009940;
@@ -43,6 +43,16 @@
 
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+/* Accessibility */
+.skip-link{position:absolute;top:-100%;left:16px;background:var(--green);color:var(--bg);padding:8px 16px;font-family:var(--mono);font-size:14px;z-index:1000;border-radius:0 0 4px 4px;text-decoration:none;}
+.skip-link:focus{top:0;}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;}
+.btn:focus-visible{outline:2px solid var(--green);outline-offset:3px;}
+a:focus-visible{outline:2px solid var(--green);outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important;}
+  .scanline{display:none;}
+}
 
 /* GRID BACKGROUND */
 body::before{
@@ -256,8 +266,8 @@ footer a:hover{color:var(--green);}
 </style>
 </head>
 <body>
-
-<div class="scanline"></div>
+<a href="#main" class="skip-link">Skip to content</a>
+<div class="scanline" aria-hidden="true"></div>
 
 <!-- NAV -->
 <nav>
@@ -276,6 +286,7 @@ footer a:hover{color:var(--green);}
 </nav>
 
 <!-- HERO -->
+<main id="main">
 <section class="hero">
   <div class="wrap">
     <div class="hero-tag anim"><span class="dot"></span> ML ENSEMBLE ONLINE — 4 MODELS ACTIVE</div>
@@ -289,17 +300,17 @@ footer a:hover{color:var(--green);}
     </div>
 
     <!-- THE KILL STAT -->
-    <div class="kill-stat anim anim-d4">
+    <div class="kill-stat anim anim-d4" role="figure" aria-label="OverADP model identified 16 out of 20 top players vs ADP which identified only 7 out of 20">
       <div class="ks-col model">
         <div class="ks-label">OverADP Model</div>
-        <div class="ks-num green count-pulse">16<span style="font-size:0.5em;opacity:0.5">/20</span></div>
+        <div class="ks-num green count-pulse" aria-label="16 out of 20">16<span style="font-size:0.5em;opacity:0.5">/20</span></div>
         <div class="ks-sub">top players correctly identified</div>
         <div class="ks-badge win">✓ SUPERIOR</div>
       </div>
       <div class="ks-vs">VS</div>
       <div class="ks-col adp">
         <div class="ks-label">ADP (Market Consensus)</div>
-        <div class="ks-num red">7<span style="font-size:0.5em;opacity:0.5">/20</span></div>
+        <div class="ks-num red" aria-label="7 out of 20">7<span style="font-size:0.5em;opacity:0.5">/20</span></div>
         <div class="ks-sub">top players correctly identified</div>
         <div class="ks-badge lose">✗ BASELINE</div>
       </div>
@@ -488,6 +499,7 @@ footer a:hover{color:var(--green);}
   </div>
 </section>
 
+</main>
 <!-- FINAL CTA -->
 <section class="section cta">
   <div class="wrap">
