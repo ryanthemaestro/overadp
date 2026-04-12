@@ -96,6 +96,8 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .nav-links{display:flex;gap:28px;align-items:center;}
 .nav-links a{color:var(--fg2);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:color 0.2s;}
 .nav-links a:hover{color:var(--green);}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none;}
+.hamburger span{display:block;width:22px;height:2px;background:var(--fg);transition:all 0.2s;}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
   font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;
@@ -269,8 +271,12 @@ footer a:hover{color:var(--green);}
 @media(max-width:700px){
   .wrap{padding:0 16px;}
   nav .wrap{padding:0 16px;}
-  .nav-links a:not(.btn){display:none;}
-  .nav-links{gap:12px;}
+  .nav-links{display:none;position:absolute;top:56px;left:0;right:0;background:var(--bg2);border-bottom:1px solid rgba(0,255,106,0.1);flex-direction:column;padding:16px;gap:12px;z-index:100;}
+  .nav-links.open{display:flex;}
+  .nav-links a{padding:10px 0;border-bottom:1px solid rgba(0,255,106,0.06);}
+  .nav-links .btn{width:100%;justify-content:center;border-bottom:none;}
+  .hamburger{display:flex;}
+  nav .wrap{position:relative;}
   .hero{padding:100px 0 60px;}
   .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
   .hero-sub{font-size:15px;margin-bottom:32px;}
@@ -303,10 +309,13 @@ footer a:hover{color:var(--green);}
       <div class="logo-mark">Δ</div>
       OVERADP
     </div>
+    <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="nav-links">
-      <a href="#proof">Proof</a>
-      <a href="#positions">Positions</a>
-      <a href="#features">Features</a>
+      <a href="#proof" onclick="document.querySelector('.nav-links').classList.remove('open')">Proof</a>
+      <a href="#positions" onclick="document.querySelector('.nav-links').classList.remove('open')">Positions</a>
+      <a href="#features" onclick="document.querySelector('.nav-links').classList.remove('open')">Features</a>
       <a href="/app/" class="btn btn-go">LAUNCH DRAFT →</a>
     </div>
   </div>

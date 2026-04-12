@@ -105,16 +105,25 @@
   }
   .logo .icon {
     width: 28px; height: 28px;
-    border: 2px solid var(--rb);
-    border-radius: 50%;
+    border: 2px solid var(--wr);
+    border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    box-shadow: 0 0 12px var(--rb-glow);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 600;
+    color: var(--wr);
+    position: relative;
+    box-shadow: 0 0 12px var(--wr-glow);
     animation: pulse-ring 2s ease-in-out infinite;
   }
+  .logo .icon::before {
+    content: '';
+    position: absolute; inset: -4px;
+    border: 1px solid rgba(16,185,129,0.15);
+    border-radius: 6px;
+  }
   @keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
-    50% { box-shadow: 0 0 20px var(--rb-glow); }
+    0%, 100% { box-shadow: 0 0 8px var(--wr-glow); }
+    50% { box-shadow: 0 0 20px var(--wr-glow); }
   }
   .top-actions { display: flex; gap: 8px; align-items: center; }
   .btn {
@@ -712,8 +721,8 @@
   <!-- TOP BAR -->
   <header class="top-bar" role="banner">
     <div class="logo">
-      <div class="icon">◈</div>
-      WAR ROOM
+      <div class="icon">Δ</div>
+      OVERADP
     </div>
     <div class="top-actions">
       <button class="btn btn-activate" onclick="loadData()" aria-label="Initialize draft data">INITIALIZE</button>
