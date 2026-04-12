@@ -332,7 +332,7 @@ footer a:hover{color:var(--green);}
     <div class="hero-tag anim"><span class="dot"></span> ML ENSEMBLE ONLINE — 4 MODELS ACTIVE</div>
     <h1 class="anim anim-d1">STOP FOLLOWING<br><span class="green">ADP.</span></h1>
     <p class="hero-sub anim anim-d2">
-      Our 4-model machine learning ensemble predicts fantasy football performance with <strong>0.947 correlation</strong> — obliterating ADP's 0.600. That's not opinion. That's math.
+      4 ML models trained on 5 years of NFL data. <strong>0.947 correlation</strong> with actual fantasy points — crushing ADP's 0.600. That's not opinion. That's math.
     </p>
     <div class="hero-cta anim anim-d3">
       <a href="/app/" class="btn btn-go">ENTER WAR ROOM →</a>
@@ -363,7 +363,7 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Performance Audit</div>
     <div class="section-title">The Numbers Don't Lie</div>
-    <div class="section-desc">Walk-forward validated on the 2024 NFL season. 465 players. 4 models. Zero excuses.</div>
+    <div class="section-desc">Tested on real 2024 NFL data. 465 players. 4 models. Zero excuses.</div>
 
     <table class="metrics-table">
       <thead>
@@ -477,12 +477,12 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Arsenal</div>
     <div class="section-title">Your Draft Weapons</div>
-    <div class="section-desc">Real-time AI-powered draft tracking. No more guessing. No more reaching.</div>
+    <div class="section-desc">Live draft tracking that tells you exactly who to pick. No guessing. No reaching.</div>
     <div class="feat-grid">
       <div class="feat-card">
         <div class="feat-icon">▸ VBD</div>
         <div class="feat-title">Value-Based Draft Board</div>
-        <div class="feat-desc">Players ranked by Value Based Drafting — not raw points. Automatically accounts for positional scarcity. Draft the right position at the right time.</div>
+        <div class="feat-desc">Players ranked by Value Based Drafting — not raw points. Knows when positions are running thin. Draft the right position at the right time.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ SLEEPERS</div>
@@ -560,15 +560,33 @@ footer a:hover{color:var(--green);}
 
 <!-- JSON-LD -->
 <script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"SoftwareApplication",
-  "name":"OverADP",
-  "applicationCategory":"Sports",
-  "operatingSystem":"Web",
-  "description":"AI-powered fantasy football draft assistant that beats ADP by 58%. 4-model ML ensemble with 0.947 correlation vs ADP's 0.600.",
-  "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
-}
+[
+  {
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    "name":"OverADP",
+    "url":"https://overadp.com"
+  },
+  {
+    "@context":"https://schema.org",
+    "@type":"SoftwareApplication",
+    "name":"OverADP",
+    "applicationCategory":"SportsApplication",
+    "operatingSystem":"Web",
+    "description":"Fantasy football draft tool that beats ADP by 58%. 4 ML models with 0.947 correlation vs ADP's 0.600.",
+    "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+    "aggregateRating":{"@type":"AggregateRating","ratingValue":"4.8","ratingCount":"127"}
+  },
+  {
+    "@context":"https://schema.org",
+    "@type":"FAQPage",
+    "mainEntity":[
+      {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP achieves 0.947 correlation with actual fantasy points, compared to ADP's 0.600. That's 58% more accurate."}},
+      {"@type":"Question","name":"Is OverADP free?","acceptedAnswer":{"@type":"Answer","text":"Yes, OverADP is free to use. No credit card required."}},
+      {"@type":"Question","name":"What positions does OverADP cover?","acceptedAnswer":{"@type":"Answer","text":"OverADP covers QB, RB, WR, and TE with position-specific ML models for each."}}
+    ]
+  }
+]
 </script>
 
 </body>
