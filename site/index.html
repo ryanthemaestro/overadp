@@ -264,6 +264,32 @@ footer a:hover{color:var(--green);}
 /* COUNT-UP */
 @keyframes countPulse{0%{text-shadow:0 0 0 transparent;}50%{text-shadow:0 0 20px rgba(0,255,106,0.3);}100%{text-shadow:0 0 0 transparent;}}
 .count-pulse{animation:countPulse 2s ease 1s 1;}
+
+/* === MOBILE === */
+@media(max-width:700px){
+  .wrap{padding:0 16px;}
+  nav .wrap{padding:0 16px;}
+  .nav-links a:not(.btn){display:none;}
+  .nav-links{gap:12px;}
+  .hero{padding:100px 0 60px;}
+  .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
+  .hero-sub{font-size:15px;margin-bottom:32px;}
+  .hero-cta .btn{font-size:13px;padding:12px 20px;width:100%;justify-content:center;}
+  .hero-cta{flex-direction:column;}
+  .section{padding:60px 0;}
+  .section-title{font-size:clamp(24px,6vw,36px);}
+  .section-desc{font-size:15px;margin-bottom:32px;}
+  .metrics-table{font-size:11px;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .metrics-table th,.metrics-table td{padding:12px 14px;white-space:nowrap;}
+  .metric-bar{width:60px;}
+  .pos-r2{font-size:28px;}
+  .pos-card{padding:20px;}
+  .feat-card{padding:20px;}
+  .social-stats{gap:32px;}
+  .social-stat .num{font-size:36px;}
+  .cta .btn{width:100%;justify-content:center;}
+  footer .wrap{flex-direction:column;text-align:center;}
+}
 </style>
 </head>
 <body>
@@ -514,7 +540,7 @@ footer a:hover{color:var(--green);}
 <!-- FOOTER -->
 <footer>
   <div class="wrap">
-    <p>© 2025 OverADP · Machine learning fantasy football draft tools · <a href="https://github.com/ryanthemaestro/overadp">GitHub</a></p>
+    <p>© 2026 OverADP · Machine learning fantasy football draft tools · <a href="https://github.com/ryanthemaestro/overadp">GitHub</a></p>
     <p>Not affiliated with the NFL · Predictions based on historical data</p>
   </div>
 </footer>
