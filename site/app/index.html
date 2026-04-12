@@ -179,16 +179,22 @@
     display: flex;
     align-items: center;
     padding: 0 24px;
-    gap: 24px;
+    gap: 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--ash);
     overflow: hidden;
   }
+  .ticker-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .ticker-group.pos-group { margin-left: auto; gap: 10px; }
   .ticker-stat {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     white-space: nowrap;
   }
   .ticker-stat .val {
@@ -204,7 +210,22 @@
     width: 1px;
     height: 20px;
     background: var(--rust);
+    margin: 0 16px;
   }
+  .pos-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .pos-badge.qb-b { background: rgba(255,59,92,0.12); color: var(--qb); }
+  .pos-badge.rb-b { background: rgba(59,130,246,0.12); color: var(--rb); }
+  .pos-badge.wr-b { background: rgba(16,185,129,0.12); color: var(--wr); }
+  .pos-badge.te-b { background: rgba(245,158,11,0.12); color: var(--te); }
 
   /* === LEFT PANEL — MY ROSTER === */
   .left-panel {
@@ -691,7 +712,13 @@
     .top-bar .logo .icon{width:26px;height:26px;font-size:14px;}
     .top-bar .top-actions{gap:6px;}
     .top-bar .btn{padding:6px 10px;font-size:10px;letter-spacing:1px;}
-    .ticker-bar{position:sticky;top:56px;z-index:99;flex-wrap:wrap;gap:12px;}
+    .ticker-bar{position:sticky;top:64px;z-index:99;flex-wrap:wrap;padding:0 12px;gap:8px;}
+    .ticker-group{gap:10px;}
+    .ticker-group.pos-group{margin-left:0;gap:6px;}
+    .ticker-divider{margin:0 8px;}
+    .ticker-stat{font-size:10px;}
+    .ticker-stat .val{font-size:11px;}
+    .pos-badge{padding:1px 4px;font-size:9px;}
     .left-panel,.right-panel{
       width:100%;border-right:none;border-bottom:1px solid var(--rust);
       max-height:none;overflow:visible;
@@ -743,18 +770,21 @@
 
   <!-- TICKER BAR -->
   <div class="ticker-bar">
-    <div class="ticker-stat">AVAIL <span class="val" id="availCount">0</span></div>
-    <div class="ticker-divider"></div>
-    <div class="ticker-stat">MY PICKS <span class="val rb-c" id="myCount">0</span></div>
-    <div class="ticker-divider"></div>
-    <div class="ticker-stat">OPPONENT <span class="val" id="oppCount">0</span></div>
-    <div class="ticker-divider"></div>
-    <div class="ticker-stat">ROUND <span class="val wr-c" id="roundNum">1</span></div>
-    <div class="ticker-divider"></div>
-    <div class="ticker-stat">QB <span class="val qb-c" id="qbCount">0</span></div>
-    <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
-    <div class="ticker-stat">WR <span class="val wr-c" id="wrCount">0</span></div>
-    <div class="ticker-stat">TE <span class="val te-c" id="teCount">0</span></div>
+    <div class="ticker-group">
+      <div class="ticker-stat">AVAIL <span class="val" id="availCount">0</span></div>
+      <div class="ticker-divider"></div>
+      <div class="ticker-stat">MINE <span class="val rb-c" id="myCount">0</span></div>
+      <div class="ticker-divider"></div>
+      <div class="ticker-stat">OPP <span class="val" id="oppCount">0</span></div>
+      <div class="ticker-divider"></div>
+      <div class="ticker-stat">RD <span class="val wr-c" id="roundNum">1</span></div>
+    </div>
+    <div class="ticker-group pos-group">
+      <span class="pos-badge qb-b">QB<span id="qbCount">0</span></span>
+      <span class="pos-badge rb-b">RB<span id="rbCount">0</span></span>
+      <span class="pos-badge wr-b">WR<span id="wrCount">0</span></span>
+      <span class="pos-badge te-b">TE<span id="teCount">0</span></span>
+    </div>
   </div>
 
   <!-- LEFT — MY ROSTER -->
