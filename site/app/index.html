@@ -1090,7 +1090,7 @@ function renderPlayerPool(){
     const byeConflict=checkByeConflictForPlayer(p);
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
     const draftBtn=byeConflict?
-      `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
+      `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT</button>`:
       `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
       <td class="rank-cell">${i+1}</td>
@@ -1313,8 +1313,8 @@ function loadByeConflicts(){
     const col=isCrit?'#ff4444':'#ffaa00';
     const icon=isCrit?'⚠':'⚡';
     const label=isCrit?'CRITICAL':'WARNING';
-    h+=`<div style="padding:4px 6px;margin:2px 0;border-left:3px solid ${col};font-size:11px;">
-      <div style="color:${col};font-weight:700;">${icon} WK${cf.week} ${label}</div>
+    h+=`<div style="padding:6px 8px;margin:4px 0;border-left:3px solid ${col};font-size:12px;">
+      <div style="color:${col};font-weight:700;font-size:13px;">${icon} WK${cf.week} ${label}</div>
       <div style="color:var(--fg);">${cf.position}: ${cf.players.map(p=>p.name).join(', ')}</div>
       ${cf.has_coverage?'<div style="color:var(--smoke);">Bench coverage available</div>':'<div style="color:#ff4444;">No bench coverage!</div>'}
     </div>`;

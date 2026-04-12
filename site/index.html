@@ -96,7 +96,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .nav-links{display:flex;gap:28px;align-items:center;}
 .nav-links a{color:var(--fg2);font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:color 0.2s;}
 .nav-links a:hover{color:var(--green);}
-.hamburger{display:none;cursor:pointer;padding:8px 12px;background:none;border:1px solid var(--fg3);border-radius:4px;color:var(--fg);font-size:22px;line-height:1;z-index:101;}
+.hamburger{display:none;cursor:pointer;padding:8px 14px;background:var(--bg3);border:1px solid var(--fg3);border-radius:4px;color:var(--fg);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;z-index:101;}
 .hamburger:hover{border-color:var(--green);color:var(--green);}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
@@ -275,7 +275,8 @@ footer a:hover{color:var(--green);}
   .nav-links.open{display:flex !important;}
   .nav-links a{padding:10px 0;border-bottom:1px solid rgba(0,255,106,0.06);}
   .nav-links .btn{width:100%;justify-content:center;border-bottom:none;}
-  .hamburger{display:block !important;flex-shrink:0;}
+  .hamburger{display:inline-block !important;flex-shrink:0;}
+  .mobile-launch{display:inline-flex !important;}
   nav .wrap{position:relative;}
   .hero{padding:100px 0 60px;}
   .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
@@ -310,7 +311,8 @@ footer a:hover{color:var(--green);}
       <div class="logo-mark">Δ</div>
       OVERADP
     </div>
-    <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">☰</button>
+    <a href="/app/" class="btn btn-go mobile-launch" style="display:none;">LAUNCH →</a>
+    <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">MENU</button>
     <div class="nav-links">
       <a href="#proof" onclick="document.querySelector('.nav-links').classList.remove('open')">Proof</a>
       <a href="#positions" onclick="document.querySelector('.nav-links').classList.remove('open')">Positions</a>
