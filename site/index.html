@@ -208,7 +208,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
   content:attr(data-pos);position:absolute;top:8px;right:12px;
   font-family:var(--display);font-size:64px;font-weight:700;opacity:0.03;color:var(--green);
 }
-.pos-label{font-family:var(--display);font-size:24px;font-weight:700;margin-bottom:4px;}
+.pos-label{font-family:var(--display);font-size:22px;font-weight:700;margin-bottom:4px;white-space:nowrap;}
 .pos-label.qb{color:var(--red);}
 .pos-label.rb{color:var(--green);}
 .pos-label.wr{color:var(--blue);}
@@ -290,8 +290,10 @@ footer a:hover{color:var(--green);}
   .metrics-table{font-size:11px;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .metrics-table th,.metrics-table td{padding:12px 14px;white-space:nowrap;}
   .metric-bar{width:60px;}
-  .pos-r2{font-size:28px;}
-  .pos-card{padding:20px;}
+  .pos-r2{font-size:24px;}
+  .pos-card{padding:16px;}
+  .pos-label{font-size:16px;}
+  .pos-card::before{font-size:48px;opacity:0.06;}
   .feat-card{padding:20px;}
   .social-stats{gap:32px;}
   .social-stat .num{font-size:36px;}
