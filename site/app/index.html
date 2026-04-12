@@ -686,7 +686,11 @@
     .war-room{
       display:flex;flex-direction:column;height:auto;min-height:100vh;
     }
-    .top-bar{position:sticky;top:0;z-index:100;}
+    .top-bar{position:sticky;top:0;z-index:100;padding:0 12px;}
+    .top-bar .logo{font-size:16px;letter-spacing:2px;gap:8px;}
+    .top-bar .logo .icon{width:26px;height:26px;font-size:14px;}
+    .top-bar .top-actions{gap:6px;}
+    .top-bar .btn{padding:6px 10px;font-size:10px;letter-spacing:1px;}
     .ticker-bar{position:sticky;top:56px;z-index:99;flex-wrap:wrap;gap:12px;}
     .left-panel,.right-panel{
       width:100%;border-right:none;border-bottom:1px solid var(--rust);
