@@ -719,28 +719,20 @@
     .ticker-stat{font-size:10px;}
     .ticker-stat .val{font-size:11px;}
     .pos-badge{padding:1px 4px;font-size:9px;}
-    .left-panel,.right-panel{
-      width:100%;border-right:none;border-bottom:1px solid var(--rust);
-      max-height:none;overflow:visible;
-      order:2;
+    /* Tab-based mobile: only one panel visible at a time */
+    .left-panel,.center-panel,.right-panel{
+      width:100%;border-right:none;border-left:none;
+      border-bottom:1px solid var(--rust);
+      overflow-y:auto;flex:1;
+      display:none;
     }
-    .center-panel{order:1;}
-    .left-panel .panel-title,.right-panel .panel-title{
-      cursor:pointer;padding:10px 12px;margin-bottom:0;
-      display:flex;justify-content:space-between;align-items:center;
+    .left-panel.mobile-active,.center-panel.mobile-active,.right-panel.mobile-active{
+      display:block;
     }
-    .left-panel .panel-title::after,.right-panel .panel-title::after{
-      content:'▼';font-size:10px;color:var(--smoke);transition:transform 0.2s;
-    }
-    .left-panel.collapsed #myTeamSlots,
-    .left-panel.collapsed .total-bar,
-    .right-panel.collapsed > div:not(.panel-title){display:none;}
-    .left-panel.collapsed .panel-title::after,
-    .right-panel.collapsed .panel-title::after{transform:rotate(-90deg);}
-    .center-panel{overflow:visible;padding:12px;}
     .center-panel::before{display:none;}
+    .center-panel{padding:12px;}
     .filter-row{flex-wrap:wrap;}
-    .search-field{min-width:120px;flex:1 1 120px;}
+    .search-field{min-width:100px;flex:1 1 100px;}
     .pool-table{font-size:11px;}
     .pool-table th,.pool-table td{padding:6px 8px;}
     .pool-table th:nth-child(4),.pool-table td:nth-child(4),
@@ -751,19 +743,25 @@
     .pool-table th:nth-child(9),.pool-table td:nth-child(9){display:none;}
     .info-modal{width:95vw;padding:20px;max-height:90vh;overflow-y:auto;}
     .loading-overlay{position:fixed;}
-    /* Mobile tab toggle for sidebars */
-    .mobile-tabs{
-      display:flex;gap:4px;padding:8px 12px;background:var(--steel);
-      border-bottom:1px solid var(--rust);position:sticky;top:98px;z-index:98;
+    /* Bottom tab bar */
+    .mobile-tab-bar{
+      display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;
+      background:var(--pit);border-top:1px solid var(--rust);
+      padding:6px 8px;gap:4px;
     }
-    .mobile-tab{
+    .mobile-tab-btn{
+      flex:1;padding:8px 4px;border:1px solid var(--rust);border-radius:2px;
+      background:var(--steel);color:var(--ash);cursor:pointer;text-align:center;
       font-family:'Oswald',sans-serif;font-size:11px;font-weight:600;
-      letter-spacing:1px;padding:6px 12px;border:1px solid var(--rust);
-      border-radius:2px;background:var(--pit);color:var(--ash);cursor:pointer;
+      letter-spacing:1px;text-transform:uppercase;
     }
-    .mobile-tab.active{background:var(--iron);color:var(--chalk);border-color:var(--smoke);}
+    .mobile-tab-btn.active{background:var(--iron);color:var(--chalk);border-color:var(--smoke);}
+    .left-panel .panel-title::after,.right-panel .panel-title::after{display:none;}
   }
-  @media(min-width:701px){.mobile-tabs{display:none;}.left-panel.collapsed #myTeamSlots,.left-panel.collapsed .total-bar,.right-panel.collapsed > div:not(.panel-title){display:block !important;}.left-panel.collapsed .panel-title::after,.right-panel.collapsed .panel-title::after{display:none;}.left-panel .panel-title,.right-panel .panel-title{cursor:default;}}
+  @media(min-width:701px){
+    .mobile-tab-bar{display:none !important;}
+    .left-panel,.center-panel,.right-panel{display:block !important;}
+  }
 </style>
 </head>
 <body>
@@ -802,8 +800,8 @@
   </div>
 
   <!-- LEFT — MY ROSTER -->
-  <aside class="left-panel collapsed" role="complementary" aria-label="My roster">
-    <div class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">My Roster</div>
+  <aside class="left-panel" role="complementary" aria-label="My roster">
+    <div class="panel-title">My Roster</div>
     <div id="myTeamSlots"></div>
     <div class="total-bar">
       <div class="total-label">Projected Total</div>
@@ -831,8 +829,8 @@
   </main>
 
   <!-- RIGHT — INTEL -->
-  <aside class="right-panel collapsed" role="complementary" aria-label="Draft intelligence">
-    <div class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">Target Intel</div>
+  <aside class="right-panel" role="complementary" aria-label="Draft intelligence">
+    <div class="panel-title">Target Intel</div>
     <div id="recommendations">
       <div class="empty-state" style="padding:20px 8px;">
         <p style="font-size:12px;">Load data to get recommendations.</p>
@@ -859,6 +857,13 @@
       <div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>
     </div>
   </aside>
+
+  <!-- MOBILE TAB BAR -->
+  <div class="mobile-tab-bar">
+    <button class="mobile-tab-btn" onclick="mobileTab('left-panel',this)">ROSTER</button>
+    <button class="mobile-tab-btn active" onclick="mobileTab('center-panel',this)">PLAYERS</button>
+    <button class="mobile-tab-btn" onclick="mobileTab('right-panel',this)">INTEL</button>
+  </div>
 </div>
 
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
@@ -944,6 +949,17 @@
 </div>
 
 <script>
+function mobileTab(panelClass, btn){
+  document.querySelectorAll('.left-panel,.center-panel,.right-panel').forEach(p=>p.classList.remove('mobile-active'));
+  document.querySelector('.'+panelClass).classList.add('mobile-active');
+  document.querySelectorAll('.mobile-tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+// Set initial mobile tab
+if(window.innerWidth<=700){
+  document.querySelector('.center-panel').classList.add('mobile-active');
+}
+
 let allPlayers = [];
 let myTeamIds = [];
 let opponentIds = [];
