@@ -722,7 +722,21 @@
     .left-panel,.right-panel{
       width:100%;border-right:none;border-bottom:1px solid var(--rust);
       max-height:none;overflow:visible;
+      order:2;
     }
+    .center-panel{order:1;}
+    .left-panel .panel-title,.right-panel .panel-title{
+      cursor:pointer;padding:10px 12px;margin-bottom:0;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+    .left-panel .panel-title::after,.right-panel .panel-title::after{
+      content:'▼';font-size:10px;color:var(--smoke);transition:transform 0.2s;
+    }
+    .left-panel.collapsed #myTeamSlots,
+    .left-panel.collapsed .total-bar,
+    .right-panel.collapsed > div:not(.panel-title){display:none;}
+    .left-panel.collapsed .panel-title::after,
+    .right-panel.collapsed .panel-title::after{transform:rotate(-90deg);}
     .center-panel{overflow:visible;padding:12px;}
     .center-panel::before{display:none;}
     .filter-row{flex-wrap:wrap;}
@@ -749,7 +763,7 @@
     }
     .mobile-tab.active{background:var(--iron);color:var(--chalk);border-color:var(--smoke);}
   }
-  @media(min-width:701px){.mobile-tabs{display:none;}}
+  @media(min-width:701px){.mobile-tabs{display:none;}.left-panel.collapsed #myTeamSlots,.left-panel.collapsed .total-bar,.right-panel.collapsed > div:not(.panel-title){display:block !important;}.left-panel.collapsed .panel-title::after,.right-panel.collapsed .panel-title::after{display:none;}.left-panel .panel-title,.right-panel .panel-title{cursor:default;}}
 </style>
 </head>
 <body>
@@ -788,8 +802,8 @@
   </div>
 
   <!-- LEFT — MY ROSTER -->
-  <aside class="left-panel" role="complementary" aria-label="My roster">
-    <div class="panel-title">My Roster</div>
+  <aside class="left-panel collapsed" role="complementary" aria-label="My roster">
+    <div class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">My Roster</div>
     <div id="myTeamSlots"></div>
     <div class="total-bar">
       <div class="total-label">Projected Total</div>
@@ -817,8 +831,8 @@
   </main>
 
   <!-- RIGHT — INTEL -->
-  <aside class="right-panel" role="complementary" aria-label="Draft intelligence">
-    <div class="panel-title">Target Intel</div>
+  <aside class="right-panel collapsed" role="complementary" aria-label="Draft intelligence">
+    <div class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">Target Intel</div>
     <div id="recommendations">
       <div class="empty-state" style="padding:20px 8px;">
         <p style="font-size:12px;">Load data to get recommendations.</p>
