@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAR ROOM — Fantasy Draft Command</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #06080c;
+    --pit: #0c1017;
+    --steel: #141a24;
+    --iron: #1c2433;
+    --rust: #2a3548;
+    --smoke: #4a5568;
+    --ash: #7a8599;
+    --chalk: #c8cdd8;
+    --white: #eef0f4;
+    --qb: #ff3b5c;
+    --qb-glow: rgba(255,59,92,0.35);
+    --rb: #3b82f6;
+    --rb-glow: rgba(59,130,246,0.35);
+    --wr: #10b981;
+    --wr-glow: rgba(16,185,129,0.35);
+    --te: #f59e0b;
+    --te-glow: rgba(245,158,11,0.35);
+    --k: #6b7280;
+    --def: #8b5cf6;
+    --def-glow: rgba(139,92,246,0.35);
+    --alert: #ef4444;
+    --confirm: #10b981;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Barlow Condensed', sans-serif;
+    background: var(--void);
+    color: var(--chalk);
+  }
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* === LAYOUT === */
+  .war-room {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 56px 42px 1fr;
+    height: 100vh;
+  }
+
+  /* === TOP BAR === */
+  .top-bar {
+    grid-column: 1 / -1;
+    background: var(--pit);
+    border-bottom: 1px solid var(--rust);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: relative;
+  }
+  .top-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rb), var(--wr), var(--te), var(--qb), transparent);
+    opacity: 0.4;
+  }
+  .logo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo .icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--rb);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 0 12px var(--rb-glow);
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
+    50% { box-shadow: 0 0 20px var(--rb-glow); }
+  }
+  .top-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 7px 16px;
+    border: 1px solid var(--rust);
+    border-radius: 2px;
+    background: var(--steel);
+    color: var(--ash);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .btn:hover { background: var(--iron); color: var(--chalk); border-color: var(--smoke); }
+  .btn-activate {
+    background: linear-gradient(135deg, var(--rb), #2563eb);
+    border-color: var(--rb);
+    color: #fff;
+    box-shadow: 0 0 16px var(--rb-glow);
+  }
+  .btn-activate:hover { box-shadow: 0 0 24px var(--rb-glow); }
+  .btn-kill { border-color: var(--alert); color: var(--alert); }
+  .btn-kill:hover { background: var(--alert); color: #fff; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; letter-spacing: 1px; }
+  .btn-draft {
+    border-color: var(--confirm);
+    color: var(--confirm);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+  }
+  .btn-draft:hover { background: var(--confirm); color: var(--void); }
+  .btn-opp {
+    border-color: var(--smoke);
+    color: var(--ash);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+  }
+  .btn-opp:hover { background: var(--smoke); color: var(--void); }
+  select.btn { appearance: auto; padding-right: 8px; }
+
+  /* === TICKER BAR === */
+  .ticker-bar {
+    grid-column: 1 / -1;
+    background: var(--steel);
+    border-bottom: 1px solid var(--rust);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ash);
+    overflow: hidden;
+  }
+  .ticker-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .ticker-stat .val {
+    color: var(--white);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .ticker-stat .val.qb-c { color: var(--qb); }
+  .ticker-stat .val.rb-c { color: var(--rb); }
+  .ticker-stat .val.wr-c { color: var(--wr); }
+  .ticker-stat .val.te-c { color: var(--te); }
+  .ticker-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--rust);
+  }
+
+  /* === LEFT PANEL — MY ROSTER === */
+  .left-panel {
+    background: var(--pit);
+    border-right: 1px solid var(--rust);
+    overflow-y: auto;
+    padding: 16px 12px;
+  }
+  .panel-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ash);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rust);
+  }
+  .roster-slot {
+    background: var(--steel);
+    border: 1px solid var(--rust);
+    border-radius: 2px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .roster-slot::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 2px 0 0 2px;
+    background: var(--smoke);
+  }
+  .roster-slot.filled-qb::before { background: var(--qb); box-shadow: 0 0 8px var(--qb-glow); }
+  .roster-slot.filled-rb::before { background: var(--rb); box-shadow: 0 0 8px var(--rb-glow); }
+  .roster-slot.filled-wr::before { background: var(--wr); box-shadow: 0 0 8px var(--wr-glow); }
+  .roster-slot.filled-te::before { background: var(--te); box-shadow: 0 0 8px var(--te-glow); }
+  .roster-slot.filled-k::before { background: var(--k); }
+  .roster-slot.filled-def::before { background: var(--def); box-shadow: 0 0 8px var(--def-glow); }
+  .roster-slot.empty { opacity: 0.35; border-style: dashed; }
+  .roster-slot .slot-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--ash);
+    text-transform: uppercase;
+  }
+  .roster-slot .slot-player {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 1px;
+    line-height: 1.2;
+  }
+  .roster-slot .slot-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--wr);
+  }
+  .roster-slot .slot-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .total-bar {
+    margin-top: 16px;
+    padding: 12px 10px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(16,185,129,0.08));
+    border: 1px solid var(--rb);
+    border-radius: 2px;
+    text-align: center;
+  }
+  .total-bar .total-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--ash);
+    text-transform: uppercase;
+  }
+  .total-bar .total-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    margin-top: 2px;
+  }
+
+  /* === CENTER — PLAYER POOL === */
+  .center-panel {
+    overflow-y: auto;
+    padding: 16px 20px;
+    position: relative;
+  }
+  .center-panel::before {
+    content: '';
+    position: fixed;
+    top: 98px; left: 260px; right: 300px; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .filter-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .pos-filter {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 14px;
+    border: 1px solid var(--rust);
+    border-radius: 1px;
+    background: var(--steel);
+    color: var(--ash);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .pos-filter:hover { border-color: var(--smoke); color: var(--chalk); }
+  .pos-filter.on {
+    color: var(--white);
+    border-color: var(--rb);
+    background: rgba(59,130,246,0.12);
+    box-shadow: 0 0 10px var(--rb-glow);
+  }
+  .pos-filter.on-qb { border-color: var(--qb); color: var(--qb); background: rgba(255,59,92,0.1); box-shadow: 0 0 10px var(--qb-glow); }
+  .pos-filter.on-rb { border-color: var(--rb); color: var(--rb); background: rgba(59,130,246,0.1); box-shadow: 0 0 10px var(--rb-glow); }
+  .pos-filter.on-wr { border-color: var(--wr); color: var(--wr); background: rgba(16,185,129,0.1); box-shadow: 0 0 10px var(--wr-glow); }
+  .pos-filter.on-te { border-color: var(--te); color: var(--te); background: rgba(245,158,11,0.1); box-shadow: 0 0 10px var(--te-glow); }
+  .pos-filter.on-k { border-color: var(--k); color: var(--k); background: rgba(107,114,128,0.1); box-shadow: 0 0 10px rgba(107,114,128,0.35); }
+  .pos-filter.on-def { border-color: var(--def); color: var(--def); background: rgba(139,92,246,0.1); box-shadow: 0 0 10px var(--def-glow); }
+  .search-field {
+    flex: 1;
+    min-width: 160px;
+    padding: 6px 12px;
+    border: 1px solid var(--rust);
+    border-radius: 1px;
+    background: var(--steel);
+    color: var(--chalk);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-field:focus { border-color: var(--rb); box-shadow: 0 0 8px var(--rb-glow); }
+  .search-field::placeholder { color: var(--smoke); }
+
+  /* Player table */
+  .pool-table {
+    width: 100%;
+    border-collapse: collapse;
+    position: relative;
+    z-index: 1;
+  }
+  .pool-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--smoke);
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--rust);
+    position: sticky;
+    top: 0;
+    background: var(--void);
+    z-index: 2;
+  }
+  .pool-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(42,53,72,0.5);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .pool-table tr {
+    transition: background 0.1s;
+  }
+  .pool-table tr:hover {
+    background: rgba(59,130,246,0.06);
+  }
+  .pool-table tr.rec-row {
+    background: rgba(59,130,246,0.08);
+  }
+  .pool-table tr.rec-row td:first-child {
+    position: relative;
+  }
+  .pool-table tr.rec-row td:first-child::before {
+    content: '▶';
+    color: var(--rb);
+    font-size: 8px;
+    animation: blink-rec 1.2s ease-in-out infinite;
+  }
+  @keyframes blink-rec {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .rank-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--smoke);
+    width: 30px;
+  }
+  .name-cell {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--white);
+  }
+  .pts-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--wr);
+  }
+  .team-cell {
+    color: var(--ash);
+    font-size: 12px;
+  }
+  .model-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--smoke);
+  }
+  .actions-cell { display: flex; gap: 4px; }
+
+  /* Position tag */
+  .pos-tag {
+    display: inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 1px;
+    border: 1px solid;
+  }
+  .pos-tag-qb { color: var(--qb); border-color: var(--qb); background: rgba(255,59,92,0.1); }
+  .pos-tag-rb { color: var(--rb); border-color: var(--rb); background: rgba(59,130,246,0.1); }
+  .pos-tag-wr { color: var(--wr); border-color: var(--wr); background: rgba(16,185,129,0.1); }
+  .pos-tag-te { color: var(--te); border-color: var(--te); background: rgba(245,158,11,0.1); }
+  .pos-tag-k { color: var(--k); border-color: var(--k); background: rgba(107,114,128,0.1); }
+  .pos-tag-def { color: var(--def); border-color: var(--def); background: rgba(139,92,246,0.1); }
+
+  /* === RIGHT PANEL — INTEL === */
+  .right-panel {
+    background: var(--pit);
+    border-left: 1px solid var(--rust);
+    overflow-y: auto;
+    padding: 16px 12px;
+  }
+  .intel-card {
+    background: var(--steel);
+    border: 1px solid var(--rb);
+    border-radius: 2px;
+    padding: 12px;
+    margin-bottom: 6px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.15s;
+  }
+  .intel-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--rb), var(--wr));
+  }
+  .intel-card:hover {
+    border-color: var(--rb);
+    box-shadow: 0 0 16px var(--rb-glow);
+  }
+  .intel-rank {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--rb);
+    line-height: 1;
+  }
+  .intel-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--white);
+    margin-top: 4px;
+  }
+  .intel-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wr);
+    margin-top: 2px;
+  }
+  .intel-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 4px;
+  }
+
+  /* Opponent picks list */
+  .opp-entry {
+    background: var(--steel);
+    border: 1px solid var(--rust);
+    border-radius: 2px;
+    padding: 6px 10px;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  .opp-entry .opp-pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--smoke);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 16px;
+  }
+  .empty-state .empty-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+  .empty-state h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ash);
+    margin-bottom: 6px;
+  }
+  .empty-state p {
+    font-size: 13px;
+    color: var(--smoke);
+    line-height: 1.5;
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,8,12,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.hidden { display: none; }
+
+  /* Info modal */
+  .info-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,8,12,0.95);
+    z-index: 200; display: none;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .info-overlay.active { display: flex; justify-content: center; }
+  .info-modal {
+    max-width: 800px; width: 100%;
+    background: var(--pit);
+    border: 1px solid var(--rust);
+    border-radius: 12px;
+    padding: 28px 32px;
+    color: var(--fg);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .info-modal h2 {
+    font-family: 'Oswald', sans-serif;
+    color: var(--accent); font-size: 22px;
+    margin: 20px 0 8px; border-bottom: 1px solid var(--rust);
+    padding-bottom: 4px;
+  }
+  .info-modal h2:first-child { margin-top: 0; }
+  .info-modal h3 {
+    font-family: 'Oswald', sans-serif;
+    color: #00ccff; font-size: 16px;
+    margin: 12px 0 4px;
+  }
+  .info-modal p { margin: 4px 0; color: #c0c8d4; }
+  .info-modal ul { margin: 4px 0 8px 20px; color: #a0aab8; }
+  .info-modal li { margin: 2px 0; }
+  .info-modal .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    margin: 0 2px;
+  }
+  .info-modal .tag-green { background: rgba(0,255,136,0.15); color: #00ff88; }
+  .info-modal .tag-red { background: rgba(255,68,68,0.15); color: #ff4444; }
+  .info-modal .tag-blue { background: rgba(0,204,255,0.15); color: #00ccff; }
+  .info-modal .tag-yellow { background: rgba(255,170,0,0.15); color: #ffaa00; }
+  .info-modal .close-btn {
+    float: right; background: none; border: 1px solid var(--rust);
+    color: var(--fg); font-size: 18px; cursor: pointer;
+    border-radius: 6px; padding: 2px 10px;
+  }
+  .info-modal .close-btn:hover { background: var(--rust); }
+  .info-modal table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  .info-modal th { text-align: left; color: var(--accent); padding: 4px 8px; border-bottom: 1px solid var(--rust); font-size: 12px; }
+  .info-modal td { padding: 3px 8px; border-bottom: 1px solid var(--steel); font-size: 13px; }
+  .load-spinner {
+    width: 48px; height: 48px;
+    border: 2px solid var(--rust);
+    border-top-color: var(--rb);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-text {
+    margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ash);
+    letter-spacing: 1px;
+  }
+  .load-bar {
+    margin-top: 12px;
+    width: 200px;
+    height: 2px;
+    background: var(--rust);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .load-bar-inner {
+    height: 100%;
+    width: 40%;
+    background: var(--rb);
+    animation: load-slide 1.5s ease-in-out infinite;
+  }
+  @keyframes load-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--pit); }
+  ::-webkit-scrollbar-thumb { background: var(--rust); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--smoke); }
+
+  /* Scarcity bars */
+  .scarcity-row { margin-bottom: 8px; }
+  .scarcity-label { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .scarcity-bar-bg { height: 6px; background: var(--rust); border-radius: 3px; overflow: hidden; }
+  .scarcity-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+  .scarcity-bar-fill.s-qb { background: var(--qb); }
+  .scarcity-bar-fill.s-rb { background: var(--rb); }
+  .scarcity-bar-fill.s-wr { background: var(--wr); }
+  .scarcity-bar-fill.s-te { background: var(--te); }
+  .scarcity-bar-fill.s-k { background: var(--k); }
+  .scarcity-bar-fill.s-def { background: var(--def); }
+  .scarcity-detail { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--smoke); margin-top: 2px; }
+
+  /* VBD column */
+  .vbd-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; color: var(--te); }
+</style>
+</head>
+<body>
+<div class="war-room">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="logo">
+      <div class="icon">◈</div>
+      WAR ROOM
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
+      <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
+      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
+    </div>
+  </div>
+
+  <!-- TICKER BAR -->
+  <div class="ticker-bar">
+    <div class="ticker-stat">AVAIL <span class="val" id="availCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">MY PICKS <span class="val rb-c" id="myCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">OPPONENT <span class="val" id="oppCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">ROUND <span class="val wr-c" id="roundNum">1</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">QB <span class="val qb-c" id="qbCount">0</span></div>
+    <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
+    <div class="ticker-stat">WR <span class="val wr-c" id="wrCount">0</span></div>
+    <div class="ticker-stat">TE <span class="val te-c" id="teCount">0</span></div>
+  </div>
+
+  <!-- LEFT — MY ROSTER -->
+  <div class="left-panel">
+    <div class="panel-title">My Roster</div>
+    <div id="myTeamSlots"></div>
+    <div class="total-bar">
+      <div class="total-label">Projected Total</div>
+      <div class="total-val" id="totalPts">0.0</div>
+    </div>
+  </div>
+
+  <!-- CENTER — PLAYER POOL -->
+  <div class="center-panel">
+    <div class="filter-row">
+      <button class="pos-filter on" data-pos="ALL" onclick="filterPos('ALL', this)">ALL</button>
+      <button class="pos-filter" data-pos="QB" onclick="filterPos('QB', this)">QB</button>
+      <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
+      <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
+      <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
+      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)">
+      <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
+    </div>
+    <div id="playerPool">
+      <div class="empty-state">
+        <div class="empty-icon">◈</div>
+        <h3>No Data</h3>
+        <p>Click INITIALIZE to fetch NFL stats<br>and train prediction models.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT — INTEL -->
+  <div class="right-panel">
+    <div class="panel-title">Target Intel</div>
+    <div id="recommendations">
+      <div class="empty-state" style="padding:20px 8px;">
+        <p style="font-size:12px;">Load data to get recommendations.</p>
+      </div>
+    </div>
+    <div class="panel-title" style="margin-top:16px;">Positional Scarcity</div>
+    <div id="scarcityPanel">
+      <div style="color:var(--smoke);font-size:12px;padding:4px;">Load data to see scarcity.</div>
+    </div>
+    <div class="panel-title" style="margin-top:16px;">Bye Week Conflicts</div>
+    <div id="byePanel">
+      <div style="color:var(--smoke);font-size:12px;padding:4px;">Draft players to check conflicts.</div>
+    </div>
+    <div class="panel-title" style="margin-top:16px;">Sleepers & Busts</div>
+    <div id="sleepersPanel">
+      <div style="color:var(--smoke);font-size:12px;padding:4px;">Load data to see model vs ADP gaps.</div>
+    </div>
+    <div class="panel-title" style="margin-top:16px;">Handcuff Alerts</div>
+    <div id="handcuffPanel">
+      <div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>
+    </div>
+    <div class="panel-title" style="margin-top:16px;">Opponent Drafts</div>
+    <div id="opponentPicks">
+      <div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>
+    </div>
+  </div>
+</div>
+
+<div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
+  <div class="info-modal">
+    <button class="close-btn" onclick="toggleInfo()">&times;</button>
+    <h2>WAR ROOM — How It Works</h2>
+    <p>WAR ROOM is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 5+ years of NFL data to project player performance and guide your draft picks in real-time.</p>
+
+    <h2>The Model</h2>
+    <h3>Ensemble Approach</h3>
+    <p>Three models vote on each player's projection, then their predictions are averaged:</p>
+    <ul>
+      <li><span class="tag tag-blue">Ridge Regression</span> — Linear baseline, stable and unbiased</li>
+      <li><span class="tag tag-green">Random Forest</span> — Captures non-linear patterns (age cliffs, breakouts)</li>
+      <li><span class="tag tag-yellow">XGBoost</span> — Gradient boosting, best at complex feature interactions</li>
+    </ul>
+    <p>The model with the best cross-validation MAE for each position is selected as the "best" model. The ensemble average is used for the final projection.</p>
+
+    <h3>Features (40+ per position)</h3>
+    <table>
+      <tr><th>Category</th><th>What It Captures</th><th>Example</th></tr>
+      <tr><td><span class="tag tag-blue">Career Arc</span></td><td>Age, prime detection, regression risk</td><td>RB age cliff at 28+</td></tr>
+      <tr><td><span class="tag tag-green">Volume</span></td><td>Target share, rush share, snap counts</td><td>High volume = safer floor</td></tr>
+      <tr><td><span class="tag tag-yellow">Lag/Rolling</span></td><td>Prior year stats, 2-year rolling averages</td><td>YoY change signals breakout/bust</td></tr>
+      <tr><td><span class="tag tag-red">Injury</span></td><td>Injury history, games missed</td><td>Fragile players get risk flags</td></tr>
+      <tr><td><span class="tag tag-blue">ADP</span></td><td>Market wisdom — where others draft them</td><td>Model vs ADP gap = sleeper/bust</td></tr>
+      <tr><td><span class="tag tag-green">SOS</span></td><td>Strength of schedule, defensive quality</td><td>Hard schedule = lower ceiling</td></tr>
+      <tr><td><span class="tag tag-yellow">Teammate Dep.</span></td><td>QB quality → WR/TE, WR corps → QB, box-stack risk</td><td>Jefferson suffered with bad QB</td></tr>
+      <tr><td><span class="tag tag-blue">Playmaker</span></td><td>RACR, YAC share, domination score, WOPR</td><td>High RACR = creates own value</td></tr>
+      <tr><td><span class="tag tag-red">Rookie</span></td><td>First/second-year flag, wider uncertainty</td><td>Rookies get 80% wider CI</td></tr>
+      <tr><td><span class="tag tag-green">Stacking</span></td><td>QB + WR/TE same-team correlation</td><td>Amplifies upside and downside</td></tr>
+    </table>
+
+    <h3>Post-Prediction Adjustments</h3>
+    <ul>
+      <li><strong>Breakout shrinkage:</strong> If a player is coming off a breakout (>30% above average), the projection is shrunk 30% toward their 2-year rolling average to account for regression to the mean.</li>
+      <li><strong>RB age cliff:</strong> RBs over 28 get a ~3% per year penalty (0.97^age_over_27).</li>
+      <li><strong>Fringe player shrinkage:</strong> Backups with <10 pts last year who are projected >3x that are shrunk toward their actual performance.</li>
+      <li><strong>Rookie uncertainty:</strong> Rookies get 1.8x wider confidence intervals; 2nd-year players get 1.3x wider.</li>
+    </ul>
+
+    <h2>Understanding the UI</h2>
+    <h3>Player Pool (Left Panel)</h3>
+    <table>
+      <tr><th>Column</th><th>Meaning</th></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Above Replacement — how many more points this player scores vs a replacement-level player at the same position. Higher = more valuable.</td></tr>
+      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the season (half-PPR by default).</td></tr>
+      <tr><td><span class="tag tag-yellow">CI</span></td><td>80% Confidence Interval [low–high]. Wider = more uncertain. Rookies have much wider CIs.</td></tr>
+      <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — based on prediction uncertainty. High risk = boom-or-bust.</td></tr>
+      <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from FantasyPros — where the market values this player.</td></tr>
+    </table>
+    <h3>Draft Board Sort</h3>
+    <p>Players are interleaved by position (RB → WR → QB → TE) within each VBD tier, so you don't see 50 RBs in a row. This mimics how a real draft flows.</p>
+
+    <h3>My Team (Center Panel)</h3>
+    <p>Players are auto-assigned to roster slots based on position:</p>
+    <ul>
+      <li><span class="tag tag-blue">QB</span> → QB slot</li>
+      <li><span class="tag tag-green">RB</span> → RB1, RB2, then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">WR</span> → WR1, WR2, then Flex, then Bench</li>
+      <li><span class="tag tag-red">TE</span> → TE slot, then Flex, then Bench</li>
+    </ul>
+    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter.</p>
+
+    <h3>Right Sidebar Panels</h3>
+    <table>
+      <tr><th>Panel</th><th>What It Shows</th></tr>
+      <tr><td><strong>Pick Advice</strong></td><td>Top 5 recommendations based on VBD + roster need bonuses. "MUST DRAFT" = starter slot still open late.</td></tr>
+      <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
+      <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
+      <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
+      <tr><td><strong>Handcuff Alerts</strong></td><td>Backup RBs on the same team as your starting RBs. If your starter goes down, the handcuff takes over.</td></tr>
+      <tr><td><strong>Opponent Drafts</strong></td><td>Tracks what positions opponents are taking — watch for position runs.</td></tr>
+    </table>
+
+    <h2>Key Concepts</h2>
+    <h3>VBD (Value Based Drafting)</h3>
+    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last starter that would be rostered across all teams (e.g., the #24 RB in a 12-team league that starts 2 RBs). VBD tells you <em>how much better</em> this player is than what you could get for free off waivers.</p>
+
+    <h3>Positional Scarcity</h3>
+    <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
+    <p><strong>How it's calculated:</strong> For each position, WAR ROOM finds the projected points of the #1 player (elite) and the projected points of the last starter that would be rostered across all teams (replacement). The difference is the <em>scarcity score</em>.</p>
+    <table>
+      <tr><th>Scarcity Level</th><th>What It Means</th><th>Draft Strategy</th></tr>
+      <tr><td><span class="tag tag-red">High Scarcity</span></td><td>Huge gap between elite and replacement</td><td>Draft this position early — waiting means getting a much worse player</td></tr>
+      <tr><td><span class="tag tag-yellow">Medium Scarcity</span></td><td>Moderate dropoff</td><td>Balanced — draft when value aligns with your pick</td></tr>
+      <tr><td><span class="tag tag-green">Low Scarcity</span></td><td>Shallow dropoff — many comparable options</td><td>Safe to wait — replacement-level players are almost as good as "starters"</td></tr>
+    </table>
+    <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
+
+    <h3>Confidence Intervals</h3>
+    <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
+
+    <h3>Model vs ADP</h3>
+    <p>Our ensemble model has a <strong>0.84+ correlation</strong> with actual fantasy points, beating ADP's 0.56. But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+
+    <h3>Handcuff Alerts</h3>
+    <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
+    <p><strong>Why it matters:</strong> If you drafted Saquon Barkley in the 1st round and he goes down in Week 3, his backup (who you can draft in the last round for almost nothing) suddenly becomes a top-15 RB. Without the handcuff, you're scrambling on waivers.</p>
+    <table>
+      <tr><th>Handcuff Type</th><th>Description</th><th>Priority</th></tr>
+      <tr><td><span class="tag tag-red">Must Handcuff</span></td><td>Your RB1's backup — protect your 1st/2nd round investment</td><td>High — draft in late rounds</td></tr>
+      <tr><td><span class="tag tag-yellow">Consider</span></td><td>Your RB2/RB3's backup — nice insurance but less critical</td><td>Medium — if bench space allows</td></tr>
+      <tr><td><span class="tag tag-green">Available</span></td><td>Other backup RBs still on the board</td><td>Low — only if you have empty bench slots</td></tr>
+    </table>
+    <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance — you hope you never need it, but if you do, it saves your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
+
+    <h3>Ensemble Model</h3>
+    <p>WAR ROOM uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
+    <table>
+      <tr><th>Model</th><th>Strength</th><th>Best For</th></tr>
+      <tr><td><strong>Ridge</strong></td><td>Linear relationships, stable with small data</td><td>Baseline — prevents wild predictions</td></tr>
+      <tr><td><strong>Random Forest</strong></td><td>Non-linear patterns, resistant to outliers</td><td>Capturing interactions without overfitting</td></tr>
+      <tr><td><strong>XGBoost</strong></td><td>Gradient boosting, strong on tabular data</td><td>RB/TE projections</td></tr>
+      <tr><td><strong>CatBoost</strong></td><td>Ordered boosting, best generalization</td><td>QB/WR/TE — wins validation on most positions</td></tr>
+    </table>
+    <p><strong>Feature selection:</strong> We ran an ablation study and found that derived features (teammate dependency, playmaker metrics like RACR/WOPR) were <em>harmful</em> — they're collinear with base lag features and added noise. The model performs best with clean lag features + ADP + age curves + regression-to-mean adjustments.</p>
+
+    <h2>Data Sources</h2>
+    <ul>
+      <li><strong>nflverse</strong> (via nfl_data_py) — Seasonal stats, roster info, team stats, OL metrics, snap counts, injuries</li>
+      <li><strong>FantasyPros</strong> — ADP (Average Draft Position) data</li>
+      <li><strong>NFL Schedule</strong> — Bye week derivation</li>
+    </ul>
+
+    <h2>Accuracy</h2>
+    <table>
+      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.793</td><td>0.757</td><td>~23 pts</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.936</td><td>0.933</td><td>~10 pts</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.964</td><td>0.962</td><td>~7 pts</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.950</td><td>0.943</td><td>~6 pts</td></tr>
+    </table>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
+
+    <h2>Model vs ADP — Head to Head</h2>
+    <p>We tested our model against ADP (Average Draft Position) on the 2024 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
+    <table>
+      <tr><th>Metric</th><th>WAR ROOM</th><th>ADP</th><th>Winner</th></tr>
+      <tr><td><strong>Correlation with actual</strong></td><td>0.947</td><td>0.600</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><td><strong>R² (explained variance)</strong></td><td>0.870</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>MAE (avg error)</strong></td><td>13.5 pts</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>Top-20 hit rate</strong></td><td>16/20 (80%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+    </table>
+    <p><strong>What this means:</strong> Our model correctly identified 16 of the 20 highest-scoring players in 2024. ADP only found 7. The model's correlation with actual production is 0.947 vs ADP's 0.600 — that's a <strong>58% improvement</strong>.</p>
+    <table>
+      <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.866</td><td>0.544</td><td>+0.32</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.970</td><td>0.780</td><td>+0.19</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.950</td><td>0.704</td><td>+0.25</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.894</td><td>0.688</td><td>+0.21</td></tr>
+    </table>
+    <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
+  </div>
+</div>
+
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="load-spinner"></div>
+  <div class="load-text" id="loadingText">ACQUIRING DATA...</div>
+  <div class="load-bar"><div class="load-bar-inner"></div></div>
+</div>
+
+<script>
+let allPlayers = [];
+let myTeamIds = [];
+let opponentIds = [];
+let recommendedIds = new Set();
+let currentFilter = 'ALL';
+let searchQuery = '';
+let vbdMode = false;
+let vbdPlayers = [];
+let byeWeeks = {};
+let scarcityData = [];
+let sleepersData = [];
+let bustsData = [];
+let rosterConfig = {};
+let playerMap = {};  // player_id → player object
+
+const LS_KEY = 'warroom_';
+function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSet(k,v){localStorage.setItem(LS_KEY+k,JSON.stringify(v));}
+
+const ROSTER_SLOTS = [
+  {key:'qb',label:'QB',pos:'QB',count:1},
+  {key:'rb',label:'RB',pos:'RB',count:2},
+  {key:'wr',label:'WR',pos:'WR',count:2},
+  {key:'te',label:'TE',pos:'TE',count:1},
+  {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:1},
+  {key:'bench',label:'BN',pos:'ANY',count:6},
+];
+
+function showLoading(t){document.getElementById('loadingText').textContent=t;document.getElementById('loadingOverlay').classList.remove('hidden');}
+function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden');}
+
+async function loadData(){
+  showLoading('ACQUIRING NFL DATA...');
+  try{
+    const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
+      fetch('data/players.json'),
+      fetch('data/bye_weeks.json'),
+      fetch('data/scarcity.json'),
+      fetch('data/roster_config.json'),
+      fetch('data/accuracy.json'),
+    ]);
+    allPlayers=await pRes.json();
+    byeWeeks=await bRes.json();
+    scarcityData=await sRes.json();
+    rosterConfig=await rcRes.json();
+    // Build player map
+    playerMap={};
+    allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
+    // Load sleepers/busts
+    try{const sbRes=await fetch('data/sleepers_busts.json');const sb=await sbRes.json();
+      if(Array.isArray(sb)){sleepersData=sb.filter(x=>x.label==='SLEEPER');bustsData=sb.filter(x=>x.label==='BUST');}
+      else{sleepersData=sb.sleepers||[];bustsData=sb.busts||[];}
+    }catch(e){}
+    // Restore draft state from localStorage
+    myTeamIds=lsGet('myTeam',[]);
+    opponentIds=lsGet('opponentPicks',[]);
+    computeClientVBD();
+    getRecommendations();
+    renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
+    hideLoading();
+  }catch(e){hideLoading();alert('ERROR: '+e.message);}
+}
+
+function draftPlayer(pid,team){
+  if(team==='mine'){
+    if(myTeamIds.includes(pid))return;
+    myTeamIds.push(pid);
+  }else{
+    if(opponentIds.includes(pid))return;
+    opponentIds.push(pid);
+  }
+  lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  refreshAll();
+}
+function undoDraft(pid){
+  myTeamIds=myTeamIds.filter(id=>id!==pid);
+  opponentIds=opponentIds.filter(id=>id!==pid);
+  lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  refreshAll();
+}
+function resetDraft(){
+  if(!confirm('RESET ALL DRAFT PICKS?'))return;
+  myTeamIds=[];opponentIds=[];
+  lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  refreshAll();
+}
+
+// Client-side VBD computation (matches backend logic)
+let replacementLevels={};
+function computeClientVBD(){
+  const rawSlots=rosterConfig.roster_slots||{};
+  const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
+  const numTeams=rosterConfig.num_teams||12;
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  // Step 1: Compute replacement level per base position (skip flex/bench)
+  replacementLevels={};
+  const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
+  for(const[k,v] of Object.entries(rawSlots)){
+    if(k==='flex'||k==='bench')continue;
+    const pos=keyMap[k]||k.toUpperCase();
+    const nStarters=numTeams*v;
+    const posPlayers=available.filter(p=>p.position===pos).sort((a,b)=>b.projected_points-a.projected_points);
+    if(posPlayers.length>=nStarters){
+      replacementLevels[pos]=posPlayers[nStarters-1].projected_points;
+    }else if(posPlayers.length>0){
+      replacementLevels[pos]=posPlayers[posPlayers.length-1].projected_points;
+    }else{
+      replacementLevels[pos]=0;
+    }
+  }
+  // Step 2: Flex replacement = min replacement among flex-eligible positions
+  // This matches the backend: flex slot uses the cheapest replacement
+  const flexReps=flexEligible.map(pos=>replacementLevels[pos]).filter(v=>v!==undefined);
+  if(flexReps.length) replacementLevels.FLEX=Math.min(...flexReps);
+  // Step 3: Compute VBD for each player
+  // Flex-eligible players: VBD = max(above own position rep, above flex rep)
+  // Non-flex players: VBD = above own position rep
+  allPlayers.forEach(p=>{
+    const ownRep=replacementLevels[p.position]||0;
+    const flexRep=replacementLevels.FLEX||ownRep;
+    // Flex-eligible players get the higher VBD (more valuable if they can fill flex)
+    if(flexEligible.includes(p.position)){
+      p.vbd=Math.max(0,p.projected_points-ownRep,p.projected_points-flexRep);
+    }else{
+      p.vbd=Math.max(0,p.projected_points-ownRep);
+    }
+  });
+}
+
+function getRecommendations(){
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  // Sort by VBD with roster need bonus
+  const myPosCount={};
+  myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
+  const rawSlots=rosterConfig.roster_slots||{};
+  const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',flex:'FLEX',k:'K',defense:'DEF'};
+  const slots={};
+  for(const[k,v] of Object.entries(rawSlots)){
+    const pos=keyMap[k]||k.toUpperCase();
+    if(pos!=='BN'&&pos!=='FLEX') slots[pos]=v;
+  }
+  const scored=available.map(p=>{
+    let score=p.vbd||0;
+    const needed=Math.max(0,(slots[p.position]||0)-(myPosCount[p.position]||0));
+    if(needed>0)score+=15; // Need bonus
+    const round=Math.floor((myTeamIds.length+opponentIds.length)/12)+1;
+    if(round>=8&&needed>0)score+=25; // Late-round need urgency
+    return {...p,score};
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  const top5=scored.slice(0,5);
+  recommendedIds=new Set(top5.map(x=>x.player_id));
+  renderRecommendations(top5);
+}
+
+function refreshAll(){
+  computeClientVBD();
+  getRecommendations();
+  renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
+}
+
+// Helper: get player objects from IDs
+function getMyTeamPlayers(){return myTeamIds.map(id=>playerMap[id]).filter(Boolean);}
+function getOpponentPlayers(){return opponentIds.map(id=>playerMap[id]).filter(Boolean);}
+
+function posTag(p){
+  const cls={'QB':'pos-tag-qb','RB':'pos-tag-rb','WR':'pos-tag-wr','TE':'pos-tag-te','K':'pos-tag-k','DEF':'pos-tag-def'}[p]||'';
+  return `<span class="pos-tag ${cls}">${p}</span>`;
+}
+
+function renderPlayerPool(){
+  const c=document.getElementById('playerPool');
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
+  // Filter out drafted players
+  f=f.filter(p=>!drafted.has(p.player_id));
+  // Always sort by VBD — it accounts for positional scarcity
+  // (QB raw points are high but replacement QB also scores a lot, so VBD is lower)
+  f=[...f].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
+  if(currentFilter!=='ALL')f=f.filter(p=>p.position===currentFilter);
+  if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
+  if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
+  const vbdHead=vbdMode?'<th>VBD</th>':'';
+  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  f.forEach((p,i)=>{
+    const isR=recommendedIds.has(p.player_id);
+    const vbdCell=vbdMode?`<td class="vbd-cell">${(p.vbd||0).toFixed(1)}</td>`:'';
+    const ciLow=p.ci_low!=null?p.ci_low.toFixed(0):'—';
+    const ciHigh=p.ci_high!=null?p.ci_high.toFixed(0):'—';
+    const risk=p.risk||'low';
+    const riskColor={'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888';
+    const bye=byeWeeks[p.team]||[];
+    const byeStr=bye.length?bye.join(','):'—';
+    // Check if drafting this player creates a bye conflict
+    const byeConflict=checkByeConflictForPlayer(p);
+    const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
+    const draftBtn=byeConflict?
+      `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
+      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`;
+    h+=`<tr class="${isR?'rec-row':''}">
+      <td class="rank-cell">${i+1}</td>
+      <td class="name-cell">${p.player_name||p.player_id}</td>
+      <td>${posTag(p.position)}</td>
+      <td class="team-cell">${p.team||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
+      <td class="pts-cell">${(p.projected_points||0).toFixed(1)}</td>
+      ${vbdCell}
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
+      <td class="actions-cell">
+        ${draftBtn}
+        <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
+      </td></tr>`;
+  });
+  h+='</tbody></table>';c.innerHTML=h;
+}
+
+function assignRosterSlots(players){
+  // Properly assign players to roster slots by position matching
+  const assigned=new Map(); // player_id -> slot label
+  const remaining=[...players].sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
+  const slotAssignments=[]; // [{slot, player, slotLabel}]
+
+  // Pass 1: fill position-specific slots (QB->QB, RB->RB, etc.)
+  ROSTER_SLOTS.forEach(slot=>{
+    if(slot.key==='flex'||slot.key==='bench') return; // handle later
+    for(let i=0;i<slot.count;i++){
+      const posMatch=slot.pos.split('/'); // e.g. ['RB'] or ['RB','WR','TE'] for flex
+      const idx=remaining.findIndex(p=>posMatch.includes(p.position));
+      if(idx>=0){
+        const p=remaining.splice(idx,1)[0];
+        const label=slot.label+(slot.count>1?(i+1):'');
+        slotAssignments.push({slot,label,player:p});
+        assigned.set(p.player_id,label);
+      }else{
+        const label=slot.label+(slot.count>1?(i+1):'');
+        slotAssignments.push({slot,label,player:null});
+      }
+    }
+  });
+
+  // Pass 2: fill FLEX slot (best remaining RB/WR/TE)
+  ROSTER_SLOTS.filter(s=>s.key==='flex').forEach(slot=>{
+    for(let i=0;i<slot.count;i++){
+      const flexPos=slot.pos.split('/');
+      const idx=remaining.findIndex(p=>flexPos.includes(p.position));
+      if(idx>=0){
+        const p=remaining.splice(idx,1)[0];
+        const label=slot.label;
+        slotAssignments.push({slot,label,player:p});
+        assigned.set(p.player_id,label);
+      }else{
+        slotAssignments.push({slot,label:slot.label,player:null});
+      }
+    }
+  });
+
+  // Pass 3: fill bench with remaining players
+  ROSTER_SLOTS.filter(s=>s.key==='bench').forEach(slot=>{
+    for(let i=0;i<slot.count;i++){
+      if(remaining.length){
+        const p=remaining.shift();
+        const label='BN'+(slot.count>1?(i+1):'');
+        slotAssignments.push({slot,label,player:p});
+        assigned.set(p.player_id,label);
+      }else{
+        slotAssignments.push({slot,label:'BN'+(slot.count>1?(i+1):''),player:null});
+      }
+    }
+  });
+
+  return slotAssignments;
+}
+
+function renderMyTeam(){
+  const c=document.getElementById('myTeamSlots');
+  const slotAssignments=assignRosterSlots(getMyTeamPlayers());
+  let h='';
+  slotAssignments.forEach(({slot,label,player:p})=>{
+    if(p){
+      const posCls=(p.position||'').toLowerCase();
+      const bye=byeWeeks[p.team]||[];
+      const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
+      h+=`<div class="roster-slot filled-${posCls}">
+        <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+      </div>`;
+    }else{
+      h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
+    }
+  });
+  c.innerHTML=h;
+  const total=getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0);
+  document.getElementById('totalPts').textContent=total.toFixed(1);
+}
+
+function renderOpponentPicks(){
+  const c=document.getElementById('opponentPicks');
+  const oppP=getOpponentPlayers();
+  if(!oppP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>';return;}
+  c.innerHTML=oppP.map(p=>
+    `<div class="opp-entry"><div>${posTag(p.position)} ${p.player_name||p.player_id}</div><div style="display:flex;align-items:center;gap:6px;"><span class="opp-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm" onclick="undoDraft('${p.player_id}')">✕</button></div></div>`
+  ).join('');
+}
+
+function renderRecommendations(recs){
+  const c=document.getElementById('recommendations');
+  if(!recs||!recs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No intel yet.</div>';return;}
+  c.innerHTML=recs.map((r,i)=>
+    `<div class="intel-card">
+      <div class="intel-rank">#${i+1}</div>
+      <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}</div>
+      <div class="intel-pts">${(r.projected_points||0).toFixed(1)} proj pts</div>
+      <div class="intel-actions">
+        <button class="btn btn-sm btn-draft" onclick="draftPlayer('${r.player_id}','mine')">DRAFT</button>
+        <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function updateStatus(){
+  document.getElementById('availCount').textContent=allPlayers.length;
+  const myTeamP=getMyTeamPlayers();const oppP=getOpponentPlayers();
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  document.getElementById('availCount').textContent=allPlayers.filter(p=>!drafted.has(p.player_id)).length;
+  document.getElementById('myCount').textContent=myTeamP.length;
+  document.getElementById('oppCount').textContent=oppP.length;
+  document.getElementById('roundNum').textContent=Math.floor((myTeamP.length+oppP.length)/12)+1;
+  // Position counts on my team
+  const posCounts={};myTeamP.forEach(p=>{const pos=p.position||'?';posCounts[pos]=(posCounts[pos]||0)+1;});
+  document.getElementById('qbCount').textContent=posCounts['QB']||0;
+  document.getElementById('rbCount').textContent=posCounts['RB']||0;
+  document.getElementById('wrCount').textContent=posCounts['WR']||0;
+  document.getElementById('teCount').textContent=posCounts['TE']||0;
+}
+
+function filterPos(pos,btn){
+  currentFilter=pos;
+  document.querySelectorAll('.pos-filter').forEach(b=>{b.className='pos-filter';});
+  if(pos==='ALL'){btn.classList.add('on');}
+  else{
+    const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te'}[pos]||'on';
+    btn.classList.add(cls);
+  }
+  renderPlayerPool();
+}
+function searchPlayers(q){searchQuery=q;renderPlayerPool();}
+
+function checkByeConflictForPlayer(player){
+  // Returns conflict info if drafting this player creates a bye conflict, else null
+  if(!byeWeeks || !myTeamIds.length) return null;
+  const pos=player.position;
+  if(pos==='K'||pos==='DEF') return null;
+  const playerBye=byeWeeks[player.team]||[];
+  if(!playerBye.length) return null;
+
+  // Check each of my rostered players at same position
+  const conflicts=[];
+  getMyTeamPlayers().forEach(p=>{
+    if(p.position!==pos) return;
+    const rosterBye=byeWeeks[p.team]||[];
+    const overlap=playerBye.filter(w=>rosterBye.includes(w));
+    if(overlap.length){
+      // Check bench coverage
+      const benchAtPos=getMyTeamPlayers().filter(mp=>mp.position===pos && !overlap.some(w=>(byeWeeks[mp.team]||[]).includes(w)));
+      conflicts.push({
+        week: overlap[0],
+        position: pos,
+        existing_player: p.player_name||p.player_id,
+        existing_team: p.team,
+        new_player: player.player_name||player.player_id,
+        new_team: player.team,
+        has_coverage: benchAtPos.length > 0,
+        severity: benchAtPos.length > 0 ? 'warning' : 'critical'
+      });
+    }
+  });
+  return conflicts.length ? conflicts[0] : null;
+}
+
+function draftWithWarning(pid, team, conflict){
+  const msg = conflict.severity==='critical'
+    ? `⚠ BYE CONFLICT: ${conflict.new_player} (${conflict.new_team}) and ${conflict.existing_player} (${conflict.existing_team}) both have bye week ${conflict.week}.\nNo bench coverage at ${conflict.position}!\n\nDraft anyway?`
+    : `⚡ Bye overlap: ${conflict.new_player} (${conflict.new_team}) and ${conflict.existing_player} (${conflict.existing_team}) share bye week ${conflict.week}.\nBench coverage available.\n\nDraft anyway?`;
+  if(confirm(msg)){
+    draftPlayer(pid, team);
+  }
+}
+
+
+function loadByeConflicts(){
+  const c=document.getElementById('byePanel');
+  const myTeamP=getMyTeamPlayers();
+  if(!myTeamP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft players to check conflicts.</div>';return;}
+  // Compute bye conflicts client-side
+  const conflicts=[];
+  const posGroups={};
+  myTeamP.forEach(p=>{const pos=p.position;if(!posGroups[pos])posGroups[pos]=[];posGroups[pos].push(p);});
+  for(const[pos,players] of Object.entries(posGroups)){
+    if(pos==='K'||pos==='DEF')continue;
+    for(let i=0;i<players.length;i++){
+      for(let j=i+1;j<players.length;j++){
+        const bye1=byeWeeks[players[i].team]||[];
+        const bye2=byeWeeks[players[j].team]||[];
+        const overlap=bye1.filter(w=>bye2.includes(w));
+        if(overlap.length){
+          const benchAtPos=myTeamP.filter(mp=>mp.position===pos&&!overlap.some(w=>(byeWeeks[mp.team]||[]).includes(w)));
+          conflicts.push({week:overlap[0],position:pos,players:[{name:players[i].player_name},{name:players[j].player_name}],has_coverage:benchAtPos.length>0,severity:benchAtPos.length>0?'warning':'critical'});
+        }
+      }
+    }
+  }
+  if(!conflicts.length){c.innerHTML='<div style="color:#44ff44;font-size:12px;padding:4px;">✓ No bye conflicts</div>';return;}
+  let h='';
+  conflicts.forEach(cf=>{
+    const isCrit=cf.severity==='critical';
+    const col=isCrit?'#ff4444':'#ffaa00';
+    const icon=isCrit?'⚠':'⚡';
+    const label=isCrit?'CRITICAL':'WARNING';
+    h+=`<div style="padding:4px 6px;margin:2px 0;border-left:3px solid ${col};font-size:11px;">
+      <div style="color:${col};font-weight:700;">${icon} WK${cf.week} ${label}</div>
+      <div style="color:var(--fg);">${cf.position}: ${cf.players.map(p=>p.name).join(', ')}</div>
+      ${cf.has_coverage?'<div style="color:var(--smoke);">Bench coverage available</div>':'<div style="color:#ff4444;">No bench coverage!</div>'}
+    </div>`;
+  });
+  c.innerHTML=h;
+}
+
+function loadSleepers(){
+  const c=document.getElementById('sleepersPanel');
+  if(!sleepersData.length&&!bustsData.length){
+    c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
+    return;
+  }
+  let h='';
+  if(sleepersData.length){
+    h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
+    sleepersData.slice(0,5).forEach(s=>{
+      h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
+        ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
+      </div>`;
+    });
+  }
+  if(bustsData.length){
+    h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
+    bustsData.slice(0,5).forEach(b=>{
+      h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
+        ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
+      </div>`;
+    });
+  }
+  c.innerHTML=h;
+}
+
+function loadHandcuffs(){
+  const c=document.getElementById('handcuffPanel');
+  const myTeamP=getMyTeamPlayers();
+  if(!myTeamP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
+  // Client-side handcuff detection
+  const myRBs=myTeamP.filter(p=>p.position==='RB');
+  if(!myRBs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  const cuffs=[];
+  myRBs.forEach(starter=>{
+    const backups=available.filter(p=>p.position==='RB'&&p.team===starter.team);
+    backups.forEach(b=>{cuffs.push({starter_name:starter.player_name,starter_team:starter.team,handcuff_name:b.player_name,handcuff_proj:(b.projected_points||0).toFixed(1)});});
+  });
+  if(!cuffs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No handcuff RBs available for your starters.</div>';return;}
+  let h='';
+  cuffs.forEach(cf=>{
+    h+=`<div style="padding:3px 6px;margin:2px 0;border-left:3px solid #6b9fff;font-size:10px;">
+      <div style="color:#6b9fff;font-weight:700;">🔒 ${cf.starter_name} (${cf.starter_team})</div>
+      <div style="color:var(--fg);">→ ${cf.handcuff_name} proj=${cf.handcuff_proj}</div>
+    </div>`;
+  });
+  c.innerHTML=h;
+}
+
+function toggleInfo(){
+  const overlay=document.getElementById('infoOverlay');
+  overlay.classList.toggle('active');
+}
+
+function toggleVBD(){
+  const btn=document.getElementById('vbdToggle');
+  vbdMode=!vbdMode;
+  if(vbdMode){
+    btn.classList.add('on');
+    // Sort all players by VBD
+    vbdPlayers=[...allPlayers].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
+  }else{
+    btn.classList.remove('on');
+  }
+  renderPlayerPool();
+}
+
+function loadScarcity(){
+  const c=document.getElementById('scarcityPanel');
+  const data=scarcityData;
+  if(!data.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;">No data.</div>';return;}
+  const maxGap=Math.max(...data.map(d=>d.tier_gap||0));
+  let h='';
+  data.forEach(d=>{
+    const pos=(d.position||'').toLowerCase();
+    const pct=maxGap>0?((d.tier_gap||0)/maxGap*100):0;
+    const rank=d.scarcity_rank;
+    const label=rank===1?'HIGH':rank<=3?'MED':'LOW';
+    const color=rank===1?'var(--rb)':rank<=3?'var(--wr)':'var(--smoke)';
+    h+=`<div class="scarcity-row">
+      <div class="scarcity-label"><span>${d.position} <span style="color:${color};font-size:10px">${label}</span></span><span style="color:var(--te)">${(d.tier_gap||0).toFixed(0)} pt cliff</span></div>
+      <div class="scarcity-bar-bg"><div class="scarcity-bar-fill s-${pos}" style="width:${pct}%"></div></div>
+      <div class="scarcity-detail">Elite ${(d.top_pts||0).toFixed(0)} → Next tier ${(d.replacement_pts||0).toFixed(0)} | ${d.starters_needed} starters needed</div>
+    </div>`;
+  });
+  c.innerHTML=h;
+}
+
+// Auto-load data on page load
+loadData();
+</script>
+</body>
+</html>

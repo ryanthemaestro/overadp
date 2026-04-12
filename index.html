@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OverADP — AI Fantasy Football Draft Assistant That Beats ADP by 58%</title>
+<meta name="description" content="OverADP uses machine learning to predict fantasy football performance with 0.947 correlation — crushing ADP's 0.600. Find sleepers, avoid busts, dominate your draft.">
+<meta name="keywords" content="fantasy football draft assistant, fantasy football predictions, VBD draft guide, fantasy football AI, fantasy football sleepers, fantasy draft tool, beat ADP">
+<meta property="og:title" content="OverADP — AI Fantasy Football Draft Tool That Beats ADP by 58%">
+<meta property="og:description" content="Our 4-model ensemble predicts fantasy points with 0.947 correlation vs ADP's 0.600. 16/20 top player hit rate vs ADP's 7/20.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://overadp.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OverADP — Beat Your Draft With Machine Learning">
+<meta name="twitter:description" content="0.947 correlation vs ADP's 0.600. 16/20 top player hit rate. Free to start.">
+<link rel="canonical" href="https://overadp.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--fg:#e8e8f0;--fg2:#a0a0b8;--accent:#00ff88;--accent2:#00cc6a;--red:#ff4455;--blue:#4488ff;--purple:#8855ff;--gold:#ffcc00;--radius:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--fg);font-family:'Inter',system-ui,sans-serif;line-height:1.6;overflow-x:hidden;}
+a{color:var(--accent);text-decoration:none;}
+.container{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.05);padding:12px 0;}
+nav .container{display:flex;align-items:center;justify-content:space-between;}
+.logo{font-weight:900;font-size:22px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:18px;font-weight:900;}
+.nav-links{display:flex;gap:24px;align-items:center;}
+.nav-links a{color:var(--fg2);font-size:14px;font-weight:600;transition:color 0.2s;}
+.nav-links a:hover{color:var(--accent);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-weight:700;font-size:14px;border:none;cursor:pointer;transition:all 0.2s;}
+.btn-primary{background:var(--accent);color:var(--bg);}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+.btn-outline{background:transparent;color:var(--accent);border:2px solid var(--accent);}
+.btn-outline:hover{background:rgba(0,255,136,0.1);}
+
+/* HERO */
+.hero{padding:140px 0 80px;text-align:center;position:relative;}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:800px;height:600px;background:radial-gradient(ellipse,rgba(0,255,136,0.08) 0%,transparent 70%);pointer-events:none;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);border-radius:20px;padding:6px 16px;font-size:13px;color:var(--accent);font-weight:600;margin-bottom:24px;}
+.hero h1{font-size:clamp(40px,6vw,72px);font-weight:900;letter-spacing:-2px;line-height:1.05;margin-bottom:20px;}
+.hero h1 span{color:var(--accent);}
+.hero-sub{font-size:clamp(18px,2.5vw,24px);color:var(--fg2);max-width:700px;margin:0 auto 40px;font-weight:400;}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.hero-stat{display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--fg2);margin-top:32px;}
+.hero-stat strong{color:var(--accent);font-size:18px;}
+
+/* COMPARISON */
+.comparison{padding:80px 0;background:var(--bg2);}
+.section-label{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:12px;}
+.section-title{font-size:clamp(28px,4vw,42px);font-weight:900;letter-spacing:-1px;margin-bottom:16px;}
+.section-sub{color:var(--fg2);font-size:18px;max-width:600px;margin-bottom:48px;}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+@media(max-width:700px){.compare-grid{grid-template-columns:1fr;}}
+.compare-card{background:var(--bg3);border-radius:var(--radius);padding:32px;border:1px solid rgba(255,255,255,0.05);}
+.compare-card.winner{border-color:var(--accent);box-shadow:0 0 40px rgba(0,255,136,0.08);}
+.compare-card .card-label{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.compare-card .card-name{font-size:24px;font-weight:900;margin-bottom:24px;}
+.compare-card .card-name.ours{color:var(--accent);}
+.compare-card .card-name.theirs{color:var(--red);}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{color:var(--fg2);font-size:14px;}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+.stat-value.green{color:var(--accent);}
+.stat-value.red{color:var(--red);}
+.winner-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(0,255,136,0.15);color:var(--accent);font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;margin-top:16px;}
+
+/* PER POSITION */
+.position-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:80px 0;}
+@media(max-width:800px){.position-grid{grid-template-columns:repeat(2,1fr);}}
+.pos-card{background:var(--bg3);border-radius:var(--radius);padding:24px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.pos-card .pos-name{font-size:28px;font-weight:900;margin-bottom:8px;}
+.pos-card .pos-name.qb{color:var(--red);}
+.pos-card .pos-name.rb{color:var(--accent);}
+.pos-card .pos-name.wr{color:var(--blue);}
+.pos-card .pos-name.te{color:var(--purple);}
+.pos-card .pos-r2{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+.pos-card .pos-label{font-size:12px;color:var(--fg2);}
+.pos-card .pos-delta{font-size:13px;color:var(--accent);font-weight:600;margin-top:8px;}
+
+/* FEATURES */
+.features{padding:80px 0;background:var(--bg2);}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+@media(max-width:800px){.features-grid{grid-template-columns:1fr;}}
+.feature-card{background:var(--bg3);border-radius:var(--radius);padding:28px;border:1px solid rgba(255,255,255,0.05);}
+.feature-icon{font-size:28px;margin-bottom:12px;}
+.feature-title{font-size:18px;font-weight:700;margin-bottom:8px;}
+.feature-desc{color:var(--fg2);font-size:14px;line-height:1.5;}
+
+/* CTA */
+.cta-section{padding:100px 0;text-align:center;position:relative;}
+.cta-section::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(0,255,136,0.06) 0%,transparent 70%);pointer-events:none;}
+.cta-section h2{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-1px;margin-bottom:16px;}
+.cta-section h2 span{color:var(--accent);}
+.cta-section p{color:var(--fg2);font-size:18px;margin-bottom:36px;}
+
+/* FOOTER */
+footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);text-align:center;}
+footer p{color:var(--fg2);font-size:13px;}
+
+/* SCHEMA MARKUP - hidden */
+.schema-only{display:none;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-icon">Δ</div>
+      OverADP
+    </div>
+    <div class="nav-links">
+      <a href="#comparison">The Data</a>
+      <a href="#features">Features</a>
+      <a href="/app/" class="btn btn-primary">LAUNCH DRAFT →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">⚡ 4-MODEL ML ENSEMBLE</div>
+    <h1>Beat ADP.<br><span>Win Your Draft.</span></h1>
+    <p class="hero-sub">Our machine learning model predicts fantasy football performance with <strong style="color:var(--accent)">0.947 correlation</strong> — crushing ADP's 0.600. Stop following the crowd. Start drafting with data.</p>
+    <div class="hero-cta">
+      <a href="/app/" class="btn btn-primary" style="font-size:18px;padding:16px 32px;">START FREE DRAFT →</a>
+      <a href="#comparison" class="btn btn-outline" style="font-size:18px;padding:16px 32px;">SEE THE PROOF</a>
+    </div>
+    <div class="hero-stat">
+      Backtested on <strong>2024</strong> season · <strong>465</strong> players · <strong>4</strong> ML models · Walk-forward validated
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="comparison" id="comparison">
+  <div class="container">
+    <div class="section-label">Head to Head</div>
+    <div class="section-title">OverADP vs ADP — Not Even Close</div>
+    <div class="section-sub">We tested our 4-model ensemble against ADP (Average Draft Position) on the 2024 NFL season. ADP represents where thousands of fantasy players draft. Our model destroys it.</div>
+
+    <div class="compare-grid">
+      <div class="compare-card winner">
+        <div class="card-label">Machine Learning</div>
+        <div class="card-name ours">OverADP</div>
+        <div class="stat-row">
+          <span class="stat-label">Correlation with actual</span>
+          <span class="stat-value green">0.947</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">R² (explained variance)</span>
+          <span class="stat-value green">0.870</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Top-20 players identified</span>
+          <span class="stat-value green">16/20</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Mean Absolute Error</span>
+          <span class="stat-value green">13.5 pts</span>
+        </div>
+        <div class="winner-badge">✓ WINNER</div>
+      </div>
+
+      <div class="compare-card">
+        <div class="card-label">Wisdom of the Crowd</div>
+        <div class="card-name theirs">ADP</div>
+        <div class="stat-row">
+          <span class="stat-label">Correlation with actual</span>
+          <span class="stat-value red">0.600</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">R² (explained variance)</span>
+          <span class="stat-value" style="color:var(--fg2)">N/A</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Top-20 players identified</span>
+          <span class="stat-value red">7/20</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Mean Absolute Error</span>
+          <span class="stat-value" style="color:var(--fg2)">N/A</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PER POSITION -->
+<section class="position-grid" style="background:var(--bg);">
+  <div class="container" style="grid-column:1/-1;">
+    <div class="section-label">Per Position</div>
+    <div class="section-title" style="margin-bottom:32px;">We Beat ADP At Every Position</div>
+  </div>
+  <div class="pos-card">
+    <div class="pos-name qb">QB</div>
+    <div class="pos-r2">0.866</div>
+    <div class="pos-label">model correlation</div>
+    <div class="pos-delta">+0.32 vs ADP (0.544)</div>
+  </div>
+  <div class="pos-card">
+    <div class="pos-name rb">RB</div>
+    <div class="pos-r2">0.970</div>
+    <div class="pos-label">model correlation</div>
+    <div class="pos-delta">+0.19 vs ADP (0.780)</div>
+  </div>
+  <div class="pos-card">
+    <div class="pos-name wr">WR</div>
+    <div class="pos-r2">0.950</div>
+    <div class="pos-label">model correlation</div>
+    <div class="pos-delta">+0.25 vs ADP (0.704)</div>
+  </div>
+  <div class="pos-card">
+    <div class="pos-name te">TE</div>
+    <div class="pos-r2">0.894</div>
+    <div class="pos-label">model correlation</div>
+    <div class="pos-delta">+0.21 vs ADP (0.688)</div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Draft Tools</div>
+    <div class="section-title">Everything You Need To Dominate</div>
+    <div class="section-sub">Real-time draft tracking with AI-powered insights. No more guessing.</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">VBD Draft Board</div>
+        <div class="feature-desc">Players ranked by Value Based Drafting — not raw points. Automatically accounts for positional scarcity so you draft the right position at the right time.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💤</div>
+        <div class="feature-title">Sleeper Detection</div>
+        <div class="feature-desc">When our model ranks a player far above their ADP, that's a sleeper. We flagged 13 players ADP missed in 2024 — including Lamar Jackson at pick #24.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📉</div>
+        <div class="feature-title">Bust Alerts</div>
+        <div class="feature-desc">ADP overvalues name recognition. Our model spots players the market is overpaying for — before you waste a pick on them.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Positional Scarcity</div>
+        <div class="feature-desc">See which positions have the steepest talent cliffs. If TE drops off a cliff after the top 5, you know to grab one early.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Handcuff Alerts</div>
+        <div class="feature-desc">Automatically finds backup RBs on the same team as your starters. Draft insurance for your 1st-round picks.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Bye Conflict Detection</div>
+        <div class="feature-desc">Warns when drafting a player creates a bye week conflict with your starters. Never get caught with an empty lineup again.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Stop Following ADP.<br><span>Start Beating It.</span></h2>
+    <p>Free to start. No credit card required. Your league won't know what hit them.</p>
+    <a href="/app/" class="btn btn-primary" style="font-size:20px;padding:18px 40px;">LAUNCH DRAFT BOARD →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <p>© 2025 OverADP · Fantasy football draft tools powered by machine learning · Not affiliated with the NFL</p>
+  </div>
+</footer>
+
+<!-- JSON-LD Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "OverADP",
+  "applicationCategory": "Sports",
+  "operatingSystem": "Web",
+  "description": "AI-powered fantasy football draft assistant that beats ADP by 58%. 4-model ML ensemble with 0.947 correlation vs ADP's 0.600.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+[build]
+  publish = "site"
+  command = "echo 'Static site - no build needed'"
+
+[[headers]]
+  for = "/app/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+    Access-Control-Allow-Origin = "*"
+
+[[redirects]]
+  from = "/app"
+  to = "/app/"
+  status = 200
