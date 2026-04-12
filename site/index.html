@@ -98,6 +98,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .nav-links a:hover{color:var(--green);}
 .hamburger{display:none;cursor:pointer;padding:8px 14px;background:var(--bg3);border:1px solid var(--fg3);border-radius:4px;color:var(--fg);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;z-index:101;}
 .hamburger:hover{border-color:var(--green);color:var(--green);}
+.mobile-launch{display:none;}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
   font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;
@@ -275,8 +276,8 @@ footer a:hover{color:var(--green);}
   .nav-links.open{display:flex !important;}
   .nav-links a{padding:10px 0;border-bottom:1px solid rgba(0,255,106,0.06);}
   .nav-links .btn{width:100%;justify-content:center;border-bottom:none;}
-  .hamburger{display:inline-block !important;flex-shrink:0;}
-  .mobile-launch{display:inline-flex !important;}
+  .hamburger{display:inline-block !important;}
+  .mobile-launch{display:inline-flex !important;margin-left:auto !important;}
   nav .wrap{position:relative;}
   .hero{padding:100px 0 60px;}
   .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
@@ -311,7 +312,7 @@ footer a:hover{color:var(--green);}
       <div class="logo-mark">Δ</div>
       OVERADP
     </div>
-    <a href="/app/" class="btn btn-go mobile-launch" style="display:none;margin-left:auto;">LAUNCH</a>
+    <a href="/app/" class="btn btn-go mobile-launch">LAUNCH</a>
     <button class="hamburger" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">MENU</button>
     <div class="nav-links">
       <a href="#proof" onclick="document.querySelector('.nav-links').classList.remove('open')">Proof</a>
