@@ -1,1 +1,1 @@
-{"QB": {"best_model": "catboost", "mae": 20.9, "rmse": 27.08, "r2": 0.89}, "RB": {"best_model": "ridge", "mae": 9.06, "rmse": 13.44, "r2": 0.96}, "WR": {"best_model": "catboost", "mae": 5.83, "rmse": 9.63, "r2": 0.97}, "TE": {"best_model": "xgboost", "mae": 3.4, "rmse": 5.16, "r2": 0.98}}
+{"QB": {"best_model": "catboost", "mae": 23.17, "rmse": 32.47, "r2": 0.84}, "RB": {"best_model": "ridge", "mae": 9.29, "rmse": 13.43, "r2": 0.96}, "WR": {"best_model": "xgboost", "mae": 5.7, "rmse": 9.13, "r2": 0.97}, "TE": {"best_model": "xgboost", "mae": 3.4, "rmse": 5.16, "r2": 0.98}}
