@@ -1,0 +1,35 @@
+standard:
+  passing_yards: 0.04
+  passing_td: 4
+  passing_int: -2
+  rushing_yards: 0.1
+  rushing_td: 6
+  receiving_yards: 0.1
+  receiving_td: 6
+  receptions: 0
+  fumble_lost: -2
+  two_point_conversion: 2
+
+half_ppr:
+  passing_yards: 0.04
+  passing_td: 4
+  passing_int: -2
+  rushing_yards: 0.1
+  rushing_td: 6
+  receiving_yards: 0.1
+  receiving_td: 6
+  receptions: 0.5
+  fumble_lost: -2
+  two_point_conversion: 2
+
+ppr:
+  passing_yards: 0.04
+  passing_td: 4
+  passing_int: -2
+  rushing_yards: 0.1
+  rushing_td: 6
+  receiving_yards: 0.1
+  receiving_td: 6
+  receptions: 1.0
+  fumble_lost: -2
+  two_point_conversion: 2

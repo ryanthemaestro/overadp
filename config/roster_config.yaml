@@ -1,0 +1,24 @@
+roster_slots:
+  qb: 1
+  rb: 2
+  wr: 2
+  te: 1
+  flex: 1
+  k: 1
+  defense: 1
+  bench: 6
+
+flex_eligible:
+  - rb
+  - wr
+  - te
+
+draft:
+  total_picks: 16
+  snake_draft: true
+  num_teams: 12
+
+data:
+  seasons_back: 5
+  min_games: 3
+  current_season: 2026

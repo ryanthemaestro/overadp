@@ -1,0 +1,18 @@
+[project]
+name = "nflmodel"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "nfl_data_py>=0.3.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+    "scikit-learn>=1.3.0",
+    "xgboost>=2.0.0",
+    "pulp>=2.7.0",
+    "click>=8.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

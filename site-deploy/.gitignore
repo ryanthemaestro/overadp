@@ -1,0 +1,2 @@
+# Only deploy the site/ directory
+# Everything else is the ML pipeline, not needed for hosting
