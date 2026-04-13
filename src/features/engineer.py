@@ -268,6 +268,11 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
     if "receiving_tds" in df.columns and "targets" in df.columns:
         df["rec_td_rate_lag1"] = df.groupby("player_id")["rec_td_rate"].shift(1) if "rec_td_rate" in df.columns else np.nan
 
+    # Cap extreme YoY pct changes and regression risk (from near-zero previous season)
+    for c in ["yoy_pct_change", "yoy_pct_change_injury_adj", "regression_risk_injury_adj"]:
+        if c in df.columns:
+            df[c] = df[c].clip(-500, 500)
+
     # Fill NaN
     for c in ["yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
               "pts_roll2", "rush_td_rate_lag1", "rec_td_rate_lag1",
