@@ -369,27 +369,94 @@ footer a:hover{color:var(--green);}
     <div class="section-tag">Proof</div>
     <div class="section-title">We Called It. ADP Didn't.</div>
     <div class="section-desc">Walk-forward validated on the 2025 NFL season. Here's what happened when our model disagreed with ADP consensus.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0;max-width:800px;">
-      <div style="padding:20px;border:1px solid rgba(0,255,106,0.15);border-radius:8px;background:var(--bg3);">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--green);margin-bottom:8px;">SLEEPER IDENTIFIED</div>
-        <div style="font-size:18px;font-weight:700;color:var(--fg);margin-bottom:4px;">Drake Maye</div>
-        <div style="font-family:var(--mono);font-size:12px;color:var(--smoke);line-height:1.6;">
-          ADP ranked him <strong style="color:var(--red);">#128 overall</strong><br>
-          Our model projected <strong style="color:var(--green);">212 pts</strong> (top-15)<br>
-          He finished as the <strong style="color:var(--green);">#2 QB with 351 pts</strong>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:40px 0;max-width:900px;">
+      <!-- SLEEPER CARD -->
+      <div style="position:relative;padding:28px 24px 24px;border:1px solid rgba(0,255,106,0.2);border-radius:3px;background:linear-gradient(170deg,rgba(0,255,106,0.04) 0%,var(--bg3) 40%);overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);"></div>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:12px;text-transform:uppercase;">▲ Sleeper Identified</div>
+        <div style="font-family:var(--display);font-size:24px;font-weight:700;color:var(--fg);margin-bottom:16px;letter-spacing:0.5px;">Drake Maye</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--fg2);margin-bottom:16px;">QB · 2025 Season</div>
+        <!-- ADP bar -->
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--red);">ADP #128</span>
+            <span style="color:var(--fg3);">consensus rank</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:15%;background:var(--red);border-radius:1px;"></div>
+          </div>
+        </div>
+        <!-- Model bar -->
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--green);">MODEL #15</span>
+            <span style="color:var(--fg3);">projected 212 pts</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:88%;background:var(--green);border-radius:1px;"></div>
+          </div>
+        </div>
+        <!-- Actual bar -->
+        <div style="margin-bottom:4px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--green);">ACTUAL #2 QB</span>
+            <span style="color:var(--fg3);">351 pts</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:95%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:1px;"></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,255,106,0.1);font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:0.5px;">
+          +113 RANK EDGE vs ADP
         </div>
       </div>
-      <div style="padding:20px;border:1px solid rgba(255,51,68,0.15);border-radius:8px;background:var(--bg3);">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--red);margin-bottom:8px;">BUST FLAGGED</div>
-        <div style="font-size:18px;font-weight:700;color:var(--fg);margin-bottom:4px;">Brian Thomas Jr.</div>
-        <div style="font-family:var(--mono);font-size:12px;color:var(--smoke);line-height:1.6;">
-          ADP ranked him <strong style="color:var(--red);">#14 overall</strong><br>
-          He finished with only <strong style="color:var(--red);">91 fantasy points</strong><br>
-          Drafted as a top-20 pick. Our model flagged the risk.
+
+      <!-- BUST CARD -->
+      <div style="position:relative;padding:28px 24px 24px;border:1px solid rgba(255,51,68,0.2);border-radius:3px;background:linear-gradient(170deg,rgba(255,51,68,0.04) 0%,var(--bg3) 40%);overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),transparent);"></div>
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:12px;text-transform:uppercase;">▼ Bust Flagged</div>
+        <div style="font-family:var(--display);font-size:24px;font-weight:700;color:var(--fg);margin-bottom:16px;letter-spacing:0.5px;">Brian Thomas Jr.</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--fg2);margin-bottom:16px;">WR · 2025 Season</div>
+        <!-- ADP bar -->
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--red);">ADP #14</span>
+            <span style="color:var(--fg3);">consensus rank</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:93%;background:var(--red);border-radius:1px;"></div>
+          </div>
+        </div>
+        <!-- Model bar -->
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--amber);">MODEL #40+</span>
+            <span style="color:var(--fg3);">flagged regression risk</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:35%;background:var(--amber);border-radius:1px;"></div>
+          </div>
+        </div>
+        <!-- Actual bar -->
+        <div style="margin-bottom:4px;">
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px;">
+            <span style="color:var(--red);">ACTUAL #50+</span>
+            <span style="color:var(--fg3);">91 pts</span>
+          </div>
+          <div style="height:6px;background:var(--bg);border-radius:1px;overflow:hidden;">
+            <div style="height:100%;width:12%;background:linear-gradient(90deg,var(--red),rgba(255,51,68,0.5));border-radius:1px;"></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,51,68,0.1);font-family:var(--mono);font-size:10px;color:var(--red);letter-spacing:0.5px;">
+          −36 RANK DROP vs ADP
         </div>
       </div>
     </div>
-    <p style="color:var(--smoke);font-size:12px;max-width:600px;">These aren't cherry-picked. Our model identified 16/20 top players correctly vs ADP's 8/20. That's 2x better. Every draft, ADP steers you wrong. Our model catches it.</p>
+
+    <div style="max-width:700px;margin:0 auto;text-align:center;">
+      <p style="color:var(--fg2);font-size:13px;line-height:1.7;">These aren't cherry-picked. Our model identified <strong style="color:var(--green);">16/20</strong> top players correctly vs ADP's <strong style="color:var(--red);">8/20</strong>. That's <strong style="color:var(--fg);">2x better</strong>. Every draft, ADP steers you wrong. Our model catches it.</p>
+    </div>
   </div>
 </section>
 
