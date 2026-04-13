@@ -25,12 +25,12 @@ POSITION_FEATURES = {
         "passing_yards_lag1", "passing_yards_lag2", "passing_yards_roll3",
         "passing_td_lag1", "passing_td_lag2",
         "passing_int_lag1",
-        "qb_completion_rate", "team_pass_volume",
-        "team_sack_rate", "ol_pass_block_quality",
+        "qb_completion_rate_lag1", "team_pass_volume_lag1",
+        "team_sack_rate", "ol_pass_block_quality_lag1",
         "rushing_yards_lag1", "rushing_td_lag1",
-        # Regression features
-        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
-        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
+        # Regression features (lagged to prevent leakage)
+        "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
+        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -55,12 +55,12 @@ POSITION_FEATURES = {
         "rushing_tds_lag1", "rushing_tds_lag2",
         "rushing_attempts_lag1",
         "receiving_yards_lag1", "targets_lag1", "receptions_lag1",
-        "rush_att_per_game", "targets_per_game",
-        "rb_share_of_team_rush", "rb_share_of_team_rush_td",
+        "rush_att_per_game_lag1", "targets_per_game_lag1",
+        "rb_share_of_team_rush_lag1", "rb_share_of_team_rush_td_lag1",
         "ol_quality_tier", "team_rush_ypa", "team_rush_td_rate",
-        # Regression features
-        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
-        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
+        # Regression features (lagged to prevent leakage)
+        "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
+        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -80,12 +80,12 @@ POSITION_FEATURES = {
         "receiving_tds_lag1", "receiving_tds_lag2",
         "targets_lag1", "targets_lag2", "targets_roll3",
         "receptions_lag1",
-        "target_share", "yards_per_target", "catch_rate",
-        "targets_per_game", "rec_td_rate",
-        "team_pass_volume", "qb_completion_rate",
-        # Regression features
-        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
-        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
+        "target_share_lag1", "yards_per_target_lag1", "catch_rate_lag1",
+        "targets_per_game_lag1", "rec_td_rate_lag1",
+        "team_pass_volume_lag1", "qb_completion_rate_lag1",
+        # Regression features (lagged to prevent leakage)
+        "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
+        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
@@ -105,12 +105,12 @@ POSITION_FEATURES = {
         "receiving_tds_lag1",
         "targets_lag1", "targets_lag2", "targets_roll3",
         "receptions_lag1",
-        "target_share", "yards_per_target", "catch_rate",
-        "targets_per_game", "rec_td_rate",
-        "team_pass_volume", "qb_completion_rate",
-        # Regression features
-        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
-        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
+        "target_share_lag1", "yards_per_target_lag1", "catch_rate_lag1",
+        "targets_per_game_lag1", "rec_td_rate_lag1",
+        "team_pass_volume_lag1", "qb_completion_rate_lag1",
+        # Regression features (lagged to prevent leakage)
+        "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
+        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
@@ -372,8 +372,9 @@ class PositionPipeline:
                 # Post-prediction regression adjustment:
                 # If player is coming off a breakout (>30% above 2yr avg),
                 # shrink projection toward their recent average.
-                regression_risk = row.get("regression_risk", 0)
-                is_breakout = row.get("is_breakout", 0)
+                # Use lagged features to prevent leakage (previous season's regression risk)
+                regression_risk = row.get("regression_risk_lag1", 0) or row.get("regression_risk", 0)
+                is_breakout = row.get("is_breakout_lag1", 0) or row.get("is_breakout", 0)
                 pts_roll2 = row.get("pts_roll2", 0)
 
                 if is_breakout and regression_risk > 30 and pts_roll2 > 0:

@@ -92,6 +92,12 @@ def compute_ol_rb_features(df: pd.DataFrame) -> pd.DataFrame:
         df["rb_share_of_team_rush_td"] = df["rushing_tds"] / team_rush_tds.replace(0, np.nan)
         df["rb_share_of_team_rush_td"] = df["rb_share_of_team_rush_td"].fillna(0)
 
+    # === LEAKAGE PREVENTION: Lag current-season share features ===
+    for c in ["rb_share_of_team_rush", "rb_share_of_team_rush_td"]:
+        if c in df.columns:
+            df[f"{c}_lag1"] = df.groupby("player_id")[c].shift(1)
+            df[f"{c}_lag1"] = df[f"{c}_lag1"].fillna(0)
+
     return df
 
 
@@ -122,6 +128,13 @@ def compute_qb_wr_features(df: pd.DataFrame) -> pd.DataFrame:
 
     if "team_sack_rate" in df.columns:
         df["ol_pass_block_quality"] = 1 - df["team_sack_rate"].fillna(0)
+
+    # === LEAKAGE PREVENTION: Lag current-season WR/QB features ===
+    for c in ["target_share", "yards_per_target", "team_pass_volume",
+              "qb_completion_rate", "ol_pass_block_quality"]:
+        if c in df.columns:
+            df[f"{c}_lag1"] = df.groupby("player_id")[c].shift(1)
+            df[f"{c}_lag1"] = df[f"{c}_lag1"].fillna(0)
 
     return df
 
@@ -163,6 +176,18 @@ def compute_volume_features(df: pd.DataFrame) -> pd.DataFrame:
     if "rushing_tds" in df.columns and "rushing_attempts" in df.columns:
         df["rush_td_rate"] = df["rushing_tds"] / df["rushing_attempts"].replace(0, np.nan)
         df["rush_td_rate"] = df["rush_td_rate"].fillna(0)
+
+    # === LEAKAGE PREVENTION: Lag current-season volume features ===
+    # targets_per_game, catch_rate, rush_att_per_game use current-season stats.
+    # The model should only see the PREVIOUS season's values.
+    current_season_volume_cols = [
+        "targets_per_game", "catch_rate", "rush_att_per_game",
+        "rush_td_rate", "rec_td_rate",
+    ]
+    for c in current_season_volume_cols:
+        if c in df.columns:
+            df[f"{c}_lag1"] = df.groupby("player_id")[c].shift(1)
+            df[f"{c}_lag1"] = df[f"{c}_lag1"].fillna(0)
 
     return df
 
@@ -273,12 +298,35 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
         if c in df.columns:
             df[c] = df[c].clip(-500, 500)
 
+    # === LEAKAGE PREVENTION: Lag all current-season regression features ===
+    # These features are derived from the current season's fantasy_points (the TARGET).
+    # Using them directly would be data leakage — the model would know the answer.
+    # Fix: shift by 1 season so the model only sees the PREVIOUS season's values.
+    # e.g., for predicting 2025, the model sees 2024's regression_risk, not 2025's.
+    current_season_regression_cols = [
+        "yoy_change", "yoy_pct_change", "regression_risk",
+        "is_breakout", "is_bust",
+        "yoy_change_injury_adj", "yoy_pct_change_injury_adj",
+        "regression_risk_injury_adj", "is_bust_injury_adj", "is_injury_bounce_back",
+        "fp_per_game",
+    ]
+    for c in current_season_regression_cols:
+        if c in df.columns:
+            lag_col = f"{c}_lag1"
+            df[lag_col] = df.groupby("player_id")[c].shift(1)
+
     # Fill NaN
     for c in ["yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
               "pts_roll2", "rush_td_rate_lag1", "rec_td_rate_lag1",
               "fp_per_game", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
               "is_bust_injury_adj", "regression_risk_injury_adj", "is_injury_bounce_back",
-              "yoy_change_injury_adj", "yoy_pct_change_injury_adj"]:
+              "yoy_change_injury_adj", "yoy_pct_change_injury_adj",
+              # Lagged versions (these are what the model should use)
+              "yoy_change_lag1", "yoy_pct_change_lag1", "regression_risk_lag1",
+              "is_breakout_lag1", "is_bust_lag1",
+              "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1",
+              "regression_risk_injury_adj_lag1", "is_bust_injury_adj_lag1",
+              "is_injury_bounce_back_lag1", "fp_per_game_lag1"]:
         if c in df.columns:
             df[c] = df[c].fillna(0)
 
