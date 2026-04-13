@@ -639,6 +639,10 @@ def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None
                 match_cols.append("team")
 
             adp_key = adp_clean2[match_cols + ["adp"]].drop_duplicates(subset=match_cols)
+            # Skip ambiguous matches where ADP has multiple entries for same key
+            adp_dup = adp_clean2.groupby(match_cols).size()
+            adp_dup_keys = set(adp_dup[adp_dup > 1].index)
+            adp_key = adp_key[~adp_key.set_index(match_cols).index.isin(adp_dup_keys)]
             adp_key = adp_key.rename(columns={"adp": "adp_supp"})
 
             df = df.merge(adp_key, on=match_cols, how="left")
@@ -656,6 +660,8 @@ def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None
     # Strategy 3: Match remaining unmatched on last_name + position only (no team)
     # This catches FA players (team="FA" in ADP, different team in roster)
     # and players whose ADP team doesn't match roster team yet
+    # IMPORTANT: Skip ambiguous matches where multiple players share last+position
+    # (e.g. B.Robinson RB — Brian Robinson vs Bijan Robinson)
     if "adp" in df.columns and (df["adp"] == 200).sum() > 0:
         adp_clean3 = adp_df.dropna(subset=["adp"]).copy()
         # Get the last meaningful name token (strip suffixes)
@@ -673,8 +679,19 @@ def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None
             df["_last"] = df["last_name"].str.lower().str.strip().str.replace("'", "", regex=False).str.replace(".", "", regex=False).str.replace("-", "", regex=False)
 
         if "_last" in df.columns and "position" in df.columns:
+            # Find ambiguous last+position combos (multiple players in df with same key)
+            dup_keys = df.groupby(["_last", "position"]).size()
+            dup_keys = set(dup_keys[dup_keys > 1].index)
+
             # Only match on last + position (no team constraint)
+            # But skip ADP keys that are ambiguous in our dataframe
             adp_key3 = adp_clean3[["_last", "position", "adp"]].drop_duplicates(subset=["_last", "position"])
+            # Also skip ADP entries that are ambiguous in ADP itself
+            adp_dup = adp_clean3.groupby(["_last", "position"]).size()
+            adp_dup_keys = set(adp_dup[adp_dup > 1].index)
+            adp_key3 = adp_key3[~adp_key3.set_index(["_last", "position"]).index.isin(adp_dup_keys)]
+            # Skip keys that are ambiguous in our dataframe too
+            adp_key3 = adp_key3[~adp_key3.set_index(["_last", "position"]).index.isin(dup_keys)]
             adp_key3 = adp_key3.rename(columns={"adp": "adp_fa"})
 
             df = df.merge(adp_key3, on=["_last", "position"], how="left")
