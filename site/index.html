@@ -362,7 +362,7 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Performance Audit</div>
     <div class="section-title">The Numbers Don't Lie</div>
-    <div class="section-desc">Walk-forward validated on the 2025 NFL season. 543 players. 4 models. College pipeline for rookies. Zero excuses.</div>
+    <div class="section-desc">Walk-forward validated on the 2025 NFL season. 542 players. 4 models. College pipeline for rookies. Zero excuses.</div>
 
     <table class="metrics-table">
       <thead>
@@ -398,37 +398,37 @@ footer a:hover{color:var(--green);}
         </tr>
         <tr>
           <td class="metric-name">Mean Absolute Error</td>
-          <td class="metric-ours">13.8 pts</td>
+          <td class="metric-ours">13.9 pts</td>
           <td class="metric-adp">—</td>
           <td class="metric-delta">N/A</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:72%;background:var(--green2);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">QB correlation</td>
-          <td class="metric-ours">0.948</td>
+          <td class="metric-ours">0.949</td>
           <td class="metric-adp">0.048</td>
-          <td class="metric-delta">+0.900</td>
+          <td class="metric-delta">+0.901</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:87%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">RB correlation</td>
-          <td class="metric-ours">0.973</td>
+          <td class="metric-ours">0.979</td>
           <td class="metric-adp">0.606</td>
-          <td class="metric-delta">+0.367</td>
+          <td class="metric-delta">+0.373</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:97%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">WR correlation</td>
-          <td class="metric-ours">0.962</td>
+          <td class="metric-ours">0.972</td>
           <td class="metric-adp">0.427</td>
-          <td class="metric-delta">+0.535</td>
+          <td class="metric-delta">+0.545</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:95%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">TE correlation</td>
-          <td class="metric-ours">0.951</td>
+          <td class="metric-ours">0.981</td>
           <td class="metric-adp">0.373</td>
-          <td class="metric-delta">+0.578</td>
+          <td class="metric-delta">+0.608</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:89%;background:var(--green);"></div></div></td>
         </tr>
       </tbody>
@@ -445,27 +445,27 @@ footer a:hover{color:var(--green);}
     <div class="pos-grid">
       <div class="pos-card" data-pos="QB">
         <div class="pos-label qb">Quarterback</div>
-        <div class="pos-r2">0.913</div>
+        <div class="pos-r2">0.949</div>
         <div class="pos-r2-label">model correlation</div>
         <div class="pos-vs">ADP: <span>0.048</span> → ADP is worse than a coin flip at QB</div>
       </div>
       <div class="pos-card" data-pos="RB">
         <div class="pos-label rb">Running Back</div>
-        <div class="pos-r2">0.973</div>
+        <div class="pos-r2">0.979</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.606</span> → +61% improvement</div>
+        <div class="pos-vs">ADP: <span>0.606</span> → +62% improvement</div>
       </div>
       <div class="pos-card" data-pos="WR">
         <div class="pos-label wr">Wide Receiver</div>
-        <div class="pos-r2">0.962</div>
+        <div class="pos-r2">0.972</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.427</span> → +125% improvement</div>
+        <div class="pos-vs">ADP: <span>0.427</span> → +128% improvement</div>
       </div>
       <div class="pos-card" data-pos="TE">
         <div class="pos-label te">Tight End</div>
-        <div class="pos-r2">0.951</div>
+        <div class="pos-r2">0.981</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.373</span> → +155% improvement</div>
+        <div class="pos-vs">ADP: <span>0.373</span> → +163% improvement</div>
       </div>
     </div>
   </div>
@@ -481,7 +481,7 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ COLLEGE</div>
         <div class="feat-title">College/Draft Pipeline</div>
-        <div class="feat-desc">Draft capital, combine athleticism, college production per game, and Power 5 conference flags. The model knows your rookies before they take a snap — QB R² jumped from 0.894 to 0.948.</div>
+        <div class="feat-desc">Draft capital, combine athleticism, college production per game, and Power 5 conference flags. The model knows your rookies before they take a snap — QB correlation jumped to 0.949.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ VBD</div>
@@ -502,6 +502,16 @@ footer a:hover{color:var(--green);}
         <div class="feat-icon">▸ SCARCITY</div>
         <div class="feat-title">Positional Scarcity</div>
         <div class="feat-desc">See which positions have the steepest talent cliffs. If TE drops off a cliff after the top 5, you know to grab one early.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">▸ INJURY</div>
+        <div class="feat-title">Injury-Adjusted Regression</div>
+        <div class="feat-desc">Not every decline is a bust. The model detects injury-driven drops and dampens regression signals — so injured stars get projected for bounce-backs, not collapse.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">▸ ENSEMBLE</div>
+        <div class="feat-title">4-Model Uncertainty</div>
+        <div class="feat-desc">Ridge, Random Forest, XGBoost, and CatBoost vote independently. When they disagree, you see wider confidence intervals. Know which projections are rock-solid and which are speculative.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ HANDCUFFS</div>
@@ -528,7 +538,7 @@ footer a:hover{color:var(--green);}
         <div class="label">ML Models</div>
       </div>
       <div class="social-stat">
-        <div class="num">543</div>
+        <div class="num">542</div>
         <div class="label">Players Scored</div>
       </div>
       <div class="social-stat">
