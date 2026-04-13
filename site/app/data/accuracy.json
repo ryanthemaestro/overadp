@@ -1,1 +1,43 @@
-{"QB": {"best_model": "catboost", "mae": 29.0, "rmse": 37.36, "r2": 0.92}, "RB": {"best_model": "ridge", "mae": 14.07, "rmse": 20.72, "r2": 0.95}, "WR": {"best_model": "catboost", "mae": 9.92, "rmse": 14.06, "r2": 0.96}, "TE": {"best_model": "catboost", "mae": 8.15, "rmse": 12.26, "r2": 0.95}}
+{
+  "overall": {
+    "correlation": 0.97,
+    "r2": 0.935,
+    "mae": 13.9,
+    "n": 542,
+    "adp_correlation": 0.384,
+    "top_20_model": 19,
+    "top_20_adp": 7
+  },
+  "positions": {
+    "QB": {
+      "correlation": 0.948,
+      "r2": 0.893,
+      "mae": 28.7,
+      "n": 71,
+      "adp_correlation": 0.048
+    },
+    "RB": {
+      "correlation": 0.979,
+      "r2": 0.946,
+      "mae": 14.9,
+      "n": 140,
+      "adp_correlation": 0.606
+    },
+    "WR": {
+      "correlation": 0.972,
+      "r2": 0.942,
+      "mae": 11.7,
+      "n": 214,
+      "adp_correlation": 0.427
+    },
+    "TE": {
+      "correlation": 0.981,
+      "r2": 0.954,
+      "mae": 7.7,
+      "n": 117,
+      "adp_correlation": 0.373
+    }
+  },
+  "validation_season": 2025,
+  "training_seasons": "2019-2024"
+}
