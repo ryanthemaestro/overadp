@@ -756,7 +756,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>WAR ROOM — How It Works</h2>
-    <p>WAR ROOM is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 5+ years of NFL data to project player performance and guide your draft picks in real-time.</p>
+    <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">This is not another rankings list. WAR ROOM uses <strong>4 machine learning models</strong> trained on 7 years of NFL data to predict every player's fantasy output — and it <strong>beats ADP by over 119%</strong>.</p>
 
     <h2>The Model</h2>
     <h3>Ensemble Approach</h3>
@@ -890,18 +890,20 @@
     <p>We tested our model against ADP (Average Draft Position) on the 2025 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
     <table>
       <tr><th>Metric</th><th>WAR ROOM</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Correlation with actual</strong></td><td>0.827</td><td>0.384</td><td style="color:var(--rb)">WAR ROOM</td></tr>
-      <tr><td><strong>R² (explained variance)</strong></td><td>0.682</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>MAE (avg error)</strong></td><td>34.2 pts</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>Top-20 hit rate</strong></td><td>11/20 (55%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><td style="padding:8px;">Correlation with actual</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.843</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.384</td></tr>
+      <tr><td style="padding:8px;">Top-20 players identified</td><td style="text-align:center;color:var(--wr);font-weight:700;">12/20</td><td style="text-align:center;color:var(--alert);opacity:0.6;">7/20</td></tr>
+      <tr><td style="padding:8px;">QB correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.798</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.048</td></tr>
+      <tr><td style="padding:8px;">RB correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.858</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.606</td></tr>
+      <tr><td style="padding:8px;">WR correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.823</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.427</td></tr>
+      <tr><td style="padding:8px;">TE correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.863</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.373</td></tr>
     </table>
-    <p><strong>What this means:</strong> Our model correctly identified 11 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.827 vs ADP's 0.384 — that's a <strong>115% improvement</strong>.</p>
+    <p><strong>What this means:</strong> Our model correctly identified 12 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.843 vs ADP's 0.384 — that's a <strong>119% improvement</strong>.</p>
     <table>
       <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
       <tr><td><strong>QB</strong></td><td>0.798</td><td>0.048</td><td>+0.750</td></tr>
       <tr><td><strong>RB</strong></td><td>0.858</td><td>0.606</td><td>+0.252</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.780</td><td>0.427</td><td>+0.353</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.817</td><td>0.373</td><td>+0.444</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.823</td><td>0.427</td><td>+0.396</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.863</td><td>0.373</td><td>+0.490</td></tr>
     </table>
     <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
   </div>
