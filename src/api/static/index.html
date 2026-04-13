@@ -95,11 +95,12 @@
   }
   .logo .icon {
     width: 28px; height: 28px;
-    border: 2px solid var(--rb);
-    border-radius: 50%;
+    border: 2px solid var(--wr);
+    border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    box-shadow: 0 0 12px var(--rb-glow);
+    font-size: 18px;
+    color: var(--wr);
+    box-shadow: 0 0 12px rgba(0,255,106,0.3);
     animation: pulse-ring 2s ease-in-out infinite;
   }
   @keyframes pulse-ring {
@@ -665,8 +666,8 @@
   <!-- TOP BAR -->
   <div class="top-bar">
     <div class="logo">
-      <div class="icon">◈</div>
-      WAR ROOM
+      <div class="icon">Δ</div>
+      OverADP
     </div>
     <div class="top-actions">
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
