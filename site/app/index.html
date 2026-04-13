@@ -826,7 +826,10 @@
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" id="playerSearch" type="text" name="playersearch" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="if(this.value&&!allPlayers.find(p=>p.player_name&&p.player_name.toLowerCase().includes(this.value.toLowerCase())))this.value='';" autocomplete="off" data-lpignore="true" data-form-type="other">
+      <!-- decoy inputs to absorb Chrome autofill -->
+      <input type="email" name="email" style="display:none" tabindex="-1" autocomplete="email">
+      <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
+      <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="this.removeAttribute('readonly');this.value='';" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
     </div>
     <div id="playerPool">
