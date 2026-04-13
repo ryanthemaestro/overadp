@@ -879,29 +879,29 @@
     <h2>Accuracy</h2>
     <table>
       <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.793</td><td>0.757</td><td>~23 pts</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.936</td><td>0.933</td><td>~10 pts</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.964</td><td>0.962</td><td>~7 pts</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.950</td><td>0.943</td><td>~6 pts</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.634</td><td>0.630</td><td>~57 pts</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.728</td><td>0.721</td><td>~36 pts</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.587</td><td>0.581</td><td>~32 pts</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.665</td><td>0.658</td><td>~22 pts</td></tr>
     </table>
     <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
 
     <h2>Model vs ADP — Head to Head</h2>
-    <p>We tested our model against ADP (Average Draft Position) on the 2024 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
+    <p>We tested our model against ADP (Average Draft Position) on the 2025 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
     <table>
       <tr><th>Metric</th><th>WAR ROOM</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Correlation with actual</strong></td><td>0.947</td><td>0.600</td><td style="color:var(--rb)">WAR ROOM</td></tr>
-      <tr><td><strong>R² (explained variance)</strong></td><td>0.870</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>MAE (avg error)</strong></td><td>13.5 pts</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>Top-20 hit rate</strong></td><td>16/20 (80%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><td><strong>Correlation with actual</strong></td><td>0.827</td><td>0.384</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><td><strong>R² (explained variance)</strong></td><td>0.682</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>MAE (avg error)</strong></td><td>34.2 pts</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>Top-20 hit rate</strong></td><td>11/20 (55%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
     </table>
-    <p><strong>What this means:</strong> Our model correctly identified 16 of the 20 highest-scoring players in 2024. ADP only found 7. The model's correlation with actual production is 0.947 vs ADP's 0.600 — that's a <strong>58% improvement</strong>.</p>
+    <p><strong>What this means:</strong> Our model correctly identified 11 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.827 vs ADP's 0.384 — that's a <strong>115% improvement</strong>.</p>
     <table>
       <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.866</td><td>0.544</td><td>+0.32</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.970</td><td>0.780</td><td>+0.19</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.950</td><td>0.704</td><td>+0.25</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.894</td><td>0.688</td><td>+0.21</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.798</td><td>0.048</td><td>+0.750</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.858</td><td>0.606</td><td>+0.252</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.780</td><td>0.427</td><td>+0.353</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.817</td><td>0.373</td><td>+0.444</td></tr>
     </table>
     <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
   </div>
