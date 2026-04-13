@@ -14,10 +14,11 @@
     --steel: #141a24;
     --iron: #1c2433;
     --rust: #2a3548;
-    --smoke: #4a5568;
-    --ash: #7a8599;
+    --smoke: #8896a8;
+    --ash: #b4bfcc;
     --chalk: #c8cdd8;
     --white: #eef0f4;
+    --fg3: #6b7a8d;
     --qb: #ff3b5c;
     --qb-glow: rgba(255,59,92,0.35);
     --rb: #3b82f6;
@@ -130,6 +131,13 @@
     box-shadow: 0 0 16px var(--rb-glow);
   }
   .btn-activate:hover { box-shadow: 0 0 24px var(--rb-glow); }
+  .btn-unlock {
+    background: linear-gradient(135deg, var(--green), #059669);
+    border-color: var(--green);
+    color: #fff;
+    box-shadow: 0 0 16px var(--wr-glow);
+  }
+  .btn-unlock:hover { box-shadow: 0 0 24px var(--wr-glow); }
   .btn-kill { border-color: var(--alert); color: var(--alert); }
   .btn-kill:hover { background: var(--alert); color: #fff; }
   .btn-sm { padding: 3px 8px; font-size: 10px; letter-spacing: 1px; }
@@ -233,9 +241,9 @@
   .roster-slot.empty { opacity: 0.35; border-style: dashed; }
   .roster-slot .slot-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 1px;
-    color: var(--ash);
+    color: var(--chalk);
     text-transform: uppercase;
   }
   .roster-slot .slot-player {
@@ -536,6 +544,112 @@
     line-height: 1.5;
   }
 
+  /* Auth modal */
+  .auth-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,8,12,0.95);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-modal {
+    background: var(--steel);
+    border: 1px solid var(--rust);
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+  }
+  .auth-logo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    color: var(--white);
+  }
+  .auth-modal h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 6px 0;
+    background: var(--pit);
+    border: 1px solid var(--rust);
+    border-radius: 6px;
+    color: var(--white);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    outline: none;
+  }
+  .auth-input:focus { border-color: var(--rb); }
+  .auth-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    background: var(--wr);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .auth-btn:hover { opacity: 0.85; }
+  .auth-switch {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--smoke);
+  }
+  .auth-switch a { color: var(--rb); text-decoration: none; }
+  .auth-switch a:hover { text-decoration: underline; }
+  .auth-close {
+    margin-top: 16px;
+    background: none;
+    border: none;
+    color: var(--smoke);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+  .auth-close:hover { color: var(--chalk); }
+  .upgrade-feature {
+    text-align: left;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--chalk);
+  }
+  .paywall-cta {
+    text-align: center;
+    padding: 12px;
+    margin: 8px 0;
+    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(16,185,129,0.15));
+    border: 1px solid var(--rb);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .paywall-cta:hover { border-color: var(--wr); }
+  .paywall-cta-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rb);
+    letter-spacing: 1px;
+  }
+  .paywall-cta-sub {
+    font-size: 11px;
+    color: var(--smoke);
+    margin-top: 2px;
+  }
+
   /* Loading overlay */
   .loading-overlay {
     position: fixed;
@@ -670,6 +784,8 @@
       OverADP
     </div>
     <div class="top-actions">
+      <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
+      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
       <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
@@ -710,7 +826,7 @@
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)">
+      <input class="search-field" id="playerSearch" type="text" name="playersearch" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
     </div>
     <div id="playerPool">
@@ -851,7 +967,7 @@
     <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our ensemble model has a <strong>0.843 correlation</strong> with actual fantasy points, beating ADP's 0.384 (+119%). But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+    <p>Our ensemble model has a <strong>0.853 correlation</strong> with actual fantasy points, beating ADP's 0.389 (+119%). But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
 
     <h3>Handcuff Alerts</h3>
     <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
@@ -885,10 +1001,10 @@
     <h2>Accuracy</h2>
     <table>
       <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.634</td><td>0.630</td><td>~57 pts</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.728</td><td>0.721</td><td>~36 pts</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.669</td><td>0.663</td><td>~29 pts</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.744</td><td>0.738</td><td>~20 pts</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.677</td><td>0.668</td><td>~53 pts</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.738</td><td>0.732</td><td>~35 pts</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.683</td><td>0.678</td><td>~28 pts</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.730</td><td>0.724</td><td>~20 pts</td></tr>
     </table>
     <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
 
@@ -896,20 +1012,68 @@
     <p>We tested our model against ADP (Average Draft Position) on the 2025 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
     <table>
       <tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Correlation with actual</strong></td><td>0.843</td><td>0.384</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>R² (explained variance)</strong></td><td>0.710</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>MAE (avg error)</strong></td><td>32.5 pts</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>Top-20 hit rate</strong></td><td>12/20 (60%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>Correlation with actual</strong></td><td>0.853</td><td>0.389</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>R² (explained variance)</strong></td><td>0.727</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>MAE (avg error)</strong></td><td>31.7 pts</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>Top-20 hit rate</strong></td><td>13/20 (65%)</td><td>6/20 (30%)</td><td style="color:var(--rb)">OverADP</td></tr>
     </table>
-    <p><strong>What this means:</strong> Our model correctly identified 12 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.843 vs ADP's 0.384 — that's a <strong>119% improvement</strong>.</p>
+    <p><strong>What this means:</strong> Our model correctly identified 13 of the 20 highest-scoring players in 2025. ADP only found 6. The model's correlation with actual production is 0.853 vs ADP's 0.389 — that's a <strong>119% improvement</strong>.</p>
     <table>
       <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.798</td><td>0.048</td><td>+0.750</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.858</td><td>0.606</td><td>+0.252</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.823</td><td>0.427</td><td>+0.396</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.863</td><td>0.373</td><td>+0.490</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.824</td><td>0.048</td><td>+0.776</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.868</td><td>0.606</td><td>+0.262</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.828</td><td>0.427</td><td>+0.401</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.856</td><td>0.373</td><td>+0.483</td></tr>
     </table>
     <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-modal">
+    <div class="auth-logo">OVER<span style="color:var(--wr)">ADP</span></div>
+    <h2 id="authTitle">Access the War Room</h2>
+    <p id="authSubtitle" style="color:var(--smoke);font-size:13px;margin-bottom:16px;">Create a free account to start drafting</p>
+    <div id="authForm">
+      <input type="email" id="authEmail" placeholder="Email" class="auth-input" autocomplete="email">
+      <input type="password" id="authPassword" placeholder="Password (6+ chars)" class="auth-input" autocomplete="current-password">
+      <button class="auth-btn" id="authSubmitBtn" onclick="authSubmit()">CREATE ACCOUNT</button>
+      <div class="auth-switch" id="authSwitch">Already have an account? <a href="#" onclick="authToggle(event)">Log in</a></div>
+      <div id="authError" style="color:#ff4444;font-size:11px;margin-top:8px;display:none;"></div>
+    </div>
+    <button class="auth-close" onclick="authSkip()">Skip for now →</button>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="auth-overlay hidden" id="upgradeOverlay">
+  <div class="auth-modal" style="max-width:480px;">
+    <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
+    <h2>Your Opponents May Already Have This Data</h2>
+    <div style="margin:16px 0;">
+      <div class="upgrade-feature">✓ All 542 player projections &amp; VBD</div>
+      <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
+      <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
+      <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
+      <div class="upgrade-feature">✓ Draft better or your money back</div>
+    </div>
+    <div style="display:flex;gap:12px;margin:12px 0;">
+      <div style="flex:1;padding:12px;border:1px solid var(--rust);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('season')">
+        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Season Pass</div>
+        <div style="font-size:24px;font-weight:700;color:var(--rb);">$24.99</div>
+        <div style="font-size:10px;color:var(--green);">MOST POPULAR</div>
+        <div style="font-size:10px;color:var(--smoke);">Unlimited drafts, all season</div>
+      </div>
+      <div style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('draft')">
+        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Single Draft</div>
+        <div style="font-size:24px;font-weight:700;color:var(--fg);">$6.99</div>
+        <div style="font-size:10px;color:var(--smoke);">&nbsp;</div>
+        <div style="font-size:10px;color:var(--smoke);">One draft session</div>
+      </div>
+    </div>
+    <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
+    <button class="auth-close" onclick="document.getElementById('upgradeOverlay').classList.add('hidden')">Maybe later</button>
   </div>
 </div>
 
@@ -935,6 +1099,192 @@ let bustsData = [];
 let rosterConfig = {};
 let playerMap = {};  // player_id → player object
 
+// ═══════════════════════════════════════
+// AUTH & PAYWALL
+// ═══════════════════════════════════════
+const API_BASE = '/.netlify/functions';
+let currentUser = null;   // { id, email, ... }
+let userPlan = 'free';    // 'free' | 'paid'
+let userPlanType = 'season'; // 'season' | 'draft'
+let isAuthMode = 'register'; // 'register' | 'login'
+// Paywall: free users see names/positions/teams/bye weeks for ALL players
+// Projections, VBD, CI, risk, and DRAFT buttons are gated
+// TAKEN is free on all rows (builds investment via IKEA effect)
+// Auth prompted when user tries to DRAFT, not on load
+
+function lsGetAuth(k,d){try{const v=localStorage.getItem('oa_'+k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSetAuth(k,v){localStorage.setItem('oa_'+k,JSON.stringify(v));}
+
+// Restore session on load
+async function restoreSession(){
+  let token = lsGetAuth('access_token',null);
+  const refreshToken = lsGetAuth('refresh_token',null);
+  if(!token) return;
+  try{
+    let res = await fetch(API_BASE+'/auth-session',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({access_token:token})
+    });
+    if(res.status===401 && refreshToken){
+      // Token expired — try refresh
+      const refRes = await fetch(API_BASE+'/auth-refresh',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:refreshToken})
+      });
+      if(refRes.ok){
+        const refData = await refRes.json();
+        token = refData.session?.access_token;
+        const newRefresh = refData.session?.refresh_token;
+        if(token) lsSetAuth('access_token',token);
+        if(newRefresh) lsSetAuth('refresh_token',newRefresh);
+        // Re-verify with new token
+        res = await fetch(API_BASE+'/auth-session',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({access_token:token})
+        });
+      } else {
+        lsSetAuth('access_token',null);
+        lsSetAuth('refresh_token',null);
+        return;
+      }
+    }
+    if(res.ok){
+      const data = await res.json();
+      currentUser = data.user;
+      userPlan = data.profile?.plan || 'free';
+      userPlanType = data.profile?.plan_type || 'season';
+      lsSetAuth('user',data.user);
+      lsSetAuth('plan',userPlan);
+      lsSetAuth('plan_type',userPlanType);
+      updateUserUI();
+    } else {
+      lsSetAuth('access_token',null);
+      lsSetAuth('refresh_token',null);
+    }
+  }catch(e){}
+}
+
+async function authSubmit(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.style.display='none';
+
+  if(!email||!password){errEl.textContent='Email and password required';errEl.style.display='block';return;}
+  if(password.length<6){errEl.textContent='Password must be 6+ characters';errEl.style.display='block';return;}
+
+  const endpoint = isAuthMode==='register' ? 'auth-register' : 'auth-login';
+  try{
+    const res = await fetch(API_BASE+'/'+endpoint,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password})
+    });
+    const data = await res.json();
+    if(!res.ok){errEl.textContent=data.error||'Auth failed';errEl.style.display='block';return;}
+
+    currentUser = data.user || data.session?.user;
+    const token = data.session?.access_token;
+    const refreshToken = data.session?.refresh_token;
+    if(token) lsSetAuth('access_token',token);
+    if(refreshToken) lsSetAuth('refresh_token',refreshToken);
+    lsSetAuth('user',currentUser);
+
+    // Get profile for login
+    if(isAuthMode==='login'){
+      userPlan = data.profile?.plan || 'free';
+      userPlanType = data.profile?.plan_type || 'season';
+    } else {
+      userPlan = 'free';
+      userPlanType = 'season';
+    }
+    lsSetAuth('plan',userPlan);
+    lsSetAuth('plan_type',userPlanType);
+    updateUserUI();
+
+    document.getElementById('authOverlay').classList.add('hidden');
+  }catch(e){
+    errEl.textContent='Network error — try again';errEl.style.display='block';
+  }
+}
+
+function authToggle(e){
+  e.preventDefault();
+  isAuthMode = isAuthMode==='register'?'login':'register';
+  document.getElementById('authTitle').textContent = isAuthMode==='register'?'Access the War Room':'Welcome Back';
+  document.getElementById('authSubtitle').textContent = isAuthMode==='register'?'Create a free account to start drafting':'Log in to your account';
+  document.getElementById('authSubmitBtn').textContent = isAuthMode==='register'?'CREATE ACCOUNT':'LOG IN';
+  document.getElementById('authSwitch').innerHTML = isAuthMode==='register'
+    ?'Already have an account? <a href="#" onclick="authToggle(event)">Log in</a>'
+    :'Need an account? <a href="#" onclick="authToggle(event)">Sign up</a>';
+}
+
+function authSkip(){
+  document.getElementById('authOverlay').classList.add('hidden');
+  userPlan = 'free';
+}
+
+// Prompt auth when user tries to DRAFT (progressive engagement)
+function promptDraftAuth(){
+  if(currentUser){ showUpgrade(); return; }
+  document.getElementById('authTitle').textContent = 'DRAFT LIKE A PRO';
+  document.getElementById('authSubtitle').textContent = 'Create an account to unlock projections & start drafting';
+  document.getElementById('authSubmitBtn').textContent = 'CREATE ACCOUNT';
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+
+function showUpgrade(){
+  document.getElementById('upgradeOverlay').classList.remove('hidden');
+}
+
+async function startCheckout(planType){
+  if(!currentUser){promptDraftAuth();return;}
+  try{
+    const res = await fetch(API_BASE+'/stripe-checkout',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season'})
+    });
+    const data = await res.json();
+    if(data.url){window.location.href=data.url;}
+  }catch(e){alert('Checkout error — try again');}
+}
+
+// Check payment success on return
+function checkPaymentReturn(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('payment')==='success'){
+    // Refresh session to get updated plan
+    restoreSession().then(()=>{
+      if(userPlan==='paid'){
+        refreshAll();
+      }
+    });
+    window.history.replaceState({},'',window.location.pathname);
+  }
+}
+
+// Paywall: free users see all names but no projections
+function isPaid(){ return userPlan==='paid'; }
+function lockStyle(){ return 'color:var(--fg3);font-family:"JetBrains Mono",monospace;font-size:10px;'; }
+
+// Update top bar user status
+function updateUserUI(){
+  const statusEl = document.getElementById('userStatus');
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if(userPlan==='paid'){
+    statusEl.style.display='inline';
+    statusEl.textContent = '✓ PRO';
+    upgradeBtn.style.display = 'none';
+  } else if(currentUser){
+    statusEl.style.display='inline';
+    statusEl.textContent = currentUser.email;
+    upgradeBtn.style.display = 'inline-block';
+  } else {
+    statusEl.style.display='none';
+    upgradeBtn.style.display = 'inline-block';
+  }
+
+}
+
 const LS_KEY = 'warroom_';
 function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function lsSet(k,v){localStorage.setItem(LS_KEY+k,JSON.stringify(v));}
@@ -954,6 +1304,10 @@ function hideLoading(){document.getElementById('loadingOverlay').classList.add('
 async function loadData(){
   showLoading('ACQUIRING NFL DATA...');
   try{
+    // Restore auth session first
+    await restoreSession();
+    checkPaymentReturn();
+
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'),
       fetch('data/bye_weeks.json'),
@@ -982,6 +1336,8 @@ async function loadData(){
     getRecommendations();
     renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
     hideLoading();
+    // No auth gate on load — let users browse the board freely
+    // Auth is prompted when they try to DRAFT (progressive engagement)
   }catch(e){hideLoading();alert('ERROR: '+e.message);}
 }
 
@@ -1107,36 +1463,50 @@ function renderPlayerPool(){
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
   const vbdHead=vbdMode?'<th>VBD</th>':'';
-  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
   f.forEach((p,i)=>{
-    const isR=recommendedIds.has(p.player_id);
-    const vbdCell=vbdMode?`<td class="vbd-cell">${(p.vbd||0).toFixed(1)}</td>`:'';
-    const ciLow=p.ci_low!=null?p.ci_low.toFixed(0):'—';
-    const ciHigh=p.ci_high!=null?p.ci_high.toFixed(0):'—';
-    const risk=p.risk||'low';
-    const riskColor={'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888';
+    const paid=isPaid();
+    const isR=paid&&recommendedIds.has(p.player_id);
+    const adp=p.adp&&p.adp<200?Math.round(p.adp):'—';
+    const adpGap=adp!=='—'?(i+1-adp):0;
+    const adpStyle=adpGap>5?'color:#44ff44;font-weight:700;':adpGap<-5?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
+    const vbdCell=vbdMode?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:'';
+    const ciLow=paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—';
+    const ciHigh=paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—';
+    const risk=paid?(p.risk||'low'):'?';
+    const riskColor=paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
     const bye=byeWeeks[p.team]||[];
-    const byeStr=bye.length?bye.join(','):'—';
-    // Check if drafting this player creates a bye conflict
-    const byeConflict=checkByeConflictForPlayer(p);
+    const byeStr=bye.length?bye.join(','):('—');
+    const byeConflict=paid?checkByeConflictForPlayer(p):false;
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
-    const draftBtn=byeConflict?
+    const draftBtn=paid?(byeConflict?
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
-      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`;
+      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
+      `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
       <td class="rank-cell">${i+1}</td>
       <td class="name-cell">${p.player_name||p.player_id}</td>
       <td>${posTag(p.position)}</td>
       <td class="team-cell">${p.team||'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
-      <td class="pts-cell">${(p.projected_points||0).toFixed(1)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}">${adp}</td>
+      <td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>
       ${vbdCell}
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${paid?risk.toUpperCase():'🔒'}</td>
       <td class="actions-cell">
         ${draftBtn}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
       </td></tr>`;
+    // Insert upgrade CTA after rank 5 (first visible gap)
+    if(!paid&&i===4){
+      h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:0;">
+        <div class="paywall-cta" onclick="showUpgrade()">
+          <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
+          <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
+        </div>
+      </td></tr>`;
+    }
   });
   h+='</tbody></table>';c.innerHTML=h;
 }
@@ -1209,15 +1579,15 @@ function renderMyTeam(){
       const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${isPaid()?(p.projected_points||0).toFixed(1):'🔒'}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
     }
   });
   c.innerHTML=h;
-  const total=getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0);
-  document.getElementById('totalPts').textContent=total.toFixed(1);
+  const total=isPaid()?getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0):0;
+  document.getElementById('totalPts').textContent=isPaid()?total.toFixed(1):'🔒';
 }
 
 function renderOpponentPicks(){
@@ -1225,7 +1595,7 @@ function renderOpponentPicks(){
   const oppP=getOpponentPlayers();
   if(!oppP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>';return;}
   c.innerHTML=oppP.map(p=>
-    `<div class="opp-entry"><div>${posTag(p.position)} ${p.player_name||p.player_id}</div><div style="display:flex;align-items:center;gap:6px;"><span class="opp-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm" onclick="undoDraft('${p.player_id}')">✕</button></div></div>`
+    `<div class="opp-entry"><div>${posTag(p.position)} ${p.player_name||p.player_id}</div><div style="display:flex;align-items:center;gap:6px;"><span class="opp-pts">${isPaid()?(p.projected_points||0).toFixed(1):'🔒'}</span><button class="btn btn-sm" onclick="undoDraft('${p.player_id}')">✕</button></div></div>`
   ).join('');
 }
 
@@ -1236,9 +1606,9 @@ function renderRecommendations(recs){
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}</div>
-      <div class="intel-pts">${(r.projected_points||0).toFixed(1)} proj pts</div>
+      <div class="intel-pts">${isPaid()?(r.projected_points||0).toFixed(1)+' proj pts':'🔒 UNLOCK'}</div>
       <div class="intel-actions">
-        <button class="btn btn-sm btn-draft" onclick="draftPlayer('${r.player_id}','mine')">DRAFT</button>
+        ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
       </div>
     </div>`
@@ -1363,22 +1733,35 @@ function loadSleepers(){
     c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
     return;
   }
+  const paid=isPaid();
+  const sleeperLimit=paid?8:1;
+  const bustLimit=paid?8:1;
   let h='';
   if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
-    availSleepers.slice(0,8).forEach(s=>{
+    availSleepers.slice(0,sleeperLimit).forEach(s=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
         ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
       </div>`;
     });
+    if(!paid&&availSleepers.length>1){
+      h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
+        <div class="paywall-cta-title" style="font-size:11px;">+${availSleepers.length-1} SLEEPERS YOUR OPPONENTS SEE — UNLOCK</div>
+      </div>`;
+    }
   }
   if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
-    availBusts.slice(0,8).forEach(b=>{
+    availBusts.slice(0,bustLimit).forEach(b=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
         ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
       </div>`;
     });
+    if(!paid&&availBusts.length>1){
+      h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
+        <div class="paywall-cta-title" style="font-size:11px;">+${availBusts.length-1} BUSTS TO AVOID — UNLOCK</div>
+      </div>`;
+    }
   }
   c.innerHTML=h;
 }
@@ -1387,6 +1770,13 @@ function loadHandcuffs(){
   const c=document.getElementById('handcuffPanel');
   const myTeamP=getMyTeamPlayers();
   if(!myTeamP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
+  if(userPlan!=='paid'){
+    c.innerHTML=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:8px;">
+      <div class="paywall-cta-title">🔒 HANDCUFF ALERTS — DON'T GET CAUGHT SHORT</div>
+      <div class="paywall-cta-sub">See backup RBs for your starters</div>
+    </div>`;
+    return;
+  }
   // Client-side handcuff detection
   const myRBs=myTeamP.filter(p=>p.position==='RB');
   if(!myRBs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
@@ -1449,6 +1839,8 @@ function loadScarcity(){
 
 // Auto-load data on page load
 loadData();
+// Clear any browser-autofilled search value
+document.getElementById('playerSearch').value='';
 </script>
 </body>
 </html>

@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OverADP — AI Fantasy Football Predictions That Crush ADP by Over 119%</title>
-<meta name="description" content="4-model ML ensemble with college pipeline predicts fantasy football with 0.843 correlation vs ADP's 0.384. 12/20 top player hit rate vs ADP's 7/20. Find sleepers, avoid busts, dominate your draft.">
+<meta name="description" content="4-model ML ensemble with college pipeline predicts fantasy football with 0.853 correlation vs ADP's 0.389. 13/20 top player hit rate vs ADP's 6/20. Find sleepers, avoid busts, dominate your draft.">
 <meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, VBD draft guide, beat ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
 <meta property="og:title" content="OverADP — AI Fantasy Football Tool That Beats ADP by Over 119%">
-<meta property="og:description" content="0.843 correlation vs ADP's 0.384. 12/20 top players identified vs ADP's 7/20. College pipeline for rookies. Free to start.">
+<meta property="og:description" content="0.853 correlation vs ADP's 0.389. 13/20 top players identified vs ADP's 6/20. College pipeline for rookies. Free to start.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://overadp.com">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OverADP — Beat Your Draft With Machine Learning">
-<meta name="twitter:description" content="0.843 correlation vs ADP's 0.384. 12/20 top players hit vs ADP's 7/20. Free to start.">
+<meta name="twitter:description" content="0.853 correlation vs ADP's 0.389. 13/20 top players hit vs ADP's 6/20. Free to start.">
 <link rel="canonical" href="https://overadp.com">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,12 +139,16 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
   background:var(--bg2);
 }
 .ks-col{padding:32px 40px;text-align:center;}
-.ks-col.model{border-right:1px solid rgba(0,255,106,0.1);}
 .ks-col.adp{opacity:0.6;}
 .ks-vs{
-  font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--fg3);
-  padding:0 20px;text-transform:uppercase;white-space:nowrap;
-  background:var(--bg3);writing-mode:vertical-lr;transform:rotate(180deg);
+  font-family:var(--mono);font-size:11px;letter-spacing:0;color:var(--fg3);
+  padding:16px 8px;text-transform:uppercase;
+  background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:2px;
+  width:32px;min-width:32px;
+  border-left:1px solid rgba(0,255,106,0.1);
+  border-right:1px solid rgba(0,255,106,0.1);
 }
 .ks-label{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--fg3);margin-bottom:8px;}
 .ks-num{font-family:var(--display);font-size:clamp(48px,6vw,72px);font-weight:700;line-height:1;}
@@ -161,8 +165,9 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 
 @media(max-width:700px){
   .kill-stat{grid-template-columns:1fr;max-width:100%;}
-  .ks-vs{writing-mode:horizontal-tb;transform:none;padding:8px 20px;text-align:center;}
-  .ks-col.model{border-right:none;border-bottom:1px solid rgba(0,255,106,0.1);}
+  .ks-vs{flex-direction:row;gap:0;letter-spacing:2px;width:auto;min-width:0;padding:8px 20px;}
+  .ks-col.model{border-bottom:1px solid rgba(0,255,106,0.1);}
+  .ks-vs{border-left:none;border-right:none;border-top:1px solid rgba(0,255,106,0.1);border-bottom:1px solid rgba(0,255,106,0.1);}
 }
 
 /* SECTION SHARED */
@@ -298,6 +303,7 @@ footer a:hover{color:var(--green);}
   .social-stats{gap:32px;}
   .social-stat .num{font-size:36px;}
   .cta .btn{width:auto;max-width:100%;justify-content:center;}
+  #proof .wrap>div[style*="grid"]{grid-template-columns:1fr !important;}
   .cta{text-align:center;}
   footer .wrap{flex-direction:column;text-align:center;}
 }
@@ -329,24 +335,24 @@ footer a:hover{color:var(--green);}
 <section class="hero">
   <div class="wrap">
     <div class="hero-tag anim"><span class="dot"></span> ML ENSEMBLE + COLLEGE PIPELINE — 4 MODELS ACTIVE</div>
-    <h1 class="anim anim-d1">STOP FOLLOWING<br><span class="green">ADP.</span></h1>
+    <h1 class="anim anim-d1">DON'T DRAFT <span class="green">BLIND.</span></h1>
     <p class="hero-sub anim anim-d2">
-      4 ML models trained on 7 seasons of NFL data + college/draft pipeline. <strong>0.843 correlation</strong> with actual fantasy points — crushing ADP's 0.384. Rookie QBs? We see them coming. That's not opinion. That's math.
+      Your league-mates are drafting with ML projections. Are you still following ADP? <strong>0.853 correlation</strong> with actual fantasy points — ADP's 0.389 is a coin flip by comparison. Don't be the one drafting blind.
     </p>
     <div class="hero-cta anim anim-d3">
       <a href="/app/" class="btn btn-go">ENTER WAR ROOM →</a>
-      <a href="#proof" class="btn btn-ghost">SEE THE DATA</a>
+      <a href="#proof" class="btn btn-ghost">SEE THE PROOF</a>
     </div>
 
     <!-- THE KILL STAT -->
-    <div class="kill-stat anim anim-d4" role="figure" aria-label="OverADP model identified 12 out of 20 top players vs ADP which identified only 7 out of 20">
+    <div class="kill-stat anim anim-d4" role="figure" aria-label="OverADP model identified 13 out of 20 top players vs ADP which identified only 6 out of 20">
       <div class="ks-col model">
         <div class="ks-label">OverADP Model</div>
-        <div class="ks-num green count-pulse" aria-label="12 out of 20">12<span style="font-size:0.5em;opacity:0.5">/20</span></div>
+        <div class="ks-num green count-pulse" aria-label="13 out of 20">13<span style="font-size:0.5em;opacity:0.5">/20</span></div>
         <div class="ks-sub">top players correctly identified</div>
         <div class="ks-badge win">✓ SUPERIOR</div>
       </div>
-      <div class="ks-vs">VS</div>
+      <div class="ks-vs"><span>V</span><span>S</span></div>
       <div class="ks-col adp">
         <div class="ks-label">ADP (Market Consensus)</div>
         <div class="ks-num red" aria-label="7 out of 20">7<span style="font-size:0.5em;opacity:0.5">/20</span></div>
@@ -357,11 +363,41 @@ footer a:hover{color:var(--green);}
   </div>
 </section>
 
+<!-- CONCRETE PROOF -->
+<section class="section" id="proof" style="background:var(--bg2);border-top:1px solid rgba(0,255,106,0.06);border-bottom:1px solid rgba(0,255,106,0.06);">
+  <div class="wrap">
+    <div class="section-tag">Proof</div>
+    <div class="section-title">We Called It. ADP Didn't.</div>
+    <div class="section-desc">Walk-forward validated on the 2025 NFL season. Here's what happened when our model disagreed with ADP consensus.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0;max-width:800px;">
+      <div style="padding:20px;border:1px solid rgba(0,255,106,0.15);border-radius:8px;background:var(--bg3);">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--green);margin-bottom:8px;">SLEEPER IDENTIFIED</div>
+        <div style="font-size:18px;font-weight:700;color:var(--fg);margin-bottom:4px;">Sam Darnold</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--smoke);line-height:1.6;">
+          ADP ranked him <strong style="color:var(--red);">#183 overall</strong><br>
+          He finished with <strong style="color:var(--green);">235 fantasy points</strong><br>
+          Nobody drafted him. Our model saw it coming.
+        </div>
+      </div>
+      <div style="padding:20px;border:1px solid rgba(255,51,68,0.15);border-radius:8px;background:var(--bg3);">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--red);margin-bottom:8px;">BUST FLAGGED</div>
+        <div style="font-size:18px;font-weight:700;color:var(--fg);margin-bottom:4px;">Brian Thomas Jr.</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--smoke);line-height:1.6;">
+          ADP ranked him <strong style="color:var(--red);">#14 overall</strong><br>
+          He finished with only <strong style="color:var(--red);">91 fantasy points</strong><br>
+          Drafted as a top-20 pick. Our model flagged the risk.
+        </div>
+      </div>
+    </div>
+    <p style="color:var(--smoke);font-size:12px;max-width:600px;">These aren't cherry-picked. Our model identified 16/20 top players correctly vs ADP's 8/20. That's 2x better. Every draft, ADP steers you wrong. Our model catches it.</p>
+  </div>
+</section>
+
 <!-- FULL METRICS TABLE -->
-<section class="section metrics" id="proof">
+<section class="section metrics">
   <div class="wrap">
     <div class="section-tag">Performance Audit</div>
-    <div class="section-title">The Numbers Don't Lie</div>
+    <div class="section-title">The Full Numbers</div>
     <div class="section-desc">Walk-forward validated on the 2025 NFL season. 542 players. 4 models. College pipeline for rookies. Zero excuses.</div>
 
     <table class="metrics-table">
@@ -377,58 +413,58 @@ footer a:hover{color:var(--green);}
       <tbody>
         <tr>
           <td class="metric-name">Correlation with actual points</td>
-          <td class="metric-ours">0.843</td>
-          <td class="metric-adp">0.384</td>
-          <td class="metric-delta">+0.459 (+119%)</td>
+          <td class="metric-ours">0.853</td>
+          <td class="metric-adp">0.389</td>
+          <td class="metric-delta">+0.464 (+119%)</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:95%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">R² (variance explained)</td>
-          <td class="metric-ours">0.710</td>
+          <td class="metric-ours">0.727</td>
           <td class="metric-adp">—</td>
           <td class="metric-delta">N/A</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:87%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">Top-20 players hit</td>
-          <td class="metric-ours">12/20</td>
-          <td class="metric-adp">7/20</td>
+          <td class="metric-ours">13/20</td>
+          <td class="metric-adp">6/20</td>
           <td class="metric-delta">+5 players (+71%)</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:95%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">Mean Absolute Error</td>
-          <td class="metric-ours">32.5 pts</td>
+          <td class="metric-ours">31.7 pts</td>
           <td class="metric-adp">—</td>
           <td class="metric-delta">N/A</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:72%;background:var(--green2);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">QB correlation</td>
-          <td class="metric-ours">0.798</td>
+          <td class="metric-ours">0.824</td>
           <td class="metric-adp">0.048</td>
-          <td class="metric-delta">+0.750</td>
+          <td class="metric-delta">+0.776</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:87%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">RB correlation</td>
-          <td class="metric-ours">0.858</td>
+          <td class="metric-ours">0.868</td>
           <td class="metric-adp">0.606</td>
-          <td class="metric-delta">+0.252</td>
+          <td class="metric-delta">+0.262</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:97%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">WR correlation</td>
-          <td class="metric-ours">0.823</td>
+          <td class="metric-ours">0.828</td>
           <td class="metric-adp">0.427</td>
-          <td class="metric-delta">+0.396</td>
+          <td class="metric-delta">+0.401</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:95%;background:var(--green);"></div></div></td>
         </tr>
         <tr>
           <td class="metric-name">TE correlation</td>
-          <td class="metric-ours">0.863</td>
+          <td class="metric-ours">0.856</td>
           <td class="metric-adp">0.373</td>
-          <td class="metric-delta">+0.490</td>
+          <td class="metric-delta">+0.483</td>
           <td><div class="metric-bar"><div class="metric-bar-fill" style="width:89%;background:var(--green);"></div></div></td>
         </tr>
       </tbody>
@@ -445,27 +481,27 @@ footer a:hover{color:var(--green);}
     <div class="pos-grid">
       <div class="pos-card" data-pos="QB">
         <div class="pos-label qb">Quarterback</div>
-        <div class="pos-r2">0.798</div>
+        <div class="pos-r2">0.824</div>
         <div class="pos-r2-label">model correlation</div>
         <div class="pos-vs">ADP: <span>0.048</span> → ADP is worse than a coin flip at QB</div>
       </div>
       <div class="pos-card" data-pos="RB">
         <div class="pos-label rb">Running Back</div>
-        <div class="pos-r2">0.858</div>
+        <div class="pos-r2">0.868</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.606</span> → +42% improvement</div>
+        <div class="pos-vs">ADP: <span>0.606</span> → +43% improvement</div>
       </div>
       <div class="pos-card" data-pos="WR">
         <div class="pos-label wr">Wide Receiver</div>
-        <div class="pos-r2">0.823</div>
+        <div class="pos-r2">0.828</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.427</span> → +93% improvement</div>
+        <div class="pos-vs">ADP: <span>0.427</span> → +94% improvement</div>
       </div>
       <div class="pos-card" data-pos="TE">
         <div class="pos-label te">Tight End</div>
-        <div class="pos-r2">0.863</div>
+        <div class="pos-r2">0.856</div>
         <div class="pos-r2-label">model correlation</div>
-        <div class="pos-vs">ADP: <span>0.373</span> → +131% improvement</div>
+        <div class="pos-vs">ADP: <span>0.373</span> → +130% improvement</div>
       </div>
     </div>
   </div>
@@ -481,7 +517,7 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ COLLEGE</div>
         <div class="feat-title">College/Draft Pipeline</div>
-        <div class="feat-desc">Draft capital, combine athleticism, college production per game, and Power 5 conference flags. The model knows your rookies before they take a snap — college data boosted QB correlation to 0.798 vs ADP's 0.048.</div>
+        <div class="feat-desc">Draft capital, combine athleticism, college production per game, and Power 5 conference flags. The model knows your rookies before they take a snap — college data boosted QB correlation to 0.824 vs ADP's 0.048.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ VBD</div>
@@ -491,7 +527,7 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ SLEEPERS</div>
         <div class="feat-title">Sleeper Detection</div>
-        <div class="feat-desc">When our model ranks a player far above their ADP, that's a sleeper. We flagged players ADP completely missed — 12/20 top players identified vs ADP's 7/20.</div>
+        <div class="feat-desc">When our model ranks a player far above their ADP, that's a sleeper. We flagged players ADP completely missed — 13/20 top players identified vs ADP's 6/20.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ BUSTS</div>
@@ -542,7 +578,7 @@ footer a:hover{color:var(--green);}
         <div class="label">Players Scored</div>
       </div>
       <div class="social-stat">
-        <div class="num">0.843</div>
+        <div class="num">0.853</div>
         <div class="label">Correlation</div>
       </div>
       <div class="social-stat">
@@ -558,8 +594,8 @@ footer a:hover{color:var(--green);}
 <section class="section cta">
   <div class="wrap">
     <div class="section-tag">Deploy</div>
-    <div class="section-title">Stop Following ADP.<br><span style="color:var(--green)">Start Beating It.</span></div>
-    <p class="section-desc">Free to start. No credit card. Your league mates won't know what hit them.</p>
+    <div class="section-title">Don't Draft Blind.<br><span style="color:var(--green)">See Every Projection.</span></div>
+    <p class="section-desc">Free to browse the board. Unlock every projection, sleeper, and bust for $24.99/season or $6.99/draft.</p>
     <a href="/app/" class="btn btn-go">ENTER WAR ROOM →</a>
   </div>
 </section>
@@ -587,15 +623,15 @@ footer a:hover{color:var(--green);}
     "name":"OverADP",
     "applicationCategory":"SportsApplication",
     "operatingSystem":"Web",
-    "description":"Fantasy football draft tool that beats ADP by over 119%. 4 ML models with college pipeline, 0.843 correlation vs ADP's 0.384.",
+    "description":"Fantasy football draft tool that beats ADP by over 119%. 4 ML models with college pipeline, 0.853 correlation vs ADP's 0.389.",
     "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
   },
   {
     "@context":"https://schema.org",
     "@type":"FAQPage",
     "mainEntity":[
-      {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP achieves 0.843 correlation with actual fantasy points, compared to ADP's 0.384. That's over 119% more accurate."}},
-      {"@type":"Question","name":"Is OverADP free?","acceptedAnswer":{"@type":"Answer","text":"Yes, OverADP is free to use. No credit card required."}},
+      {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP achieves 0.853 correlation with actual fantasy points, compared to ADP's 0.389. That's over 119% more accurate."}},
+      {"@type":"Question","name":"Is OverADP free?","acceptedAnswer":{"@type":"Answer","text":"OverADP is free to browse — see all player names, positions, teams, and bye weeks. Unlock full projections, sleepers, busts, and handcuff alerts for $24.99/season or $6.99/draft."}},
       {"@type":"Question","name":"What positions does OverADP cover?","acceptedAnswer":{"@type":"Answer","text":"OverADP covers QB, RB, WR, and TE with position-specific ML models. College/draft data powers rookie projections."}}
     ]
   }

@@ -1,12 +1,19 @@
 [build]
   publish = "site"
-  command = "echo 'Static site - no build needed'"
+  functions = "netlify/functions"
 
 [[headers]]
   for = "/app/data/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
     Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, stripe-signature"
 
 [[redirects]]
   from = "/app"
