@@ -14,7 +14,7 @@
     --steel: #141a24;
     --iron: #1c2433;
     --rust: #2a3548;
-    --smoke: #6a7588;
+    --smoke: #4a5568;
     --ash: #7a8599;
     --chalk: #c8cdd8;
     --white: #eef0f4;
@@ -55,21 +55,11 @@
     z-index: 9999;
   }
 
-  /* Accessibility */
-  .skip-link{position:absolute;top:-100%;left:16px;background:var(--wr);color:var(--void);padding:8px 16px;font-size:14px;z-index:10000;text-decoration:none;border-radius:0 0 4px 4px;}
-  .skip-link:focus{top:0;}
-  :focus-visible{outline:2px solid var(--wr);outline-offset:2px;}
-  button:focus-visible{outline:2px solid var(--wr);outline-offset:2px;}
-  @media(prefers-reduced-motion:reduce){
-    *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;}
-    body::after{display:none;}
-  }
-
   /* === LAYOUT === */
   .war-room {
     display: grid;
     grid-template-columns: 260px 1fr 300px;
-    grid-template-rows: 64px 42px 1fr;
+    grid-template-rows: 56px 42px 1fr;
     height: 100vh;
   }
 
@@ -81,7 +71,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 28px;
+    padding: 0 24px;
     position: relative;
   }
   .top-bar::after {
@@ -94,7 +84,7 @@
   }
   .logo {
     font-family: 'Oswald', sans-serif;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -104,37 +94,26 @@
     gap: 10px;
   }
   .logo .icon {
-    width: 30px; height: 30px;
-    border: 2px solid var(--wr);
-    border-radius: 4px;
+    width: 28px; height: 28px;
+    border: 2px solid var(--rb);
+    border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 16px; font-weight: 700; line-height: 1;
-    color: var(--wr);
-    position: relative;
-    box-shadow: 0 0 12px var(--wr-glow);
+    font-size: 14px;
+    box-shadow: 0 0 12px var(--rb-glow);
     animation: pulse-ring 2s ease-in-out infinite;
-    flex-shrink: 0;
-  }
-  .logo .icon::before {
-    content: '';
-    position: absolute; inset: -5px;
-    border: 1px solid rgba(16,185,129,0.15);
-    border-radius: 7px;
-    pointer-events: none;
   }
   @keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 8px var(--wr-glow); }
-    50% { box-shadow: 0 0 20px var(--wr-glow); }
+    0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
+    50% { box-shadow: 0 0 20px var(--rb-glow); }
   }
-  .top-actions { display: flex; gap: 10px; align-items: center; margin-left: auto; }
+  .top-actions { display: flex; gap: 8px; align-items: center; }
   .btn {
     font-family: 'Oswald', sans-serif;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    padding: 8px 18px;
+    padding: 7px 16px;
     border: 1px solid var(--rust);
     border-radius: 2px;
     background: var(--steel);
@@ -179,22 +158,16 @@
     display: flex;
     align-items: center;
     padding: 0 24px;
-    gap: 0;
+    gap: 24px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     color: var(--ash);
     overflow: hidden;
   }
-  .ticker-group {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .ticker-group.pos-group { margin-left: auto; gap: 10px; }
   .ticker-stat {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     white-space: nowrap;
   }
   .ticker-stat .val {
@@ -210,22 +183,7 @@
     width: 1px;
     height: 20px;
     background: var(--rust);
-    margin: 0 16px;
   }
-  .pos-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-  }
-  .pos-badge.qb-b { background: rgba(255,59,92,0.12); color: var(--qb); }
-  .pos-badge.rb-b { background: rgba(59,130,246,0.12); color: var(--rb); }
-  .pos-badge.wr-b { background: rgba(16,185,129,0.12); color: var(--wr); }
-  .pos-badge.te-b { background: rgba(245,158,11,0.12); color: var(--te); }
 
   /* === LEFT PANEL — MY ROSTER === */
   .left-panel {
@@ -700,127 +658,59 @@
 
   /* VBD column */
   .vbd-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; color: var(--te); }
-
-  /* === MOBILE === */
-  @media(max-width:700px){
-    html,body{overflow:auto;height:auto;}
-    .war-room{
-      display:flex;flex-direction:column;height:auto;min-height:100vh;
-    }
-    .top-bar{position:sticky;top:0;z-index:100;padding:0 12px;}
-    .top-bar .logo{font-size:16px;letter-spacing:2px;gap:8px;}
-    .top-bar .logo .icon{width:26px;height:26px;font-size:14px;}
-    .top-bar .top-actions{gap:6px;}
-    .top-bar .btn{padding:6px 10px;font-size:10px;letter-spacing:1px;}
-    .ticker-bar{position:relative;top:auto;z-index:auto;flex-wrap:wrap;padding:8px 12px;gap:8px;}
-    .ticker-group{gap:10px;}
-    .ticker-group.pos-group{margin-left:0;gap:6px;}
-    .ticker-divider{margin:0 8px;}
-    .ticker-stat{font-size:10px;}
-    .ticker-stat .val{font-size:11px;}
-    .pos-badge{padding:1px 4px;font-size:9px;}
-    /* Tab-based mobile: only one panel visible at a time */
-    .left-panel,.center-panel,.right-panel{
-      width:100%;border-right:none;border-left:none;
-      border-bottom:1px solid var(--rust);
-      overflow-y:auto;flex:1;
-      display:none;
-      padding-bottom:70px;
-    }
-    .left-panel.mobile-active,.center-panel.mobile-active,.right-panel.mobile-active{
-      display:block;
-    }
-    .center-panel::before{display:none;}
-    .center-panel{padding:12px 12px 70px 12px;}
-    .left-panel{padding:12px 12px 70px 12px;}
-    .right-panel{padding:12px 12px 70px 12px;}
-    .filter-row{flex-wrap:wrap;}
-    .search-field{min-width:100px;flex:1 1 100px;}
-    .pool-table{font-size:11px;}
-    .pool-table th,.pool-table td{padding:6px 8px;}
-    .pool-table th:nth-child(4),.pool-table td:nth-child(4),
-    .pool-table th:nth-child(5),.pool-table td:nth-child(5),
-    .pool-table th:nth-child(6),.pool-table td:nth-child(6),
-    .pool-table th:nth-child(7),.pool-table td:nth-child(7),
-    .pool-table th:nth-child(8),.pool-table td:nth-child(8),
-    .pool-table th:nth-child(9),.pool-table td:nth-child(9){display:none;}
-    .info-modal{width:95vw;padding:20px;max-height:90vh;overflow-y:auto;}
-    .loading-overlay{position:fixed;}
-    /* Bottom tab bar */
-    .mobile-tab-bar{
-      display:flex;position:fixed;bottom:0;left:0;right:0;z-index:200;
-      background:var(--pit);border-top:1px solid var(--rust);
-      padding:6px 8px;gap:4px;
-    }
-    .mobile-tab-btn{
-      flex:1;padding:8px 4px;border:1px solid var(--rust);border-radius:2px;
-      background:var(--steel);color:var(--ash);cursor:pointer;text-align:center;
-      font-family:'Oswald',sans-serif;font-size:11px;font-weight:600;
-      letter-spacing:1px;text-transform:uppercase;
-    }
-    .mobile-tab-btn.active{background:var(--iron);color:var(--chalk);border-color:var(--smoke);}
-    .left-panel .panel-title::after,.right-panel .panel-title::after{display:none;}
-  }
-  @media(min-width:701px){
-    .mobile-tab-bar{display:none !important;}
-    .left-panel,.center-panel,.right-panel{display:block !important;}
-  }
 </style>
 </head>
 <body>
-<a href="#playerPool" class="skip-link">Skip to player pool</a>
 <div class="war-room">
   <!-- TOP BAR -->
-  <header class="top-bar" role="banner">
+  <div class="top-bar">
     <div class="logo">
-      <div class="icon">Δ</div>
-      OVERADP
+      <div class="icon">◈</div>
+      WAR ROOM
     </div>
     <div class="top-actions">
-      <button class="btn btn-activate" onclick="loadData()" aria-label="Initialize draft data">INITIALIZE</button>
-      <button class="btn btn-kill" onclick="resetDraft()" aria-label="Reset all draft picks">RESET</button>
-      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works" aria-label="Information about how WAR ROOM works">ⓘ</button>
-    </div>
-  </header>
-
-  <!-- TICKER BAR -->
-  <div class="ticker-bar">
-    <div class="ticker-group">
-      <div class="ticker-stat">AVAIL <span class="val" id="availCount">0</span></div>
-      <div class="ticker-divider"></div>
-      <div class="ticker-stat">MINE <span class="val rb-c" id="myCount">0</span></div>
-      <div class="ticker-divider"></div>
-      <div class="ticker-stat">OPP <span class="val" id="oppCount">0</span></div>
-      <div class="ticker-divider"></div>
-      <div class="ticker-stat">RD <span class="val wr-c" id="roundNum">1</span></div>
-    </div>
-    <div class="ticker-group pos-group">
-      <span class="pos-badge qb-b">QB<span id="qbCount">0</span></span>
-      <span class="pos-badge rb-b">RB<span id="rbCount">0</span></span>
-      <span class="pos-badge wr-b">WR<span id="wrCount">0</span></span>
-      <span class="pos-badge te-b">TE<span id="teCount">0</span></span>
+      <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
+      <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
+      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
     </div>
   </div>
 
+  <!-- TICKER BAR -->
+  <div class="ticker-bar">
+    <div class="ticker-stat">AVAIL <span class="val" id="availCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">MY PICKS <span class="val rb-c" id="myCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">OPPONENT <span class="val" id="oppCount">0</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">ROUND <span class="val wr-c" id="roundNum">1</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">QB <span class="val qb-c" id="qbCount">0</span></div>
+    <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
+    <div class="ticker-stat">WR <span class="val wr-c" id="wrCount">0</span></div>
+    <div class="ticker-stat">TE <span class="val te-c" id="teCount">0</span></div>
+  </div>
+
   <!-- LEFT — MY ROSTER -->
-  <aside class="left-panel" role="complementary" aria-label="My roster">
+  <div class="left-panel">
     <div class="panel-title">My Roster</div>
     <div id="myTeamSlots"></div>
     <div class="total-bar">
       <div class="total-label">Projected Total</div>
       <div class="total-val" id="totalPts">0.0</div>
     </div>
-  </aside>
+  </div>
 
   <!-- CENTER — PLAYER POOL -->
-  <main class="center-panel" role="main">
+  <div class="center-panel">
     <div class="filter-row">
       <button class="pos-filter on" data-pos="ALL" onclick="filterPos('ALL', this)">ALL</button>
       <button class="pos-filter" data-pos="QB" onclick="filterPos('QB', this)">QB</button>
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" type="text" placeholder="SEARCH PLAYER..." oninput="searchPlayers(this.value)" aria-label="Search players by name or team">
+      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)">
+      <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -829,10 +719,10 @@
         <p>Click INITIALIZE to fetch NFL stats<br>and train prediction models.</p>
       </div>
     </div>
-  </main>
+  </div>
 
   <!-- RIGHT — INTEL -->
-  <aside class="right-panel" role="complementary" aria-label="Draft intelligence">
+  <div class="right-panel">
     <div class="panel-title">Target Intel</div>
     <div id="recommendations">
       <div class="empty-state" style="padding:20px 8px;">
@@ -859,117 +749,178 @@
     <div id="opponentPicks">
       <div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>
     </div>
-  </aside>
-
-  <!-- MOBILE TAB BAR -->
-  <div class="mobile-tab-bar">
-    <button class="mobile-tab-btn" onclick="mobileTab('left-panel',this)">ROSTER</button>
-    <button class="mobile-tab-btn active" onclick="mobileTab('center-panel',this)">PLAYERS</button>
-    <button class="mobile-tab-btn" onclick="mobileTab('right-panel',this)">INTEL</button>
   </div>
 </div>
 
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
+    <h2>WAR ROOM — How It Works</h2>
+    <p>WAR ROOM is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 5+ years of NFL data to project player performance and guide your draft picks in real-time.</p>
 
-    <h2>⚡ WAR ROOM — Your AI Draft Edge</h2>
-    <p style="font-size:16px;line-height:1.6;margin-bottom:24px;">This is not another rankings list. WAR ROOM uses <strong>4 machine learning models</strong> trained on 7 years of NFL data to predict every player's fantasy output — and it <strong>beats ADP by over 150%</strong>.</p>
-
-    <!-- PROOF -->
-    <div style="background:var(--steel);border:1px solid var(--rb);border-radius:4px;padding:20px;margin-bottom:24px;">
-      <h3 style="color:var(--rb);margin-bottom:12px;">The Proof — 2025 Season</h3>
-      <table style="width:100%;font-size:14px;">
-        <tr><th style="text-align:left;padding:8px;">Metric</th><th style="text-align:center;">OverADP</th><th style="text-align:center;">ADP</th></tr>
-        <tr><td style="padding:8px;">Correlation with actual</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.970</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.384</td></tr>
-        <tr><td style="padding:8px;">Top-20 players identified</td><td style="text-align:center;color:var(--wr);font-weight:700;">19/20</td><td style="text-align:center;color:var(--alert);opacity:0.6;">7/20</td></tr>
-        <tr><td style="padding:8px;">QB correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.949</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.048</td></tr>
-        <tr><td style="padding:8px;">RB correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.979</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.606</td></tr>
-        <tr><td style="padding:8px;">WR correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.972</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.427</td></tr>
-        <tr><td style="padding:8px;">TE correlation</td><td style="text-align:center;color:var(--wr);font-weight:700;">0.981</td><td style="text-align:center;color:var(--alert);opacity:0.6;">0.373</td></tr>
-      </table>
-      <p style="color:var(--ash);font-size:12px;margin-top:12px;">Walk-forward validated. Train on past seasons, test on future. No data leakage.</p>
-    </div>
-
-    <!-- HOW TO USE -->
-    <h2>🎯 How To Use This Board</h2>
-
-    <h3>1. The Player Pool — Who To Draft</h3>
-    <p>Players are ranked by <strong>VBD (Value Based Drafting)</strong>, not raw points. This accounts for positional scarcity — a RB scoring 180 pts is more valuable than a QB scoring 250 pts, because replacement QBs score more than replacement RBs.</p>
-    <table>
-      <tr><th style="text-align:left;padding:8px;">Column</th><th style="text-align:left;padding:8px;">What It Means</th></tr>
-      <tr><td style="padding:8px;"><span class="tag tag-green">VBD</span></td><td style="padding:8px;">How many more points this player gives you vs a waiver-wire replacement at the same position. <strong>Higher = draft earlier.</strong></td></tr>
-      <tr><td style="padding:8px;"><span class="tag tag-blue">PROJ</span></td><td style="padding:8px;">Projected season fantasy points (half-PPR).</td></tr>
-      <tr><td style="padding:8px;"><span class="tag tag-yellow">RANGE</span></td><td style="padding:8px;">80% confidence interval [low–high]. Wide range = risky. Narrow = reliable.</td></tr>
-      <tr><td style="padding:8px;"><span class="tag tag-red">RISK</span></td><td style="padding:8px;">low / medium / high. Based on prediction uncertainty. High risk = boom or bust.</td></tr>
-      <tr><td style="padding:8px;"><span class="tag tag-blue">BYE</span></td><td style="padding:8px;">This player's bye week. Red = conflict with your other starters.</td></tr>
-    </table>
-
-    <h3>2. My Roster — Your Team</h3>
-    <p>Click <strong>DRAFT</strong> to add a player. They auto-fill into the correct roster slot (QB → QB slot, RB → RB1/RB2/Flex/Bench, etc.). Your projected season total is shown at the bottom.</p>
-
-    <h3>3. Target Intel — The Edge</h3>
-    <table>
-      <tr><th style="text-align:left;padding:8px;">Panel</th><th style="text-align:left;padding:8px;">What It Does For You</th></tr>
-      <tr><td style="padding:8px;"><strong>🎯 Pick Advice</strong></td><td style="padding:8px;">Top 5 players to draft next, based on VBD + your roster needs. "MUST DRAFT" = you still need that position.</td></tr>
-      <tr><td style="padding:8px;"><strong>📊 Positional Scarcity</strong></td><td style="padding:8px;">Shows which positions have the steepest talent cliffs. If RB drops off hard, grab RBs early.</td></tr>
-      <tr><td style="padding:8px;"><strong>⚠ Bye Conflicts</strong></td><td style="padding:8px;">Warns if drafting a player creates a bye week hole. Never start a week with empty slots.</td></tr>
-      <tr><td style="padding:8px;"><strong>💤 Sleepers</strong></td><td style="padding:8px;">Players our model ranks WAY above ADP — the market is sleeping on them.</td></tr>
-      <tr><td style="padding:8px;"><strong>📉 Busts</strong></td><td style="padding:8px;">Players ADP overvalues — the market is paying too much for name recognition.</td></tr>
-      <tr><td style="padding:8px;"><strong>🔒 Handcuffs</strong></td><td style="padding:8px;">Backup RBs for your starters. If your 1st-round RB goes down, their backup takes over. Draft insurance.</td></tr>
-    </table>
-
-    <h3>4. Opponent Picks</h3>
-    <p>Click <strong>OPP</strong> to mark a player as drafted by an opponent. This removes them from your pool and recalculates VBD/scarcity in real-time.</p>
-
-    <!-- KEY CONCEPTS -->
-    <h2>🧠 Key Concepts</h2>
-
-    <h3>VBD — Why It Beats Raw Points</h3>
-    <p>Imagine a QB projected for 250 pts and a RB projected for 180 pts. Who's more valuable? <strong>The RB.</strong> Because the 12th-best QB scores ~170 pts (only 80 pts less), but the 24th-best RB scores ~120 pts (60 pts less with way more starters needed). VBD measures the gap between a player and the replacement you'd get for free.</p>
-
-    <h3>Why We Beat ADP</h3>
-    <p>ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and 4 ML models to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP's correlation with actual QB fantasy points is 0.048, which is <strong>worse than a coin flip</strong>. ADP completely misses dual-threat rushing upside and rookie breakouts.</p>
-
-    <h3>The 4 Models</h3>
-    <p>Each player's projection is the average of 4 independent models:</p>
+    <h2>The Model</h2>
+    <h3>Ensemble Approach</h3>
+    <p>Three models vote on each player's projection, then their predictions are averaged:</p>
     <ul>
-      <li><span class="tag tag-blue">Ridge</span> — Stable baseline, prevents wild predictions</li>
-      <li><span class="tag tag-green">Random Forest</span> — Captures age cliffs and breakouts</li>
-      <li><span class="tag tag-yellow">XGBoost</span> — Best at complex feature interactions</li>
-      <li><span class="tag tag-red">CatBoost</span> — Best generalization, wins on most positions</li>
+      <li><span class="tag tag-blue">Ridge Regression</span> — Linear baseline, stable and unbiased</li>
+      <li><span class="tag tag-green">Random Forest</span> — Captures non-linear patterns (age cliffs, breakouts)</li>
+      <li><span class="tag tag-yellow">XGBoost</span> — Gradient boosting, best at complex feature interactions</li>
     </ul>
-    <p>Averaging 4 models reduces overfitting and produces more reliable projections than any single model.</p>
+    <p>The model with the best cross-validation MAE for each position is selected as the "best" model. The ensemble average is used for the final projection.</p>
 
-    <p style="color:var(--smoke);font-size:12px;margin-top:20px;">Data: nflverse (via nfl_data_py), Fantasy Football Calculator ADP, NFL schedule · Walk-forward validated · No data leakage · Train/test R² gaps &lt; 0.02</p>
+    <h3>Features (40+ per position)</h3>
+    <table>
+      <tr><th>Category</th><th>What It Captures</th><th>Example</th></tr>
+      <tr><td><span class="tag tag-blue">Career Arc</span></td><td>Age, prime detection, regression risk</td><td>RB age cliff at 28+</td></tr>
+      <tr><td><span class="tag tag-green">Volume</span></td><td>Target share, rush share, snap counts</td><td>High volume = safer floor</td></tr>
+      <tr><td><span class="tag tag-yellow">Lag/Rolling</span></td><td>Prior year stats, 2-year rolling averages</td><td>YoY change signals breakout/bust</td></tr>
+      <tr><td><span class="tag tag-red">Injury</span></td><td>Injury history, games missed</td><td>Fragile players get risk flags</td></tr>
+      <tr><td><span class="tag tag-blue">ADP</span></td><td>Market wisdom — where others draft them</td><td>Model vs ADP gap = sleeper/bust</td></tr>
+      <tr><td><span class="tag tag-green">SOS</span></td><td>Strength of schedule, defensive quality</td><td>Hard schedule = lower ceiling</td></tr>
+      <tr><td><span class="tag tag-yellow">Teammate Dep.</span></td><td>QB quality → WR/TE, WR corps → QB, box-stack risk</td><td>Jefferson suffered with bad QB</td></tr>
+      <tr><td><span class="tag tag-blue">Playmaker</span></td><td>RACR, YAC share, domination score, WOPR</td><td>High RACR = creates own value</td></tr>
+      <tr><td><span class="tag tag-red">Rookie</span></td><td>First/second-year flag, wider uncertainty</td><td>Rookies get 80% wider CI</td></tr>
+      <tr><td><span class="tag tag-green">Stacking</span></td><td>QB + WR/TE same-team correlation</td><td>Amplifies upside and downside</td></tr>
+    </table>
+
+    <h3>Post-Prediction Adjustments</h3>
+    <ul>
+      <li><strong>Breakout shrinkage:</strong> If a player is coming off a breakout (>30% above average), the projection is shrunk 30% toward their 2-year rolling average to account for regression to the mean.</li>
+      <li><strong>RB age cliff:</strong> RBs over 28 get a ~3% per year penalty (0.97^age_over_27).</li>
+      <li><strong>Fringe player shrinkage:</strong> Backups with <10 pts last year who are projected >3x that are shrunk toward their actual performance.</li>
+      <li><strong>Rookie uncertainty:</strong> Rookies get 1.8x wider confidence intervals; 2nd-year players get 1.3x wider.</li>
+    </ul>
+
+    <h2>Understanding the UI</h2>
+    <h3>Player Pool (Left Panel)</h3>
+    <table>
+      <tr><th>Column</th><th>Meaning</th></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Above Replacement — how many more points this player scores vs a replacement-level player at the same position. Higher = more valuable.</td></tr>
+      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the season (half-PPR by default).</td></tr>
+      <tr><td><span class="tag tag-yellow">CI</span></td><td>80% Confidence Interval [low–high]. Wider = more uncertain. Rookies have much wider CIs.</td></tr>
+      <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — based on prediction uncertainty. High risk = boom-or-bust.</td></tr>
+      <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from FantasyPros — where the market values this player.</td></tr>
+    </table>
+    <h3>Draft Board Sort</h3>
+    <p>Players are interleaved by position (RB → WR → QB → TE) within each VBD tier, so you don't see 50 RBs in a row. This mimics how a real draft flows.</p>
+
+    <h3>My Team (Center Panel)</h3>
+    <p>Players are auto-assigned to roster slots based on position:</p>
+    <ul>
+      <li><span class="tag tag-blue">QB</span> → QB slot</li>
+      <li><span class="tag tag-green">RB</span> → RB1, RB2, then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">WR</span> → WR1, WR2, then Flex, then Bench</li>
+      <li><span class="tag tag-red">TE</span> → TE slot, then Flex, then Bench</li>
+    </ul>
+    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter.</p>
+
+    <h3>Right Sidebar Panels</h3>
+    <table>
+      <tr><th>Panel</th><th>What It Shows</th></tr>
+      <tr><td><strong>Pick Advice</strong></td><td>Top 5 recommendations based on VBD + roster need bonuses. "MUST DRAFT" = starter slot still open late.</td></tr>
+      <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
+      <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
+      <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
+      <tr><td><strong>Handcuff Alerts</strong></td><td>Backup RBs on the same team as your starting RBs. If your starter goes down, the handcuff takes over.</td></tr>
+      <tr><td><strong>Opponent Drafts</strong></td><td>Tracks what positions opponents are taking — watch for position runs.</td></tr>
+    </table>
+
+    <h2>Key Concepts</h2>
+    <h3>VBD (Value Based Drafting)</h3>
+    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last starter that would be rostered across all teams (e.g., the #24 RB in a 12-team league that starts 2 RBs). VBD tells you <em>how much better</em> this player is than what you could get for free off waivers.</p>
+
+    <h3>Positional Scarcity</h3>
+    <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
+    <p><strong>How it's calculated:</strong> For each position, WAR ROOM finds the projected points of the #1 player (elite) and the projected points of the last starter that would be rostered across all teams (replacement). The difference is the <em>scarcity score</em>.</p>
+    <table>
+      <tr><th>Scarcity Level</th><th>What It Means</th><th>Draft Strategy</th></tr>
+      <tr><td><span class="tag tag-red">High Scarcity</span></td><td>Huge gap between elite and replacement</td><td>Draft this position early — waiting means getting a much worse player</td></tr>
+      <tr><td><span class="tag tag-yellow">Medium Scarcity</span></td><td>Moderate dropoff</td><td>Balanced — draft when value aligns with your pick</td></tr>
+      <tr><td><span class="tag tag-green">Low Scarcity</span></td><td>Shallow dropoff — many comparable options</td><td>Safe to wait — replacement-level players are almost as good as "starters"</td></tr>
+    </table>
+    <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
+
+    <h3>Confidence Intervals</h3>
+    <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
+
+    <h3>Model vs ADP</h3>
+    <p>Our ensemble model has a <strong>0.84+ correlation</strong> with actual fantasy points, beating ADP's 0.56. But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+
+    <h3>Handcuff Alerts</h3>
+    <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
+    <p><strong>Why it matters:</strong> If you drafted Saquon Barkley in the 1st round and he goes down in Week 3, his backup (who you can draft in the last round for almost nothing) suddenly becomes a top-15 RB. Without the handcuff, you're scrambling on waivers.</p>
+    <table>
+      <tr><th>Handcuff Type</th><th>Description</th><th>Priority</th></tr>
+      <tr><td><span class="tag tag-red">Must Handcuff</span></td><td>Your RB1's backup — protect your 1st/2nd round investment</td><td>High — draft in late rounds</td></tr>
+      <tr><td><span class="tag tag-yellow">Consider</span></td><td>Your RB2/RB3's backup — nice insurance but less critical</td><td>Medium — if bench space allows</td></tr>
+      <tr><td><span class="tag tag-green">Available</span></td><td>Other backup RBs still on the board</td><td>Low — only if you have empty bench slots</td></tr>
+    </table>
+    <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance — you hope you never need it, but if you do, it saves your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
+
+    <h3>Ensemble Model</h3>
+    <p>WAR ROOM uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
+    <table>
+      <tr><th>Model</th><th>Strength</th><th>Best For</th></tr>
+      <tr><td><strong>Ridge</strong></td><td>Linear relationships, stable with small data</td><td>Baseline — prevents wild predictions</td></tr>
+      <tr><td><strong>Random Forest</strong></td><td>Non-linear patterns, resistant to outliers</td><td>Capturing interactions without overfitting</td></tr>
+      <tr><td><strong>XGBoost</strong></td><td>Gradient boosting, strong on tabular data</td><td>RB/TE projections</td></tr>
+      <tr><td><strong>CatBoost</strong></td><td>Ordered boosting, best generalization</td><td>QB/WR/TE — wins validation on most positions</td></tr>
+    </table>
+    <p><strong>Feature selection:</strong> We ran an ablation study and found that derived features (teammate dependency, playmaker metrics like RACR/WOPR) were <em>harmful</em> — they're collinear with base lag features and added noise. The model performs best with clean lag features + ADP + age curves + regression-to-mean adjustments.</p>
+
+    <h2>Data Sources</h2>
+    <ul>
+      <li><strong>nflverse</strong> (via nfl_data_py) — Seasonal stats, roster info, team stats, OL metrics, snap counts, injuries</li>
+      <li><strong>FantasyPros</strong> — ADP (Average Draft Position) data</li>
+      <li><strong>NFL Schedule</strong> — Bye week derivation</li>
+    </ul>
+
+    <h2>Accuracy</h2>
+    <table>
+      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.793</td><td>0.757</td><td>~23 pts</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.936</td><td>0.933</td><td>~10 pts</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.964</td><td>0.962</td><td>~7 pts</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.950</td><td>0.943</td><td>~6 pts</td></tr>
+    </table>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
+
+    <h2>Model vs ADP — Head to Head</h2>
+    <p>We tested our model against ADP (Average Draft Position) on the 2024 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
+    <table>
+      <tr><th>Metric</th><th>WAR ROOM</th><th>ADP</th><th>Winner</th></tr>
+      <tr><td><strong>Correlation with actual</strong></td><td>0.947</td><td>0.600</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><td><strong>R² (explained variance)</strong></td><td>0.870</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>MAE (avg error)</strong></td><td>13.5 pts</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>Top-20 hit rate</strong></td><td>16/20 (80%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+    </table>
+    <p><strong>What this means:</strong> Our model correctly identified 16 of the 20 highest-scoring players in 2024. ADP only found 7. The model's correlation with actual production is 0.947 vs ADP's 0.600 — that's a <strong>58% improvement</strong>.</p>
+    <table>
+      <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.866</td><td>0.544</td><td>+0.32</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.970</td><td>0.780</td><td>+0.19</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.950</td><td>0.704</td><td>+0.25</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.894</td><td>0.688</td><td>+0.21</td></tr>
+    </table>
+    <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
   </div>
 </div>
 
-<div class="loading-overlay hidden" id="loadingOverlay" role="status" aria-live="polite">
+<div class="loading-overlay hidden" id="loadingOverlay">
   <div class="load-spinner"></div>
   <div class="load-text" id="loadingText">ACQUIRING DATA...</div>
   <div class="load-bar"><div class="load-bar-inner"></div></div>
 </div>
 
 <script>
-function mobileTab(panelClass, btn){
-  document.querySelectorAll('.left-panel,.center-panel,.right-panel').forEach(p=>p.classList.remove('mobile-active'));
-  document.querySelector('.'+panelClass).classList.add('mobile-active');
-  document.querySelectorAll('.mobile-tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-// Set initial mobile tab
-if(window.innerWidth<=700){
-  document.querySelector('.center-panel').classList.add('mobile-active');
-}
-
 let allPlayers = [];
 let myTeamIds = [];
 let opponentIds = [];
 let recommendedIds = new Set();
 let currentFilter = 'ALL';
 let searchQuery = '';
-let vbdMode = true;
+let vbdMode = false;
 let vbdPlayers = [];
 let byeWeeks = {};
 let scarcityData = [];
@@ -1162,7 +1113,7 @@ function renderPlayerPool(){
     const byeConflict=checkByeConflictForPlayer(p);
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
     const draftBtn=byeConflict?
-      `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT</button>`:
+      `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
       `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
       <td class="rank-cell">${i+1}</td>
@@ -1385,8 +1336,8 @@ function loadByeConflicts(){
     const col=isCrit?'#ff4444':'#ffaa00';
     const icon=isCrit?'⚠':'⚡';
     const label=isCrit?'CRITICAL':'WARNING';
-    h+=`<div style="padding:6px 8px;margin:4px 0;border-left:3px solid ${col};font-size:12px;">
-      <div style="color:${col};font-weight:700;font-size:13px;">${icon} WK${cf.week} ${label}</div>
+    h+=`<div style="padding:4px 6px;margin:2px 0;border-left:3px solid ${col};font-size:11px;">
+      <div style="color:${col};font-weight:700;">${icon} WK${cf.week} ${label}</div>
       <div style="color:var(--fg);">${cf.position}: ${cf.players.map(p=>p.name).join(', ')}</div>
       ${cf.has_coverage?'<div style="color:var(--smoke);">Bench coverage available</div>':'<div style="color:#ff4444;">No bench coverage!</div>'}
     </div>`;
@@ -1396,22 +1347,26 @@ function loadByeConflicts(){
 
 function loadSleepers(){
   const c=document.getElementById('sleepersPanel');
-  if(!sleepersData.length&&!bustsData.length){
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const draftedNames=new Set([...myTeamIds,...opponentIds].map(id=>playerMap[id]?.player_name).filter(Boolean));
+  const availSleepers=sleepersData.filter(s=>!draftedNames.has(s.player_name));
+  const availBusts=bustsData.filter(b=>!draftedNames.has(b.player_name));
+  if(!availSleepers.length&&!availBusts.length){
     c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
     return;
   }
   let h='';
-  if(sleepersData.length){
+  if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
-    sleepersData.slice(0,5).forEach(s=>{
+    availSleepers.slice(0,8).forEach(s=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
         ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
       </div>`;
     });
   }
-  if(bustsData.length){
+  if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
-    bustsData.slice(0,5).forEach(b=>{
+    availBusts.slice(0,8).forEach(b=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
         ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
       </div>`;
@@ -1450,7 +1405,18 @@ function toggleInfo(){
   overlay.classList.toggle('active');
 }
 
-// VBD always on — removed toggle
+function toggleVBD(){
+  const btn=document.getElementById('vbdToggle');
+  vbdMode=!vbdMode;
+  if(vbdMode){
+    btn.classList.add('on');
+    // Sort all players by VBD
+    vbdPlayers=[...allPlayers].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
+  }else{
+    btn.classList.remove('on');
+  }
+  renderPlayerPool();
+}
 
 function loadScarcity(){
   const c=document.getElementById('scarcityPanel');
