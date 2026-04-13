@@ -5,15 +5,18 @@ from src.utils.config import get_scoring_rules
 
 STAT_TO_RULE = {
     "passing_yards": "passing_yards",
-    "passing_td": "passing_td",
-    "passing_int": "passing_int",
+    "passing_tds": "passing_td",
+    "interceptions": "passing_int",
     "rushing_yards": "rushing_yards",
-    "rushing_td": "rushing_td",
+    "rushing_tds": "rushing_td",
     "receiving_yards": "receiving_yards",
-    "receiving_td": "receiving_td",
+    "receiving_tds": "receiving_td",
     "receptions": "receptions",
-    "fumble_lost": "fumble_lost",
-    "two_point_conversion": "two_point_conversion",
+    "sack_fumbles_lost": "fumble_lost",
+    "rushing_fumbles_lost": "fumble_lost",
+    "passing_2pt": "two_point_conversion",
+    "rushing_2pt": "two_point_conversion",
+    "receiving_2pt": "two_point_conversion",
 }
 
 
@@ -27,10 +30,38 @@ def calculate_fantasy_points(stats: dict | pd.Series, format: str = "half_ppr") 
 
 
 def add_fantasy_points_to_df(df: pd.DataFrame, format: str = "half_ppr") -> pd.DataFrame:
-    """Add fantasy_points and fantasy_points_per_game columns."""
+    """Add fantasy_points and fantasy_points_per_game columns.
+    
+    Uses nflverse-provided fantasy_points when available (already correctly
+    calculated per scoring format). Falls back to manual calculation only
+    when the column is missing or all-NaN.
+    """
     df = df.copy()
-    rules = get_scoring_rules(format)
 
+    # nflverse provides fantasy_points (standard) and fantasy_points_ppr
+    # For half-PPR, we derive: half_ppr = standard + 0.5 * receptions
+    if format == "half_ppr" and "fantasy_points" in df.columns and "receptions" in df.columns:
+        if df["fantasy_points"].notna().any():
+            df["fantasy_points"] = df["fantasy_points"].fillna(0) + df["receptions"].fillna(0) * 0.5
+            if "games" in df.columns:
+                df["fantasy_points_per_game"] = df["fantasy_points"] / df["games"].replace(0, pd.NA)
+            return df
+
+    if format == "ppr" and "fantasy_points_ppr" in df.columns:
+        if df["fantasy_points_ppr"].notna().any():
+            df["fantasy_points"] = df["fantasy_points_ppr"].fillna(0)
+            if "games" in df.columns:
+                df["fantasy_points_per_game"] = df["fantasy_points"] / df["games"].replace(0, pd.NA)
+            return df
+
+    if format == "standard" and "fantasy_points" in df.columns:
+        if df["fantasy_points"].notna().any():
+            if "games" in df.columns:
+                df["fantasy_points_per_game"] = df["fantasy_points"] / df["games"].replace(0, pd.NA)
+            return df
+
+    # Fallback: manual calculation
+    rules = get_scoring_rules(format)
     points = pd.Series(0.0, index=df.index)
     for stat_col, rule_key in STAT_TO_RULE.items():
         if stat_col in df.columns:
