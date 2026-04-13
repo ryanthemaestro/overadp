@@ -33,8 +33,8 @@ POSITION_FEATURES = {
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
-        # SOS & rookie features
-        "def_rank", "pass_def_rank", "is_rookie", "is_2nd_year",
+        # SOS & rookie features (lagged to prevent leakage)
+        "def_rank_lag1", "pass_def_rank_lag1", "is_rookie", "is_2nd_year",
         # Teammate dependency
         "wr_corps_rank_lag1", "wr_total_pts_lag1",
         # Playmaker
@@ -63,8 +63,8 @@ POSITION_FEATURES = {
         "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
-        # SOS & rookie features
-        "def_rank", "is_rookie", "is_2nd_year",
+        # SOS & rookie features (lagged to prevent leakage)
+        "def_rank_lag1", "is_rookie", "is_2nd_year",
         # College/draft features
         "draft_capital", "athletic_score", "college_dominance",
         "college_rush_yds_per_game", "college_rush_td_per_game",
@@ -88,8 +88,8 @@ POSITION_FEATURES = {
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
-        # SOS, stacking & rookie features
-        "pass_def_rank", "qb_stack_bonus", "team_qb_avg_pts", "is_rookie", "is_2nd_year",
+        # SOS, stacking & rookie features (lagged to prevent leakage)
+        "pass_def_rank_lag1", "qb_stack_bonus", "team_qb_avg_pts", "is_rookie", "is_2nd_year",
         # College/draft features
         "draft_capital", "athletic_score", "college_dominance",
         "college_rec_yds_per_game", "college_rec_td_per_game",
@@ -113,8 +113,8 @@ POSITION_FEATURES = {
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
-        # SOS, stacking & rookie features
-        "pass_def_rank", "qb_stack_bonus", "team_qb_avg_pts", "is_rookie", "is_2nd_year",
+        # SOS, stacking & rookie features (lagged to prevent leakage)
+        "pass_def_rank_lag1", "qb_stack_bonus", "team_qb_avg_pts", "is_rookie", "is_2nd_year",
         # College/draft features
         "draft_capital", "athletic_score", "college_dominance",
         "college_rec_yds_per_game", "college_rec_td_per_game",

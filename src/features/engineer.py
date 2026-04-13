@@ -378,6 +378,15 @@ def compute_sos_features(df: pd.DataFrame, team_df: Optional[pd.DataFrame] = Non
             if 'pass_def_rank' in df.columns:
                 df['pass_def_rank'] = df['pass_def_rank'].fillna(16)
 
+    # === LEAKAGE FIX: Lag SOS features to use previous season's defensive stats ===
+    # Current-season defensive stats include how opponents performed AGAINST this team
+    # in the current season, which correlates with current-season player performance.
+    for c in ['def_rank', 'pass_def_rank', 'def_pts_allowed']:
+        if c in df.columns:
+            lag_col = f'{c}_lag1'
+            df[lag_col] = df.groupby('team')[c].shift(1)
+            df[lag_col] = df[lag_col].fillna(df[c].median() if c in df.columns else 16)
+
     return df
 
 
@@ -428,6 +437,9 @@ def compute_stacking_features(df: pd.DataFrame) -> pd.DataFrame:
     When a QB has a big game, his WRs/TEs tend to also have big games.
     This correlation is valuable for fantasy — it amplifies both upside
     and downside weeks.
+
+    LEAKAGE FIX: Use PREVIOUS season's QB points, not current season.
+    Current season QB points would leak the target variable.
     """
     df = df.copy()
 
@@ -436,13 +448,19 @@ def compute_stacking_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Compute QB fantasy points per team per season
     qb_pts = df[df['position'] == 'QB'].groupby(['team', 'season'])['fantasy_points'].mean().reset_index()
-    qb_pts = qb_pts.rename(columns={'fantasy_points': 'team_qb_avg_pts'})
+    qb_pts = qb_pts.rename(columns={'fantasy_points': 'team_qb_avg_pts_raw'})
 
     df = df.merge(qb_pts, on=['team', 'season'], how='left')
 
+    # Lag by team: use PREVIOUS season's QB points (prevents leakage)
+    if 'team_qb_avg_pts_raw' in df.columns:
+        df['team_qb_avg_pts'] = df.groupby('team')['team_qb_avg_pts_raw'].shift(1)
+        df['team_qb_avg_pts'] = df['team_qb_avg_pts'].fillna(df['team_qb_avg_pts_raw'].median())
+        # Drop the raw (current-season) version
+        df.drop(columns=['team_qb_avg_pts_raw'], inplace=True)
+
     # Flag: is this player on the same team as a high-scoring QB?
     if 'team_qb_avg_pts' in df.columns:
-        df['team_qb_avg_pts'] = df['team_qb_avg_pts'].fillna(0)
         df['qb_stack_bonus'] = 0
         # WR/TE on same team as elite QB get a bonus
         pass_catchers = df['position'].isin(['WR', 'TE'])
