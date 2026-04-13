@@ -172,17 +172,23 @@ def load_data(req: LoadDataRequest):
 
             proj_rows = latest_rows.copy()
             proj_rows["season"] = projection_season
+            # Save previous season's fantasy points for lag feature BEFORE zeroing
+            prev_fp = proj_rows["fantasy_points"].copy() if "fantasy_points" in proj_rows.columns else None
             # Zero out current-season stats (they haven't happened yet)
             stat_cols = [c for c in proj_rows.columns if c in [
                 "passing_yards", "passing_tds", "interceptions", "sacks",
                 "carries", "rushing_yards", "rushing_tds",
                 "receptions", "targets", "receiving_yards", "receiving_tds",
                 "attempts", "completions", "games", "fantasy_points",
-                "pts_lag0", "pts_lag1",
+                "pts_lag0",
             ]]
             for c in stat_cols:
                 if c in proj_rows.columns:
                     proj_rows[c] = 0
+            # pts_lag1 should be the PREVIOUS season's fantasy points,
+            # not zeroed out — it's a lag feature, not a current-season stat
+            if "pts_lag1" in proj_rows.columns and prev_fp is not None:
+                proj_rows["pts_lag1"] = prev_fp
 
             # Update team/position from current roster if available
             if not roster_proj.empty and "player_id" in roster_proj.columns:

@@ -536,7 +536,7 @@ def detect_sleepers_and_busts(
             return []
 
     df = projections if "adp" in projections.columns else proj
-    df = df[df["adp"].notna()].copy()
+    df = df[df["adp"].notna() & (df["adp"] < 200)].copy()
 
     # Exclude K and DEF — their projections are from historical averages, not the model,
     # so comparing them to ADP always produces false sleepers/busts

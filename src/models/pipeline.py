@@ -29,8 +29,8 @@ POSITION_FEATURES = {
         "team_sack_rate", "ol_pass_block_quality",
         "rushing_yards_lag1", "rushing_td_lag1",
         # Regression features
-        "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2",
+        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
+        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -59,8 +59,8 @@ POSITION_FEATURES = {
         "rb_share_of_team_rush", "rb_share_of_team_rush_td",
         "ol_quality_tier", "team_rush_ypa", "team_rush_td_rate",
         # Regression features
-        "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rush_td_rate_lag1",
+        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
+        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -84,8 +84,8 @@ POSITION_FEATURES = {
         "targets_per_game", "rec_td_rate",
         "team_pass_volume", "qb_completion_rate",
         # Regression features
-        "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rec_td_rate_lag1",
+        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
+        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
@@ -109,8 +109,8 @@ POSITION_FEATURES = {
         "targets_per_game", "rec_td_rate",
         "team_pass_volume", "qb_completion_rate",
         # Regression features
-        "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rec_td_rate_lag1",
+        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
+        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
@@ -248,9 +248,10 @@ class PositionPipeline:
             if not feat_cols or pos_df.empty:
                 continue
 
-            # Fill NaN features with 0, only drop rows with NaN target
+            # Fill NaN features with 0, only train on rows with actual fantasy points
+            # (exclude projection-season rows which have fantasy_points=0)
             X = pos_df[feat_cols].fillna(0)
-            valid = pos_df[target_col].notna()
+            valid = pos_df[target_col].notna() & (pos_df[target_col] > 0)
             X = X[valid]
             y = pos_df.loc[valid, target_col]
 
@@ -411,10 +412,18 @@ class PositionPipeline:
                 ci_low = max(proj_pts - 1.28 * std, 0)
                 ci_high = proj_pts + 1.28 * std
 
-                # Risk tier based on uncertainty
-                if std > 40:
+                # Risk tier based on relative uncertainty (coefficient of variation)
+                # The ensemble std measures model disagreement, not true prediction error.
+                # Top players naturally have CV 20-40% — that's normal, not "high risk".
+                # Truly risky players have CV > 60% (models strongly disagree).
+                # Injury history also factors in via injury features in the model.
+                if proj_pts > 0:
+                    cv = std / proj_pts  # coefficient of variation
+                else:
+                    cv = 1.0
+                if cv > 0.60:
                     risk = "high"
-                elif std > 20:
+                elif cv > 0.25:
                     risk = "medium"
                 else:
                     risk = "low"

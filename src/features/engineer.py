@@ -198,6 +198,17 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
     df["yoy_change"] = df[pts_col] - df["pts_lag1"]
     df["yoy_pct_change"] = df["yoy_change"] / df["pts_lag1"].replace(0, np.nan) * 100
 
+    # Per-game production lag — normalizes for injury-shortened seasons
+    # A player who scored 140 in 13 games (10.8/g) is better than one who
+    # scored 140 in 17 games (8.2/g). This helps the model distinguish
+    # injury-driven decline from talent-driven decline.
+    if "games" in df.columns:
+        df["fp_per_game"] = df[pts_col] / df["games"].replace(0, np.nan)
+        df["fp_per_game_lag1"] = df.groupby("player_id")["fp_per_game"].shift(1)
+        df["games_lag1"] = df.groupby("player_id")["games"].shift(1)
+        # Injury-adjusted FP: what they'd score in a full 17-game season
+        df["fp_adj_17games_lag1"] = df["fp_per_game_lag1"] * 17
+
     # 2-year rolling average for regression baseline
     df["pts_roll2"] = df.groupby("player_id")[pts_col].transform(
         lambda x: x.shift(1).rolling(2, min_periods=1).mean()
@@ -589,12 +600,45 @@ def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None
             df = df.merge(adp_key, on=match_cols, how="left")
             if "adp_supp" in df.columns:
                 if "adp" in df.columns:
-                    # Only fill in players that still have default ADP (200)
-                    mask = df["adp"] == 200
+                    # Only fill in players that still have default ADP (200) AND have a real match
+                    mask = (df["adp"] == 200) & df["adp_supp"].notna()
                     df.loc[mask, "adp"] = df.loc[mask, "adp_supp"]
                 else:
-                    df["adp"] = df["adp_supp"]
+                    df["adp"] = df["adp_supp"].fillna(200)
                 df = df.drop(columns=["adp_supp"], errors="ignore")
+            if "_last" in df.columns:
+                df = df.drop(columns=["_last"], errors="ignore")
+
+    # Strategy 3: Match remaining unmatched on last_name + position only (no team)
+    # This catches FA players (team="FA" in ADP, different team in roster)
+    # and players whose ADP team doesn't match roster team yet
+    if "adp" in df.columns and (df["adp"] == 200).sum() > 0:
+        adp_clean3 = adp_df.dropna(subset=["adp"]).copy()
+        # Get the last meaningful name token (strip suffixes)
+        def _get_last(name):
+            parts = str(name).split()
+            # Remove suffix tokens
+            suffixes = {"jr.", "jr", "sr.", "sr", "ii", "iii", "iv", "v"}
+            while parts and parts[-1].lower().rstrip(".") in suffixes:
+                parts = parts[:-1]
+            return parts[-1].lower().strip().replace("'", "").replace(".", "").replace("-", "") if parts else ""
+
+        adp_clean3["_last"] = adp_clean3["player_name"].apply(_get_last)
+
+        if "last_name" in df.columns:
+            df["_last"] = df["last_name"].str.lower().str.strip().str.replace("'", "", regex=False).str.replace(".", "", regex=False).str.replace("-", "", regex=False)
+
+        if "_last" in df.columns and "position" in df.columns:
+            # Only match on last + position (no team constraint)
+            adp_key3 = adp_clean3[["_last", "position", "adp"]].drop_duplicates(subset=["_last", "position"])
+            adp_key3 = adp_key3.rename(columns={"adp": "adp_fa"})
+
+            df = df.merge(adp_key3, on=["_last", "position"], how="left")
+            if "adp_fa" in df.columns:
+                # Only fill players still at default ADP
+                mask = df["adp"] == 200
+                df.loc[mask, "adp"] = df.loc[mask, "adp_fa"]
+                df = df.drop(columns=["adp_fa"], errors="ignore")
             if "_last" in df.columns:
                 df = df.drop(columns=["_last"], errors="ignore")
 
@@ -622,29 +666,36 @@ def compute_injury_features(df: pd.DataFrame, injury_df: Optional[pd.DataFrame] 
     df = df.copy()
 
     # Aggregate injuries per player per season
-    if "season" in injury_df.columns and "player_id" in injury_df.columns:
-        inj_agg = injury_df.groupby(["player_id", "season"]).agg(
-            injury_count=("report_primary_injury", "count"),
-            games_missed=("report_status", lambda x: x.isin(["Out", "IR"]).sum()),
-        ).reset_index()
+    # Injury data uses gsis_id, roster uses player_id — they're the same namespace
+    if "season" in injury_df.columns:
+        # Normalize ID column to player_id
+        inj_clean = injury_df.copy()
+        if "player_id" not in inj_clean.columns and "gsis_id" in inj_clean.columns:
+            inj_clean = inj_clean.rename(columns={"gsis_id": "player_id"})
 
-        # Lag by 1 season (prior year injuries)
-        inj_agg = inj_agg.sort_values(["player_id", "season"])
-        inj_agg["injury_count_lag1"] = inj_agg.groupby("player_id")["injury_count"].shift(1)
-        inj_agg["games_missed_lag1"] = inj_agg.groupby("player_id")["games_missed"].shift(1)
+        if "player_id" in inj_clean.columns:
+            inj_agg = inj_clean.groupby(["player_id", "season"]).agg(
+                injury_count=("report_primary_injury", "count"),
+                games_missed=("report_status", lambda x: x.isin(["Out", "IR"]).sum()),
+            ).reset_index()
 
-        # Rolling injury count
-        inj_agg["injury_count_roll3"] = inj_agg.groupby("player_id")["injury_count"].transform(
-            lambda x: x.shift(1).rolling(3, min_periods=1).sum()
-        )
+            # Lag by 1 season (prior year injuries)
+            inj_agg = inj_agg.sort_values(["player_id", "season"])
+            inj_agg["injury_count_lag1"] = inj_agg.groupby("player_id")["injury_count"].shift(1)
+            inj_agg["games_missed_lag1"] = inj_agg.groupby("player_id")["games_missed"].shift(1)
 
-        inj_sub = inj_agg[["player_id", "season", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3"]]
+            # Rolling injury count
+            inj_agg["injury_count_roll3"] = inj_agg.groupby("player_id")["injury_count"].transform(
+                lambda x: x.shift(1).rolling(3, min_periods=1).sum()
+            )
 
-        if "season" in df.columns:
-            df = df.merge(inj_sub, on=["player_id", "season"], how="left")
-            for c in ["injury_count_lag1", "games_missed_lag1", "injury_count_roll3"]:
-                if c in df.columns:
-                    df[c] = df[c].fillna(0)
+            inj_sub = inj_agg[["player_id", "season", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3"]]
+
+            if "season" in df.columns:
+                df = df.merge(inj_sub, on=["player_id", "season"], how="left")
+                for c in ["injury_count_lag1", "games_missed_lag1", "injury_count_roll3"]:
+                    if c in df.columns:
+                        df[c] = df[c].fillna(0)
 
     return df
 
@@ -760,7 +811,6 @@ def get_feature_columns(df: pd.DataFrame, exclude_cols: Optional[list[str]] = No
         "fantasy_points", "fantasy_points_per_game",
         "fantasy_points_standard", "fantasy_points_half_ppr", "fantasy_points_ppr",
         "player_display_name", "first_name", "last_name", "football_name",
-        "pts_lag1",  # used for regression features, not as input
     }
     if exclude_cols:
         default_exclude.update(exclude_cols)

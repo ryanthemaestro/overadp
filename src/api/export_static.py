@@ -130,9 +130,28 @@ def main():
 
         proj_rows = latest_rows.copy()
         proj_rows["season"] = projection_season
-        for c in ["fantasy_points", "games", "pts_lag0", "pts_lag1"]:
+
+        # Save previous season's fantasy points for pts_lag1 BEFORE zeroing
+        prev_fp = proj_rows["fantasy_points"].copy() if "fantasy_points" in proj_rows.columns else None
+
+        # Zero out current-season stats (they haven't happened yet)
+        for c in ["fantasy_points", "games", "pts_lag0"]:
             if c in proj_rows.columns:
                 proj_rows[c] = 0
+
+        # Fix pts_lag1: should be the PREVIOUS season's fantasy points.
+        # The 2025 row's pts_lag1 was 2024's FP (from the shift in compute_regression).
+        # For 2026 projection, pts_lag1 should be 2025's FP.
+        if "pts_lag1" in proj_rows.columns and prev_fp is not None:
+            proj_rows["pts_lag1"] = prev_fp
+
+        # Keep all other lag features (passing_yards_lag1, etc.) from the 2025 row.
+        # These use 2024 stats as lag1, which is actually the best available data
+        # for projecting 2026 performance. Shifting to 2025 stats would use
+        # injury-shortened data and make projections worse.
+
+        # Regression features (yoy_change, pts_roll2, etc.) are kept from the 2025 row.
+        # Don't recompute — yoy_change = 0 - pts_lag1 is always negative (meaningless).
 
         # Update team/position/age from projection-season roster
         if not roster_proj.empty and "player_id" in roster_proj.columns:
@@ -160,6 +179,23 @@ def main():
     # Just ensure any remaining NaN is filled
     if "adp" in projections.columns:
         projections["adp"] = projections["adp"].fillna(200)
+
+    # --- Add bye weeks to player records from ADP data ---
+    if adp_data is not None and not adp_data.empty and "bye" in adp_data.columns:
+        bye_map = adp_data[adp_data["bye"] > 0][["team", "bye"]].drop_duplicates("team")
+        bye_dict = dict(zip(bye_map["team"], bye_map["bye"]))
+        projections["bye"] = projections["team"].map(bye_dict).fillna(0).astype(int)
+
+    # --- Add injury data to player records from feature matrix ---
+    if "player_id" in df.columns:
+        latest = df[df["season"] == projection_season] if projection_season in df["season"].values else df[df["season"] == df["season"].max()]
+        injury_cols = ["player_id", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3"]
+        available_injury = [c for c in injury_cols if c in latest.columns]
+        if len(available_injury) > 1:
+            inj_sub = latest[available_injury].drop_duplicates("player_id")
+            projections = projections.merge(inj_sub, on="player_id", how="left")
+            for c in available_injury[1:]:
+                projections[c] = projections[c].fillna(0)
 
     # Clean NaN
     for col in projections.columns:

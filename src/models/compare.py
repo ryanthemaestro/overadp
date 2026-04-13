@@ -46,11 +46,12 @@ def walk_forward_validate(
         y_test = df.loc[test_mask, target_col]
 
         # Fill NaN features with 0 (lag features are naturally NaN for new players)
-        # Only drop rows where target is NaN
+        # Only train/test on rows with actual fantasy points (> 0)
+        # This excludes projection-season placeholder rows
         X_train = X_train.fillna(0)
         X_test = X_test.fillna(0)
-        valid_train = y_train.notna()
-        valid_test = y_test.notna()
+        valid_train = y_train.notna() & (y_train > 0)
+        valid_test = y_test.notna() & (y_test > 0)
 
         X_tr, y_tr = X_train[valid_train], y_train[valid_train]
         X_te, y_te = X_test[valid_test], y_test[valid_test]
