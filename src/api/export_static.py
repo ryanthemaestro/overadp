@@ -96,10 +96,13 @@ def main():
 
     try:
         from src.data.fetch import fetch_injury_data
-        injury_data = fetch_injury_data(seasons)
-        df = compute_injury_features(df, injury_data)
-    except Exception:
-        pass
+        # Only fetch injury data for past seasons (API returns 404 for future)
+        injury_seasons = [s for s in seasons if s <= 2025]
+        if injury_seasons:
+            injury_data = fetch_injury_data(injury_seasons)
+            df = compute_injury_features(df, injury_data)
+    except Exception as e:
+        print(f"  Warning: injury data unavailable: {e}")
 
     df = compute_sos_features(df)
     df = compute_rookie_features(df)

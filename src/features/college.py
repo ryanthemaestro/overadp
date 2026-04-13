@@ -130,17 +130,32 @@ def compute_college_features(
         cb = combine_df.copy()
         cb.columns = [c.lower() for c in cb.columns]
 
-        # Try matching via pfr_id, fallback to player_name
+        # Try matching via pfr_id through player_info gsis_id→pfr_id mapping
+        # The feature matrix has player_id (=gsis_id), combine has pfr_id
+        # We need player_info to bridge them
         merge_on = None
-        if "pfr_id" in cb.columns and "pfr_player_id" in df.columns:
-            cb = cb.rename(columns={"pfr_id": "pfr_player_id"})
-            cb = cb.drop_duplicates(subset=["pfr_player_id"])
-            merge_on = "pfr_player_id"
-        elif "player_name" in cb.columns and "player_name" in df.columns:
-            cb["_merge_name"] = cb["player_name"].str.lower().str.strip()
-            df["_merge_name"] = df["player_name"].str.lower().str.strip()
-            cb = cb.drop_duplicates(subset=["_merge_name"])
-            merge_on = "_merge_name"
+        if "pfr_id" in cb.columns and "player_id" in df.columns:
+            # Build gsis_id → pfr_id mapping from player_info
+            if player_info_df is not None and not player_info_df.empty:
+                pi_for_merge = player_info_df.copy()
+                pi_for_merge.columns = [c.lower() for c in pi_for_merge.columns]
+                if "gsis_id" in pi_for_merge.columns and "pfr_id" in pi_for_merge.columns:
+                    id_map = pi_for_merge[["gsis_id", "pfr_id"]].dropna(subset=["pfr_id"]).drop_duplicates("gsis_id")
+                    id_map = id_map.rename(columns={"gsis_id": "player_id", "pfr_id": "pfr_id"})
+                    # Add pfr_id to df via player_id
+                    df = df.merge(id_map, on="player_id", how="left")
+            if "pfr_id" in df.columns:
+                cb = cb.drop_duplicates(subset=["pfr_id"])
+                merge_on = "pfr_id"
+
+        # Fallback: name matching (less reliable but better than nothing)
+        if merge_on is None and "player_name" in cb.columns and "player_name" in df.columns:
+            # Use last_name matching since df has abbreviated names (L.Jackson)
+            # and combine has full names (Lamar Jackson)
+            cb["_merge_last"] = cb["player_name"].str.split().str[-1].str.lower().str.strip()
+            df["_merge_last"] = df["player_name"].str.split(".").str[-1].str.lower().str.strip()
+            cb = cb.drop_duplicates(subset=["_merge_last"])
+            merge_on = "_merge_last"
 
         if merge_on:
             combine_cols = [merge_on]
@@ -167,7 +182,14 @@ def compute_college_features(
 
     # --- Derived features ---
     # P5 conference flag
-    p5_names = {"sec", "big ten", "acc", "big 12", "big 12", "pac-12", "pac 12"}
+    # nfl_data_py uses full conference names, not abbreviations
+    p5_names = {
+        "southeastern conference", "sec",
+        "big ten conference", "big ten",
+        "atlantic coast conference", "acc",
+        "big twelve conference", "big 12", "big xii",
+        "pacific twelve conference", "pac-12", "pac 12", "pacific ten conference",
+    }
     if "college_conference" in df.columns:
         df["p5_conference"] = df["college_conference"].str.lower().str.strip().isin(p5_names).astype(int)
     elif "college_name" in df.columns:
