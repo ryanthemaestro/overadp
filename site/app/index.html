@@ -756,8 +756,8 @@
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
-    <h2>WAR ROOM — How It Works</h2>
-    <p>WAR ROOM is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 5+ years of NFL data to project player performance and guide your draft picks in real-time.</p>
+    <h2>OverADP — How It Works</h2>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
 
     <h2>The Model</h2>
     <h3>Ensemble Approach</h3>
@@ -794,6 +794,11 @@
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
+    <p>Each player row has two action buttons:</p>
+    <ul>
+      <li><strong>DRAFT</strong> — Click to add this player to YOUR team.</li>
+      <li><strong>TAKEN</strong> — Click to mark this player as drafted by an OPPONENT (removes them from the board).</li>
+    </ul>
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td>Value Above Replacement — how many more points this player scores vs a replacement-level player at the same position. Higher = more valuable.</td></tr>
@@ -801,7 +806,7 @@
       <tr><td><span class="tag tag-yellow">CI</span></td><td>80% Confidence Interval [low–high]. Wider = more uncertain. Rookies have much wider CIs.</td></tr>
       <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — based on prediction uncertainty. High risk = boom-or-bust.</td></tr>
       <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
-      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from FantasyPros — where the market values this player.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player.</td></tr>
     </table>
     <h3>Draft Board Sort</h3>
     <p>Players are interleaved by position (RB → WR → QB → TE) within each VBD tier, so you don't see 50 RBs in a row. This mimics how a real draft flows.</p>
@@ -833,7 +838,7 @@
 
     <h3>Positional Scarcity</h3>
     <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
-    <p><strong>How it's calculated:</strong> For each position, WAR ROOM finds the projected points of the #1 player (elite) and the projected points of the last starter that would be rostered across all teams (replacement). The difference is the <em>scarcity score</em>.</p>
+    <p><strong>How it's calculated:</strong> For each position, OverADP finds the projected points of the #1 player (elite) and the projected points of the last starter that would be rostered across all teams (replacement). The difference is the <em>scarcity score</em>.</p>
     <table>
       <tr><th>Scarcity Level</th><th>What It Means</th><th>Draft Strategy</th></tr>
       <tr><td><span class="tag tag-red">High Scarcity</span></td><td>Huge gap between elite and replacement</td><td>Draft this position early — waiting means getting a much worse player</td></tr>
@@ -846,7 +851,7 @@
     <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our ensemble model has a <strong>0.84+ correlation</strong> with actual fantasy points, beating ADP's 0.56. But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+    <p>Our ensemble model has a <strong>0.843 correlation</strong> with actual fantasy points, beating ADP's 0.384 (+119%). But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
 
     <h3>Handcuff Alerts</h3>
     <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
@@ -860,7 +865,7 @@
     <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance — you hope you never need it, but if you do, it saves your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
 
     <h3>Ensemble Model</h3>
-    <p>WAR ROOM uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
+    <p>OverADP uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
     <table>
       <tr><th>Model</th><th>Strength</th><th>Best For</th></tr>
       <tr><td><strong>Ridge</strong></td><td>Linear relationships, stable with small data</td><td>Baseline — prevents wild predictions</td></tr>
@@ -880,29 +885,29 @@
     <h2>Accuracy</h2>
     <table>
       <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.793</td><td>0.757</td><td>~23 pts</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.936</td><td>0.933</td><td>~10 pts</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.964</td><td>0.962</td><td>~7 pts</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.950</td><td>0.943</td><td>~6 pts</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.634</td><td>0.630</td><td>~57 pts</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.728</td><td>0.721</td><td>~36 pts</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.669</td><td>0.663</td><td>~29 pts</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.744</td><td>0.738</td><td>~20 pts</td></tr>
     </table>
     <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
 
     <h2>Model vs ADP — Head to Head</h2>
-    <p>We tested our model against ADP (Average Draft Position) on the 2024 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
+    <p>We tested our model against ADP (Average Draft Position) on the 2025 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
     <table>
-      <tr><th>Metric</th><th>WAR ROOM</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Correlation with actual</strong></td><td>0.947</td><td>0.600</td><td style="color:var(--rb)">WAR ROOM</td></tr>
-      <tr><td><strong>R² (explained variance)</strong></td><td>0.870</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>MAE (avg error)</strong></td><td>13.5 pts</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>Top-20 hit rate</strong></td><td>16/20 (80%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">WAR ROOM</td></tr>
+      <tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Winner</th></tr>
+      <tr><td><strong>Correlation with actual</strong></td><td>0.843</td><td>0.384</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>R² (explained variance)</strong></td><td>0.710</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>MAE (avg error)</strong></td><td>32.5 pts</td><td>N/A</td><td>—</td></tr>
+      <tr><td><strong>Top-20 hit rate</strong></td><td>12/20 (60%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">OverADP</td></tr>
     </table>
-    <p><strong>What this means:</strong> Our model correctly identified 16 of the 20 highest-scoring players in 2024. ADP only found 7. The model's correlation with actual production is 0.947 vs ADP's 0.600 — that's a <strong>58% improvement</strong>.</p>
+    <p><strong>What this means:</strong> Our model correctly identified 12 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.843 vs ADP's 0.384 — that's a <strong>119% improvement</strong>.</p>
     <table>
       <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.866</td><td>0.544</td><td>+0.32</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.970</td><td>0.780</td><td>+0.19</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.950</td><td>0.704</td><td>+0.25</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.894</td><td>0.688</td><td>+0.21</td></tr>
+      <tr><td><strong>QB</strong></td><td>0.798</td><td>0.048</td><td>+0.750</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.858</td><td>0.606</td><td>+0.252</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.823</td><td>0.427</td><td>+0.396</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.863</td><td>0.373</td><td>+0.490</td></tr>
     </table>
     <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
   </div>
