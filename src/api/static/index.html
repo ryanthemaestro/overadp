@@ -1347,22 +1347,26 @@ function loadByeConflicts(){
 
 function loadSleepers(){
   const c=document.getElementById('sleepersPanel');
-  if(!sleepersData.length&&!bustsData.length){
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const draftedNames=new Set([...myTeamIds,...opponentIds].map(id=>playerMap[id]?.player_name).filter(Boolean));
+  const availSleepers=sleepersData.filter(s=>!draftedNames.has(s.player_name));
+  const availBusts=bustsData.filter(b=>!draftedNames.has(b.player_name));
+  if(!availSleepers.length&&!availBusts.length){
     c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
     return;
   }
   let h='';
-  if(sleepersData.length){
+  if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
-    sleepersData.slice(0,5).forEach(s=>{
+    availSleepers.slice(0,8).forEach(s=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
         ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
       </div>`;
     });
   }
-  if(bustsData.length){
+  if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
-    bustsData.slice(0,5).forEach(b=>{
+    availBusts.slice(0,8).forEach(b=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
         ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
       </div>`;
