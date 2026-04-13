@@ -963,6 +963,8 @@ async function loadData(){
     ]);
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
+    // Normalize: bye_weeks.json may have single ints or arrays
+    Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
     rosterConfig=await rcRes.json();
     // Build player map
