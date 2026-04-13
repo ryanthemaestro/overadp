@@ -439,6 +439,7 @@ class PositionPipeline:
                     "uncertainty": round(std, 1),
                     "risk": risk,
                     "adp": row.get("adp", 200),
+                    "pts_lag1": row.get("pts_lag1", 0) or 0,
                     "model_used": f"ensemble({'+'.join(ensemble_preds.keys())})" if len(ensemble_preds) > 1 else self.best_models[pos].name,
                 })
 

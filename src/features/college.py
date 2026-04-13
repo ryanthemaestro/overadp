@@ -224,20 +224,23 @@ def compute_college_features(
                 df[f"{metric}_z"] = (vals - mean) / std.replace(0, np.nan)
 
         # Weighted athletic score per position
-        df["athletic_score"] = 0.0
+        # Only compute for players who have at least one combine metric
+        df["athletic_score"] = np.nan
         for pos, weights in pos_weights.items():
             pos_mask = df["position"] == pos
             if pos_mask.sum() == 0:
                 continue
             score = pd.Series(0.0, index=df.index)
-            total_w = 0
+            weight_applied = pd.Series(0.0, index=df.index)
             for metric, weight in weights.items():
                 z_col = f"{metric}_z"
                 if z_col in df.columns:
+                    has_val = df[z_col].notna()
                     score += df[z_col].fillna(0) * weight
-                    total_w += weight
-            if total_w > 0:
-                df.loc[pos_mask, "athletic_score"] = score.loc[pos_mask] / total_w
+                    weight_applied += has_val.astype(float) * weight
+            # Only assign score where at least one metric was available
+            valid = weight_applied > 0
+            df.loc[pos_mask & valid, "athletic_score"] = (score / weight_applied).loc[pos_mask & valid]
 
     # College dominance: position-weighted college production z-score
     college_stat_cols = {
