@@ -221,6 +221,47 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
     df["is_breakout"] = (df["yoy_pct_change"] > 30).astype(int)
     df["is_bust"] = (df["yoy_pct_change"] < -25).astype(int)
 
+    # Injury-adjusted regression: when YoY decline is driven by missed games,
+    # the decline is likely temporary (players return to pre-injury form).
+    # Key insight: a player who scored 140 in 13 games is NOT in decline —
+    # they just got hurt. Their per-game production may still be elite.
+    if "games" in df.columns:
+        # Injury-driven decline: YoY decline AND current season had fewer games
+        # (the decline IS this season — check current games, not lag1)
+        injury_decline = (df["yoy_pct_change"] < -15) & (df["games"] < 14)
+        # Per-game production held up despite fewer total points
+        if "fp_per_game_lag1" not in df.columns:
+            df["fp_per_game"] = df[pts_col] / df["games"].replace(0, np.nan)
+            df["fp_per_game_lag1"] = df.groupby("player_id")["fp_per_game"].shift(1)
+        fp_per_game_lag2 = df.groupby("player_id")["fp_per_game"].shift(2)
+        # Per-game rate in current season vs 2 seasons ago (skip the injury season)
+        # Use 65% threshold: even a 35% per-game decline can be injury-driven
+        # (players play through minor injuries, reducing effectiveness)
+        pg_held_up = df["fp_per_game"] >= fp_per_game_lag2 * 0.65
+
+        # Injury-adjusted bust: only flag as bust if decline is NOT injury-driven
+        df["is_bust_injury_adj"] = df["is_bust"].copy()
+        df.loc[injury_decline & pg_held_up, "is_bust_injury_adj"] = 0
+
+        # Injury-adjusted regression risk: reduce penalty for injury-driven decline
+        # If per-game rate held up, the "regression risk" should be mild
+        df["regression_risk_injury_adj"] = df["regression_risk"].copy()
+        injury_adj_mask = injury_decline & pg_held_up
+        # Dampen regression risk by 70% for injury-driven declines
+        df.loc[injury_adj_mask, "regression_risk_injury_adj"] = df.loc[injury_adj_mask, "regression_risk"] * 0.3
+
+        # Injury-adjusted YoY change: scale the decline by games_played/17
+        # If a player missed 4 games, their YoY decline should be reduced by ~25%
+        games_ratio = df["games"] / 17
+        df["yoy_change_injury_adj"] = df["yoy_change"].copy()
+        df.loc[injury_adj_mask, "yoy_change_injury_adj"] = df.loc[injury_adj_mask, "yoy_change"] * games_ratio[injury_adj_mask]
+        df["yoy_pct_change_injury_adj"] = df["yoy_pct_change"].copy()
+        df.loc[injury_adj_mask, "yoy_pct_change_injury_adj"] = df.loc[injury_adj_mask, "yoy_pct_change"] * games_ratio[injury_adj_mask]
+
+        # Injury bounce-back flag: player was productive per-game but missed time
+        # These players tend to return to form next season
+        df["is_injury_bounce_back"] = (injury_decline & pg_held_up).astype(int)
+
     # TD regression: TD rate tends to regress heavily
     if "rushing_tds" in df.columns and "rushing_attempts" in df.columns:
         df["rush_td_rate_lag1"] = df.groupby("player_id")["rush_td_rate"].shift(1) if "rush_td_rate" in df.columns else np.nan
@@ -229,7 +270,10 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Fill NaN
     for c in ["yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-              "pts_roll2", "rush_td_rate_lag1", "rec_td_rate_lag1"]:
+              "pts_roll2", "rush_td_rate_lag1", "rec_td_rate_lag1",
+              "fp_per_game", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
+              "is_bust_injury_adj", "regression_risk_injury_adj", "is_injury_bounce_back",
+              "yoy_change_injury_adj", "yoy_pct_change_injury_adj"]:
         if c in df.columns:
             df[c] = df[c].fillna(0)
 

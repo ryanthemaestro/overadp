@@ -29,8 +29,8 @@ POSITION_FEATURES = {
         "team_sack_rate", "ol_pass_block_quality",
         "rushing_yards_lag1", "rushing_td_lag1",
         # Regression features
-        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
+        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
+        "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -59,8 +59,8 @@ POSITION_FEATURES = {
         "rb_share_of_team_rush", "rb_share_of_team_rush_td",
         "ol_quality_tier", "team_rush_ypa", "team_rush_td_rate",
         # Regression features
-        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
+        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
+        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features
@@ -84,8 +84,8 @@ POSITION_FEATURES = {
         "targets_per_game", "rec_td_rate",
         "team_pass_volume", "qb_completion_rate",
         # Regression features
-        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
+        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
+        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
@@ -109,8 +109,8 @@ POSITION_FEATURES = {
         "targets_per_game", "rec_td_rate",
         "team_pass_volume", "qb_completion_rate",
         # Regression features
-        "pts_lag1", "yoy_change", "yoy_pct_change", "regression_risk", "is_breakout", "is_bust",
-        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1",
+        "pts_lag1", "yoy_change_injury_adj", "yoy_pct_change_injury_adj", "regression_risk_injury_adj", "is_breakout", "is_bust_injury_adj",
+        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS, stacking & rookie features
