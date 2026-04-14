@@ -328,6 +328,25 @@
     background: rgba(59,130,246,0.12);
     box-shadow: 0 0 10px var(--rb-glow);
   }
+  .scoring-btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    border: 1px solid var(--rust);
+    border-radius: 1px;
+    background: var(--steel);
+    color: var(--ash);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .scoring-btn:hover { border-color: var(--smoke); color: var(--chalk); }
+  .scoring-btn.active {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(0,255,106,0.08);
+  }
   .pos-filter.on-qb { border-color: var(--qb); color: var(--qb); background: rgba(255,59,92,0.1); box-shadow: 0 0 10px var(--qb-glow); }
   .pos-filter.on-rb { border-color: var(--rb); color: var(--rb); background: rgba(59,130,246,0.1); box-shadow: 0 0 10px var(--rb-glow); }
   .pos-filter.on-wr { border-color: var(--wr); color: var(--wr); background: rgba(16,185,129,0.1); box-shadow: 0 0 10px var(--wr-glow); }
@@ -831,6 +850,7 @@
       <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
       <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="this.removeAttribute('readonly');this.value='';" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
+      <button class="pos-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙</button>
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -875,41 +895,8 @@
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
-    <h2>OverADP — How It Works</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
-
-    <h2>The Model</h2>
-    <h3>Ensemble Approach</h3>
-    <p>Three models vote on each player's projection, then their predictions are averaged:</p>
-    <ul>
-      <li><span class="tag tag-blue">Ridge Regression</span> — Linear baseline, stable and unbiased</li>
-      <li><span class="tag tag-green">Random Forest</span> — Captures non-linear patterns (age cliffs, breakouts)</li>
-      <li><span class="tag tag-yellow">XGBoost</span> — Gradient boosting, best at complex feature interactions</li>
-    </ul>
-    <p>The model with the best cross-validation MAE for each position is selected as the "best" model. The ensemble average is used for the final projection.</p>
-
-    <h3>Features (40+ per position)</h3>
-    <table>
-      <tr><th>Category</th><th>What It Captures</th><th>Example</th></tr>
-      <tr><td><span class="tag tag-blue">Career Arc</span></td><td>Age, prime detection, regression risk</td><td>RB age cliff at 28+</td></tr>
-      <tr><td><span class="tag tag-green">Volume</span></td><td>Target share, rush share, snap counts</td><td>High volume = safer floor</td></tr>
-      <tr><td><span class="tag tag-yellow">Lag/Rolling</span></td><td>Prior year stats, 2-year rolling averages</td><td>YoY change signals breakout/bust</td></tr>
-      <tr><td><span class="tag tag-red">Injury</span></td><td>Injury history, games missed</td><td>Fragile players get risk flags</td></tr>
-      <tr><td><span class="tag tag-blue">ADP</span></td><td>Market wisdom — where others draft them</td><td>Model vs ADP gap = sleeper/bust</td></tr>
-      <tr><td><span class="tag tag-green">SOS</span></td><td>Strength of schedule, defensive quality</td><td>Hard schedule = lower ceiling</td></tr>
-      <tr><td><span class="tag tag-yellow">Teammate Dep.</span></td><td>QB quality → WR/TE, WR corps → QB, box-stack risk</td><td>Jefferson suffered with bad QB</td></tr>
-      <tr><td><span class="tag tag-blue">Playmaker</span></td><td>RACR, YAC share, domination score, WOPR</td><td>High RACR = creates own value</td></tr>
-      <tr><td><span class="tag tag-red">Rookie</span></td><td>First/second-year flag, wider uncertainty</td><td>Rookies get 80% wider CI</td></tr>
-      <tr><td><span class="tag tag-green">Stacking</span></td><td>QB + WR/TE same-team correlation</td><td>Amplifies upside and downside</td></tr>
-    </table>
-
-    <h3>Post-Prediction Adjustments</h3>
-    <ul>
-      <li><strong>Breakout shrinkage:</strong> If a player is coming off a breakout (>30% above average), the projection is shrunk 30% toward their 2-year rolling average to account for regression to the mean.</li>
-      <li><strong>RB age cliff:</strong> RBs over 28 get a ~3% per year penalty (0.97^age_over_27).</li>
-      <li><strong>Fringe player shrinkage:</strong> Backups with <10 pts last year who are projected >3x that are shrunk toward their actual performance.</li>
-      <li><strong>Rookie uncertainty:</strong> Rookies get 1.8x wider confidence intervals; 2nd-year players get 1.3x wider.</li>
-    </ul>
+    <h2>OverADP — How to Use the War Room</h2>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -1086,6 +1073,41 @@
   <div class="load-bar"><div class="load-bar-inner"></div></div>
 </div>
 
+<!-- SETTINGS OVERLAY -->
+<div class="info-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)toggleSettings()">
+  <div class="info-modal" style="max-width:480px;">
+    <button class="close-btn" onclick="toggleSettings()">&times;</button>
+    <h2>Draft Settings</h2>
+
+    <h3>Scoring Format</h3>
+    <div style="display:flex;gap:8px;margin:8px 0 16px;">
+      <button class="scoring-btn" data-scoring="standard" onclick="setScoring('standard',this)">Standard</button>
+      <button class="scoring-btn active" data-scoring="half_ppr" onclick="setScoring('half_ppr',this)">Half PPR</button>
+      <button class="scoring-btn" data-scoring="ppr" onclick="setScoring('ppr',this)">PPR</button>
+    </div>
+
+    <h3>League Size</h3>
+    <div style="display:flex;gap:8px;margin:8px 0 16px;">
+      <button class="scoring-btn" data-teams="8" onclick="setTeams(8,this)">8</button>
+      <button class="scoring-btn" data-teams="10" onclick="setTeams(10,this)">10</button>
+      <button class="scoring-btn active" data-teams="12" onclick="setTeams(12,this)">12</button>
+      <button class="scoring-btn" data-teams="14" onclick="setTeams(14,this)">14</button>
+    </div>
+
+    <h3>Roster Slots</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:8px 0 16px;font-family:var(--mono);font-size:12px;">
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">QB <input type="number" id="slotQB" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">RB <input type="number" id="slotRB" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">WR <input type="number" id="slotWR" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">TE <input type="number" id="slotTE" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">FLEX <input type="number" id="slotFlex" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">BNCH <input type="number" id="slotBench" value="6" min="0" max="10" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+    </div>
+
+    <button onclick="applySettings()" style="width:100%;padding:10px;background:var(--green);color:var(--bg);border:none;border-radius:2px;font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">Apply & Recalculate</button>
+  </div>
+</div>
+
 <script>
 let allPlayers = [];
 let myTeamIds = [];
@@ -1101,6 +1123,7 @@ let sleepersData = [];
 let bustsData = [];
 let rosterConfig = {};
 let playerMap = {};  // player_id → player object
+let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
 
 // ═══════════════════════════════════════
 // AUTH & PAYWALL
@@ -1336,6 +1359,7 @@ async function loadData(){
     // Restore draft state from localStorage
     myTeamIds=lsGet('myTeam',[]);
     opponentIds=lsGet('opponentPicks',[]);
+    restoreSettings(); // apply saved scoring format & roster config
     computeClientVBD();
     getRecommendations();
     renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
@@ -1805,6 +1829,92 @@ function loadHandcuffs(){
 function toggleInfo(){
   const overlay=document.getElementById('infoOverlay');
   overlay.classList.toggle('active');
+}
+
+function toggleSettings(){
+  const overlay=document.getElementById('settingsOverlay');
+  overlay.classList.toggle('hidden');
+  overlay.classList.toggle('active');
+}
+
+// Scoring format: adjust projected_points based on receptions
+// Baseline is half_ppr (0.5 pts/rec). PPR adds 0.5 more, Standard subtracts 0.5.
+function adjustScoring(){
+  const delta = scoringFormat==='ppr' ? 0.5 : scoringFormat==='standard' ? -0.5 : 0;
+  allPlayers.forEach(p=>{
+    const rec = p.projected_receptions || 0;
+    const base = p._base_proj !== undefined ? p._base_proj : p.projected_points;
+    p._base_proj = base; // store original half-PPR projection
+    p.projected_points = Math.round((base + rec * delta)*10)/10;
+    // Adjust CI similarly
+    const ciDelta = rec * delta;
+    if(p._base_ci_low !== undefined){
+      p.ci_low = Math.round((p._base_ci_low + ciDelta)*10)/10;
+      p.ci_high = Math.round((p._base_ci_high + ciDelta)*10)/10;
+    } else {
+      p._base_ci_low = p.ci_low;
+      p._base_ci_high = p.ci_high;
+      p.ci_low = Math.round((p.ci_low + ciDelta)*10)/10;
+      p.ci_high = Math.round((p.ci_high + ciDelta)*10)/10;
+    }
+  });
+}
+
+function setScoring(fmt, btn){
+  scoringFormat = fmt;
+  btn.parentElement.querySelectorAll('.scoring-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setTeams(n, btn){
+  btn.parentElement.querySelectorAll('.scoring-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function applySettings(){
+  // Update scoring
+  adjustScoring();
+  // Update roster config from inputs
+  const qbv=parseInt(document.getElementById('slotQB').value)||1;
+  const rbv=parseInt(document.getElementById('slotRB').value)||2;
+  const wrv=parseInt(document.getElementById('slotWR').value)||2;
+  const tev=parseInt(document.getElementById('slotTE').value)||1;
+  const flexv=parseInt(document.getElementById('slotFlex').value)||1;
+  const benchv=parseInt(document.getElementById('slotBench').value)||6;
+  const teamsBtn=document.querySelector('.scoring-btn.active[data-teams]');
+  const numTeams=teamsBtn?parseInt(teamsBtn.dataset.teams):12;
+  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:1,defense:1,bench:benchv};
+  rosterConfig.num_teams=numTeams;
+  rosterConfig.bench_size=benchv;
+  // Save to localStorage
+  lsSet('settings',{scoring:scoringFormat,numTeams,slots:rosterConfig.roster_slots,bench:benchv});
+  // Recalculate everything
+  refreshAll();
+  toggleSettings();
+}
+
+function restoreSettings(){
+  const s=lsGet('settings',null);
+  if(!s)return;
+  scoringFormat=s.scoring||'half_ppr';
+  if(s.numTeams)rosterConfig.num_teams=s.numTeams;
+  if(s.slots)rosterConfig.roster_slots=s.slots;
+  if(s.bench)rosterConfig.bench_size=s.bench;
+  // Update UI buttons
+  document.querySelectorAll('.scoring-btn[data-scoring]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.scoring===scoringFormat);
+  });
+  const teamsBtn=document.querySelector(`.scoring-btn[data-teams="${s.numTeams||12}"]`);
+  if(teamsBtn){document.querySelectorAll('.scoring-btn[data-teams]').forEach(b=>b.classList.remove('active'));teamsBtn.classList.add('active');}
+  if(s.slots){
+    document.getElementById('slotQB').value=s.slots.qb||1;
+    document.getElementById('slotRB').value=s.slots.rb||2;
+    document.getElementById('slotWR').value=s.slots.wr||2;
+    document.getElementById('slotTE').value=s.slots.te||1;
+    document.getElementById('slotFlex').value=s.slots.flex||1;
+    document.getElementById('slotBench').value=s.bench||6;
+  }
+  adjustScoring();
 }
 
 function toggleVBD(){
