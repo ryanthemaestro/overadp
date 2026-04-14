@@ -825,6 +825,8 @@
     <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
     <div class="ticker-stat">WR <span class="val wr-c" id="wrCount">0</span></div>
     <div class="ticker-stat">TE <span class="val te-c" id="teCount">0</span></div>
+    <div class="ticker-stat">K <span class="val" id="kCount" style="color:var(--k);">0</span></div>
+    <div class="ticker-stat">DEF <span class="val" id="defCount" style="color:var(--def);">0</span></div>
   </div>
 
   <!-- LEFT — MY ROSTER -->
@@ -1323,6 +1325,8 @@ const ROSTER_SLOTS = [
   {key:'wr',label:'WR',pos:'WR',count:2},
   {key:'te',label:'TE',pos:'TE',count:1},
   {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:1},
+  {key:'k',label:'K',pos:'K',count:1},
+  {key:'def',label:'DEF',pos:'DEF',count:1},
   {key:'bench',label:'BN',pos:'ANY',count:6},
 ];
 
@@ -1642,7 +1646,7 @@ function renderMyTeam(){
       const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${isPaid()?(p.projected_points||0).toFixed(1):'🔒'}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.pts_lag1>0?p.pts_lag1.toFixed(0)+'\'25':'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
@@ -1692,6 +1696,8 @@ function updateStatus(){
   document.getElementById('rbCount').textContent=posCounts['RB']||0;
   document.getElementById('wrCount').textContent=posCounts['WR']||0;
   document.getElementById('teCount').textContent=posCounts['TE']||0;
+  document.getElementById('kCount').textContent=posCounts['K']||0;
+  document.getElementById('defCount').textContent=posCounts['DEF']||0;
 }
 
 function filterPos(pos,btn){
