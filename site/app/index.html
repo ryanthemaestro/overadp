@@ -1340,7 +1340,7 @@ async function loadData(){
     await restoreSession();
     checkPaymentReturn();
 
-    const _v='?v=20260414b'; // cache buster
+    const _v='?v=20260414c'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1538,10 +1538,10 @@ function renderPlayerPool(){
     }else{
       projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
     }
-    const ciLow=paid&&p.ci_low!=null?p.ci_low.toFixed(0):kd?'—':'—';
-    const ciHigh=paid&&p.ci_high!=null?p.ci_high.toFixed(0):kd?'—':'—';
-    const risk=paid?(p.risk||'low'):'—';
-    const riskColor=paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
+    const ciLow=kd&&p.ci_low!=null?p.ci_low.toFixed(0):(paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—');
+    const ciHigh=kd&&p.ci_high!=null?p.ci_high.toFixed(0):(paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—');
+    const risk=kd?(p.risk||'—'):(paid?(p.risk||'low'):'—');
+    const riskColor=kd?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):(paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555');
     const bye=byeWeeks[p.team]||[];
     const byeStr=bye.length?bye.join(','):('—');
     const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
@@ -1559,8 +1559,8 @@ function renderPlayerPool(){
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}">${adp}</td>
       ${projCell}
       ${vbdCell}
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${kd?'—':ciLow+'–'+ciHigh}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${kd?'—':(paid?risk.toUpperCase():'🔒')}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
       <td class="actions-cell">
         ${draftBtn}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
