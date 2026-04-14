@@ -1340,7 +1340,7 @@ async function loadData(){
     await restoreSession();
     checkPaymentReturn();
 
-    const _v='?v=20260414'; // cache buster
+    const _v='?v=20260414b'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1530,18 +1530,18 @@ function renderPlayerPool(){
     const adpGap=adp!=='—'?(i+1-adp):0;
     const adpStyle=adpGap>5?'color:#44ff44;font-weight:700;':adpGap<-5?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
     const vbdCell=vbdMode&&!kd?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell" style="color:var(--smoke);">—</td>':'';
-    // K/DEF: show last year's points instead of projection
+    // K/DEF: show regression-based projection
     let projCell;
     if(kd){
-      const lag1=p.pts_lag1>0?p.pts_lag1.toFixed(0):'—';
-      projCell=`<td class="pts-cell" style="color:var(--smoke);font-size:10px;" title="2025 stats (no ML projection)">${lag1}<span style="font-size:8px;opacity:0.5"> '25</span></td>`;
+      const proj=p.projected_points>0?p.projected_points.toFixed(0):'—';
+      projCell=`<td class="pts-cell" style="color:var(--smoke);font-size:10px;" title="Regression-based projection">${proj}</td>`;
     }else{
       projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
     }
-    const ciLow=paid&&!kd&&p.ci_low!=null?p.ci_low.toFixed(0):'—';
-    const ciHigh=paid&&!kd&&p.ci_high!=null?p.ci_high.toFixed(0):'—';
-    const risk=paid&&!kd?(p.risk||'low'):'—';
-    const riskColor=!kd&&paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
+    const ciLow=paid&&p.ci_low!=null?p.ci_low.toFixed(0):kd?'—':'—';
+    const ciHigh=paid&&p.ci_high!=null?p.ci_high.toFixed(0):kd?'—':'—';
+    const risk=paid?(p.risk||'low'):'—';
+    const riskColor=paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
     const bye=byeWeeks[p.team]||[];
     const byeStr=bye.length?bye.join(','):('—');
     const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
@@ -1630,7 +1630,7 @@ function renderMyTeam(){
       const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.pts_lag1>0?p.pts_lag1.toFixed(0)+'\'25':'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
