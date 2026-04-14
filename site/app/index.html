@@ -940,7 +940,7 @@
 
     <h2>Key Concepts</h2>
     <h3>VBD (Value Based Drafting)</h3>
-    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last starter that would be rostered across all teams (e.g., the #24 RB in a 12-team league that starts 2 RBs). VBD tells you <em>how much better</em> this player is than what you could get for free off waivers.</p>
+    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last player typically drafted at each position (including bench). This means even bench-worthy players get positive VBD, helping you compare value across all rounds — not just the early ones.</p>
 
     <h3>Positional Scarcity</h3>
     <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
@@ -1399,18 +1399,27 @@ function computeClientVBD(){
   const rawSlots=rosterConfig.roster_slots||{};
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const numTeams=rosterConfig.num_teams||12;
+  const benchSize=rosterConfig.bench_size||6;
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
-  // Step 1: Compute replacement level per base position (skip flex/bench)
+  // Step 1: Compute replacement level per position
+  // Use "last typically drafted" not just "last starter" — people draft bench players too
+  // Estimate: each team drafts (starters + bench/4) per position, minimum 1.5x starters
   replacementLevels={};
   const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
   for(const[k,v] of Object.entries(rawSlots)){
     if(k==='flex'||k==='bench')continue;
     const pos=keyMap[k]||k.toUpperCase();
     const nStarters=numTeams*v;
+    // Bench allocation: each position gets roughly bench/4 extra slots per team
+    // but RB/WR get more bench love. Use 1.5x starters as floor.
+    const benchAlloc=Math.max(v, Math.ceil(benchSize/4));
+    const nDrafted=numTeams*(v+benchAlloc);
     const posPlayers=available.filter(p=>p.position===pos).sort((a,b)=>b.projected_points-a.projected_points);
-    if(posPlayers.length>=nStarters){
-      replacementLevels[pos]=posPlayers[nStarters-1].projected_points;
+    // Use last typically drafted as replacement (gives positive VBD to bench-worthy players)
+    const repIdx=Math.min(nDrafted, posPlayers.length)-1;
+    if(repIdx>=0){
+      replacementLevels[pos]=posPlayers[repIdx].projected_points;
     }else if(posPlayers.length>0){
       replacementLevels[pos]=posPlayers[posPlayers.length-1].projected_points;
     }else{
@@ -1418,7 +1427,6 @@ function computeClientVBD(){
     }
   }
   // Step 2: Flex replacement = min replacement among flex-eligible positions
-  // This matches the backend: flex slot uses the cheapest replacement
   const flexReps=flexEligible.map(pos=>replacementLevels[pos]).filter(v=>v!==undefined);
   if(flexReps.length) replacementLevels.FLEX=Math.min(...flexReps);
   // Step 3: Compute VBD for each player
@@ -1427,7 +1435,6 @@ function computeClientVBD(){
   allPlayers.forEach(p=>{
     const ownRep=replacementLevels[p.position]||0;
     const flexRep=replacementLevels.FLEX||ownRep;
-    // Flex-eligible players get the higher VBD (more valuable if they can fill flex)
     if(flexEligible.includes(p.position)){
       p.vbd=Math.max(0,p.projected_points-ownRep,p.projected_points-flexRep);
     }else{
@@ -1484,9 +1491,8 @@ function renderPlayerPool(){
   let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Always sort by VBD — it accounts for positional scarcity
-  // (QB raw points are high but replacement QB also scores a lot, so VBD is lower)
-  f=[...f].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
+  // Sort by VBD desc, then projected_points desc as tiebreaker
+  f=[...f].sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
   if(currentFilter!=='ALL')f=f.filter(p=>p.position===currentFilter);
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
