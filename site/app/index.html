@@ -845,6 +845,8 @@
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
+      <button class="pos-filter" data-pos="K" onclick="filterPos('K', this)">K</button>
+      <button class="pos-filter" data-pos="DEF" onclick="filterPos('DEF', this)">DEF</button>
       <!-- decoy inputs to absorb Chrome autofill -->
       <input type="email" name="email" style="display:none" tabindex="-1" autocomplete="email">
       <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
@@ -1348,6 +1350,10 @@ async function loadData(){
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
     rosterConfig=await rcRes.json();
+    // Load K/DEF (ADP-based, no ML projections)
+    try{const kdRes=await fetch('data/k_def.json'+_v);const kd=await kdRes.json();
+      allPlayers=allPlayers.concat(kd);
+    }catch(e){}
     // Build player map
     playerMap={};
     allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
@@ -1433,6 +1439,7 @@ function computeClientVBD(){
   // Flex-eligible players: VBD = max(above own position rep, above flex rep)
   // Non-flex players: VBD = above own position rep
   allPlayers.forEach(p=>{
+    if(p.position==='K'||p.position==='DEF'){p.vbd=0;return;} // No VBD for K/DEF
     const ownRep=replacementLevels[p.position]||0;
     const flexRep=replacementLevels.FLEX||ownRep;
     if(flexEligible.includes(p.position)){
@@ -1445,7 +1452,7 @@ function computeClientVBD(){
 
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
-  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id)&&p.position!=='K'&&p.position!=='DEF');
   // Sort by VBD with roster need bonus
   const myPosCount={};
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
@@ -1491,27 +1498,49 @@ function renderPlayerPool(){
   let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Sort by VBD desc, then projected_points desc as tiebreaker
-  f=[...f].sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
-  if(currentFilter!=='ALL')f=f.filter(p=>p.position===currentFilter);
+  // Sort: K/DEF by ADP, skill players by VBD then proj
+  const isKD=p=>p.position==='K'||p.position==='DEF';
+  const skillPlayers=[...f].filter(p=>!isKD(p)).sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
+  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(a.adp||200)-(b.adp||200));
+  if(currentFilter==='ALL'){
+    // Interleave: skill players first, then K/DEF at the bottom
+    f=[...skillPlayers,...kdPlayers];
+  }else if(currentFilter==='K'||currentFilter==='DEF'){
+    f=kdPlayers.filter(p=>p.position===currentFilter);
+  }else{
+    f=skillPlayers.filter(p=>p.position===currentFilter);
+  }
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
   const vbdHead=vbdMode?'<th>VBD</th>':'';
   let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  // K/DEF notice banner
+  if(currentFilter==='K'||currentFilter==='DEF'){
+    h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:6px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:11px;color:#ffaa00;text-align:center;">⚠ K & DEF are statistically unpredictable — rankings are ADP-based. Draft last, stream weekly.</td></tr>`;
+  }
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
+    const kd=isKD(p);
     const adp=p.adp&&p.adp<200?Math.round(p.adp):'—';
     const adpGap=adp!=='—'?(i+1-adp):0;
     const adpStyle=adpGap>5?'color:#44ff44;font-weight:700;':adpGap<-5?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
-    const vbdCell=vbdMode?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:'';
-    const ciLow=paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—';
-    const ciHigh=paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—';
-    const risk=paid?(p.risk||'low'):'?';
-    const riskColor=paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
+    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell" style="color:var(--smoke);">—</td>':'';
+    // K/DEF: show last year's points instead of projection
+    let projCell;
+    if(kd){
+      const lag1=p.pts_lag1>0?p.pts_lag1.toFixed(0):'—';
+      projCell=`<td class="pts-cell" style="color:var(--smoke);font-size:10px;" title="2025 stats (no ML projection)">${lag1}<span style="font-size:8px;opacity:0.5"> '25</span></td>`;
+    }else{
+      projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
+    }
+    const ciLow=paid&&!kd&&p.ci_low!=null?p.ci_low.toFixed(0):'—';
+    const ciHigh=paid&&!kd&&p.ci_high!=null?p.ci_high.toFixed(0):'—';
+    const risk=paid&&!kd?(p.risk||'low'):'—';
+    const riskColor=!kd&&paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555';
     const bye=byeWeeks[p.team]||[];
     const byeStr=bye.length?bye.join(','):('—');
-    const byeConflict=paid?checkByeConflictForPlayer(p):false;
+    const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
     const draftBtn=paid?(byeConflict?
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
@@ -1524,10 +1553,10 @@ function renderPlayerPool(){
       <td class="team-cell">${p.team||'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}">${adp}</td>
-      <td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>
+      ${projCell}
       ${vbdCell}
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${paid?risk.toUpperCase():'🔒'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${kd?'—':ciLow+'–'+ciHigh}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${kd?'—':(paid?risk.toUpperCase():'🔒')}</td>
       <td class="actions-cell">
         ${draftBtn}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
@@ -1670,7 +1699,7 @@ function filterPos(pos,btn){
   document.querySelectorAll('.pos-filter').forEach(b=>{b.className='pos-filter';});
   if(pos==='ALL'){btn.classList.add('on');}
   else{
-    const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te'}[pos]||'on';
+    const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te','K':'on-k','DEF':'on-def'}[pos]||'on';
     btn.classList.add(cls);
   }
   renderPlayerPool();
