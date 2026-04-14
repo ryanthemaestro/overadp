@@ -1311,12 +1311,13 @@ async function loadData(){
     await restoreSession();
     checkPaymentReturn();
 
+    const _v='?v=20260414'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
-      fetch('data/players.json'),
-      fetch('data/bye_weeks.json'),
-      fetch('data/scarcity.json'),
-      fetch('data/roster_config.json'),
-      fetch('data/accuracy.json'),
+      fetch('data/players.json'+_v),
+      fetch('data/bye_weeks.json'+_v),
+      fetch('data/scarcity.json'+_v),
+      fetch('data/roster_config.json'+_v),
+      fetch('data/accuracy.json'+_v),
     ]);
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
@@ -1328,7 +1329,7 @@ async function loadData(){
     playerMap={};
     allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
     // Load sleepers/busts
-    try{const sbRes=await fetch('data/sleepers_busts.json');const sb=await sbRes.json();
+    try{const sbRes=await fetch('data/sleepers_busts.json'+_v);const sb=await sbRes.json();
       if(Array.isArray(sb)){sleepersData=sb.filter(x=>x.label==='SLEEPER');bustsData=sb.filter(x=>x.label==='BUST');}
       else{sleepersData=sb.sleepers||[];bustsData=sb.busts||[];}
     }catch(e){}
