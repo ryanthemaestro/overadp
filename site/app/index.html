@@ -1584,9 +1584,9 @@ function assignRosterSlots(players){
   const remaining=[...players].sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
   const slotAssignments=[]; // [{slot, player, slotLabel}]
 
-  // Pass 1: fill position-specific slots (QB->QB, RB->RB, etc.)
+  // Process all slots in ROSTER_SLOTS order so display order matches definition
   ROSTER_SLOTS.forEach(slot=>{
-    if(slot.key==='flex'||slot.key==='bench') return; // handle later
+    if(slot.key==='bench') return; // handle bench last
     for(let i=0;i<slot.count;i++){
       const posMatch=slot.pos.split('/'); // e.g. ['RB'] or ['RB','WR','TE'] for flex
       const idx=remaining.findIndex(p=>posMatch.includes(p.position));
@@ -1602,23 +1602,7 @@ function assignRosterSlots(players){
     }
   });
 
-  // Pass 2: fill FLEX slot (best remaining RB/WR/TE)
-  ROSTER_SLOTS.filter(s=>s.key==='flex').forEach(slot=>{
-    for(let i=0;i<slot.count;i++){
-      const flexPos=slot.pos.split('/');
-      const idx=remaining.findIndex(p=>flexPos.includes(p.position));
-      if(idx>=0){
-        const p=remaining.splice(idx,1)[0];
-        const label=slot.label;
-        slotAssignments.push({slot,label,player:p});
-        assigned.set(p.player_id,label);
-      }else{
-        slotAssignments.push({slot,label:slot.label,player:null});
-      }
-    }
-  });
-
-  // Pass 3: fill bench with remaining players
+  // Fill bench with remaining players
   ROSTER_SLOTS.filter(s=>s.key==='bench').forEach(slot=>{
     for(let i=0;i<slot.count;i++){
       if(remaining.length){
