@@ -3,6 +3,18 @@
   functions = "netlify/functions"
 
 [[headers]]
+  for = "/app/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+
+[[headers]]
+  for = "/app/"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+
+[[headers]]
   for = "/app/data/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
