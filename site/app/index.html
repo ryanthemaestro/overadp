@@ -902,7 +902,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on 7 years of NFL data plus pre-season depth-chart snapshots, teammate target competition, and <strong>conformalized quantile regression</strong> for calibrated confidence intervals. Updated April 2026 with depth-chart awareness and CQR intervals.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -913,25 +913,26 @@
     </ul>
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
-      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Above Replacement — how many more points this player scores vs a replacement-level player at the same position. Higher = more valuable.</td></tr>
-      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the season (half-PPR by default).</td></tr>
-      <tr><td><span class="tag tag-yellow">CI</span></td><td>80% Confidence Interval [low–high]. Wider = more uncertain. Rookies have much wider CIs.</td></tr>
-      <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — based on prediction uncertainty. High risk = boom-or-bust.</td></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Based Drafting — projected points above the replacement level at each position. Higher = more valuable relative to a waiver-wire fill-in.</td></tr>
+      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
+      <tr><td><span class="tag tag-yellow">CI</span></td><td><strong>Conformalized 80% Confidence Interval</strong> [low–high]. Validated on held-out seasons: when we say the 80% CI is 110–180 pts, the truth actually lands in that range ~80% of the time. Rookies have wider CIs (1.8× widening); second-year players 1.3×.</td></tr>
+      <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — computed as a <em>position-relative quartile</em> on relative CI width (width ÷ projection). Low = stable like Josh Allen / Chase / Gibbs. High = wide CI or near-replacement-level depth.</td></tr>
       <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
-      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player. Sleepers = model rank better than ADP; busts = worse.</td></tr>
     </table>
     <h3>Draft Board Sort</h3>
-    <p>Players are interleaved by position (RB → WR → QB → TE) within each VBD tier, so you don't see 50 RBs in a row. This mimics how a real draft flows.</p>
+    <p>Offensive players (QB/RB/WR/TE) are sorted by VBD (value over replacement) and interleaved by position within each tier, so you don't see 50 RBs in a row — the order mimics how a real draft flows. Kickers (K) and Defenses (DEF) are sorted by projected points since they have no meaningful VBD signal.</p>
 
     <h3>My Team (Center Panel)</h3>
-    <p>Players are auto-assigned to roster slots based on position:</p>
+    <p>Roster slots are driven by your league configuration (Settings). Players are auto-assigned in priority order:</p>
     <ul>
-      <li><span class="tag tag-blue">QB</span> → QB slot</li>
-      <li><span class="tag tag-green">RB</span> → RB1, RB2, then Flex, then Bench</li>
-      <li><span class="tag tag-yellow">WR</span> → WR1, WR2, then Flex, then Bench</li>
-      <li><span class="tag tag-red">TE</span> → TE slot, then Flex, then Bench</li>
+      <li><span class="tag tag-blue">QB</span> → QB slot(s), then Superflex (if configured)</li>
+      <li><span class="tag tag-green">RB</span> → RB1, RB2 (or however many RB slots), then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">WR</span> → WR slots, then Flex, then Bench</li>
+      <li><span class="tag tag-red">TE</span> → TE slot(s), then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">K</span> / <span class="tag tag-blue">DEF</span> → their dedicated slots (configurable count)</li>
     </ul>
-    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter.</p>
+    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter at the same position.</p>
 
     <h3>Right Sidebar Panels</h3>
     <table>
@@ -959,11 +960,21 @@
     </table>
     <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
 
-    <h3>Confidence Intervals</h3>
-    <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
+    <h3>Confidence Intervals (CQR)</h3>
+    <p>The 80% CI is built via <strong>Conformalized Quantile Regression</strong> — we train separate quantile models at the 10th and 90th percentiles, then apply a conformal adjustment learned on a held-out calibration season to guarantee marginal coverage.</p>
+    <p><strong>Empirical coverage</strong> (target 80%, held-out 2024): QB 88%, RB 79%, WR 86%, TE 80% — average 83.5%. Naïve quantile regression alone only covers 56%; the conformal step is what makes the intervals honest.</p>
+    <p>Rookies and 2nd-year players get a 1.8× / 1.3× width multiplier on top of the calibrated interval to reflect their scarcer historical data.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our CatBoost model has a <strong>0.764 average correlation</strong> with actual fantasy points, beating ADP's 0.678. The model's edge is largest at TE (+39% MAE improvement) and QB/WR (+26%). When the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+    <p>Our model explains <strong>58% of variance</strong> in fantasy points on held-out seasons. ADP alone (a linear projection from draft position) explains <strong>15%</strong> — nearly 4× worse. The breakdown by position on walk-forward validation (train 2019 to N-1, test season N, averaged across 2022-2025):</p>
+    <table>
+      <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
+      <tr><td><strong>QB</strong></td><td>65.4</td><td>83.5</td><td style="color:var(--rb)">-21.7%</td><td>0.52</td><td>0.03</td></tr>
+      <tr><td><strong>RB</strong></td><td>39.8</td><td>61.8</td><td style="color:var(--rb)">-35.7%</td><td>0.60</td><td>0.20</td></tr>
+      <tr><td><strong>WR</strong></td><td>33.2</td><td>49.7</td><td style="color:var(--rb)">-33.1%</td><td>0.62</td><td>0.25</td></tr>
+      <tr><td><strong>TE</strong></td><td>24.0</td><td>41.5</td><td style="color:var(--rb)">-42.1%</td><td>0.58</td><td>0.12</td></tr>
+    </table>
+    <p>When the model and ADP disagree strongly, it flags sleepers (model rank better than ADP) and busts (ADP rank better than model).</p>
 
     <h3>Handcuff Alerts</h3>
     <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
@@ -976,51 +987,46 @@
     </table>
     <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance — you hope you never need it, but if you do, it saves your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
 
-    <h3>Ensemble Model</h3>
-    <p>OverADP uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
+    <h3>Model Architecture</h3>
+    <p>OverADP trains four base models per position (Ridge, Random Forest, XGBoost, CatBoost) and picks the <strong>best per-position model</strong> via walk-forward validation rather than naively averaging. In the current production build, CatBoost wins RB and WR; XGBoost wins QB and TE. All CatBoost models use <strong>per-position tuned hyperparameters</strong>, <strong>temporal sample weighting</strong> (more recent seasons matter more), and <strong>monotonic constraints</strong> on aggregate production lags (more prior-year points → never a lower projection).</p>
+    <p>Calibrated confidence intervals come from a parallel <strong>Conformalized Quantile Regression</strong> pipeline (see Confidence Intervals section above).</p>
     <table>
-      <tr><th>Model</th><th>Strength</th><th>Best For</th></tr>
-      <tr><td><strong>Ridge</strong></td><td>Linear relationships, stable with small data</td><td>Baseline — prevents wild predictions</td></tr>
-      <tr><td><strong>Random Forest</strong></td><td>Non-linear patterns, resistant to outliers</td><td>Capturing interactions without overfitting</td></tr>
-      <tr><td><strong>XGBoost</strong></td><td>Gradient boosting, strong on tabular data</td><td>RB/TE projections</td></tr>
-      <tr><td><strong>CatBoost</strong></td><td>Ordered boosting, best generalization</td><td>All positions — wins validation on every position</td></tr>
+      <tr><th>Model</th><th>Role</th></tr>
+      <tr><td><strong>CatBoost</strong> (tuned)</td><td>Wins RB &amp; WR. Ordered boosting + monotonic constraints.</td></tr>
+      <tr><td><strong>XGBoost</strong></td><td>Wins QB &amp; TE. Gradient boosting with strong tabular performance.</td></tr>
+      <tr><td><strong>Random Forest</strong></td><td>Ensemble candidate + uncertainty signal (not typically selected).</td></tr>
+      <tr><td><strong>Ridge</strong></td><td>Linear baseline + stability anchor.</td></tr>
     </table>
-    <p><strong>Feature selection:</strong> We ran an ablation study and found that derived features (teammate dependency, playmaker metrics like RACR/WOPR) were <em>harmful</em> — they're collinear with base lag features and added noise. The model performs best with clean lag features + ADP + age curves + regression-to-mean adjustments.</p>
+
+    <h3>Key Features (April 2026)</h3>
+    <ul>
+      <li><strong>Depth chart role</strong> — Week 1 nflverse snapshot, with <code>depth_rank</code>, <code>is_starter</code>, <code>is_backup</code> for QB/WR/TE (RB skipped due to RBBC noise). Refreshable post-draft/cuts via <code>scripts/refresh_depth_charts.py</code>.</li>
+      <li><strong>Target / carry competition</strong> — Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
+      <li><strong>College &amp; draft pipeline</strong> — Draft capital, combine athleticism, college per-game production, Power 5 flags. Projects rookies before they play a snap.</li>
+      <li><strong>Injury-adjusted regression</strong> — Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
+      <li><strong>Conformal 80% CIs</strong> — 83.5% empirical coverage on held-out test; 28-71% for the old ensemble-std approach.</li>
+      <li><strong>ADP matching</strong> — Robust via <code>football_name</code> (handles apostrophes, suffixes, nicknames).</li>
+    </ul>
 
     <h2>Data Sources</h2>
     <ul>
-      <li><strong>nflverse</strong> (via nfl_data_py) — Seasonal stats, roster info, team stats, OL metrics, snap counts, injuries</li>
-      <li><strong>FantasyPros</strong> — ADP (Average Draft Position) data</li>
-      <li><strong>NFL Schedule</strong> — Bye week derivation</li>
+      <li><strong>nflverse</strong> (via <code>nfl_data_py</code>) — Seasonal stats, rosters, team stats, OL metrics, snap counts, injuries, depth charts</li>
+      <li><strong>Fantasy Football Calculator</strong> — ADP (half-PPR) and bye weeks</li>
+      <li><strong>FantasyPros</strong> — K and DEF projections (ML is not reliable for these; we use consensus instead)</li>
+      <li><strong>Pro-Football-Reference</strong> — Combine data, draft capital, college production stats</li>
     </ul>
 
-    <h2>Accuracy</h2>
+    <h2>Accuracy (Walk-Forward Validated)</h2>
+    <p>Trained on 2019 through N-1, tested on season N, averaged across 2022-2025. Features are strictly lagged to prevent leakage. Calibration set for CQR is the most recent season in the training window.</p>
     <table>
-      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (ADP-only)</th><th>MAE vs ADP</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.491</td><td>0.224</td><td>+26% better</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.614</td><td>0.448</td><td>+6% better</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.606</td><td>0.408</td><td>+26% better</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.604</td><td>0.250</td><td>+39% better</td></tr>
+      <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
+      <tr><td><strong>QB</strong></td><td>65.4</td><td>83.5</td><td style="color:var(--rb)"><strong>-21.7%</strong></td><td>0.52</td><td>0.03</td></tr>
+      <tr><td><strong>RB</strong></td><td>39.8</td><td>61.8</td><td style="color:var(--rb)"><strong>-35.7%</strong></td><td>0.60</td><td>0.20</td></tr>
+      <tr><td><strong>WR</strong></td><td>33.2</td><td>49.7</td><td style="color:var(--rb)"><strong>-33.1%</strong></td><td>0.62</td><td>0.25</td></tr>
+      <tr><td><strong>TE</strong></td><td>24.0</td><td>41.5</td><td style="color:var(--rb)"><strong>-42.1%</strong></td><td>0.58</td><td>0.12</td></tr>
+      <tr><td><strong>Overall</strong></td><td>—</td><td>—</td><td style="color:var(--rb)"><strong>-33% avg</strong></td><td><strong>0.58</strong></td><td>0.15</td></tr>
     </table>
-    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated 2022-2025 (train on past, test on future). CatBoost wins all 4 positions. All features are lagged to prevent data leakage. R² measures out-of-sample accuracy — how well the model predicts players it's never seen before.</p>
-
-    <h2>Model vs ADP — Head to Head</h2>
-    <p>We tested our model against ADP (Average Draft Position) using walk-forward validation on 2022-2025. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>beats it at every position</strong>:</p>
-    <table>
-      <tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Avg R²</strong></td><td>0.579</td><td>0.333</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>Avg Correlation</strong></td><td>0.764</td><td>0.678</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>Best edge</strong></td><td>TE +39% MAE</td><td>—</td><td style="color:var(--rb)">OverADP</td></tr>
-    </table>
-    <p><strong>What this means:</strong> Our model explains 58% of variance in fantasy points vs ADP's 33%. The biggest edge is at TE (39% less error) and QB/WR (26% less error). ADP is already decent at RB, so the model's edge there is smaller (6%).</p>
-    <table>
-      <tr><th>Position</th><th>Model R²</th><th>ADP R²</th><th>MAE Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.491</td><td>0.224</td><td>+26%</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.614</td><td>0.448</td><td>+6%</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.606</td><td>0.408</td><td>+26%</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.604</td><td>0.250</td><td>+39%</td></tr>
-    </table>
-    <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The model explains 4× more variance than ADP alone. The largest edge is at TE (42% less mean absolute error) and the smallest is still at QB (22%). ADP performs worst at QB (R² 0.03) because rushing production from dual-threat QBs is invisible to pure draft-position rankings.</p>
   </div>
 </div>
 
