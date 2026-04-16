@@ -1379,7 +1379,7 @@ async function loadData(){
     await restoreSession();
     checkPaymentReturn();
 
-    const _v='?v=20260416cqr'; // cache buster — CQR calibrated CIs + depth chart + target competition
+    const _v='?v=20260416mono'; // cache buster — + monotonic constraints (WR -4% MAE vs baseline)
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
