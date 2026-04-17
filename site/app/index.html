@@ -1249,6 +1249,8 @@ async function authSubmit(){
     lsSetAuth('plan_type',userPlanType);
     updateUserUI();
 
+    gaEvent(isAuthMode==='register' ? 'sign_up' : 'login', { method: 'email', user_plan: userPlan });
+
     document.getElementById('authOverlay').classList.add('hidden');
 
     // Re-render board so paid content (projections, VBD, CI, risk) unlocks immediately
@@ -1289,6 +1291,7 @@ function showAuth(){
 // Prompt auth when user tries to DRAFT (progressive engagement)
 function promptDraftAuth(){
   if(currentUser){ showUpgrade(); return; }
+  gaEvent('auth_prompted', { source: 'draft_gate', trigger: 'locked_feature' });
   document.getElementById('authTitle').textContent = 'DRAFT LIKE A PRO';
   document.getElementById('authSubtitle').textContent = 'Create an account to unlock projections & start drafting';
   document.getElementById('authSubmitBtn').textContent = 'CREATE ACCOUNT';
