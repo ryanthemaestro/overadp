@@ -1322,6 +1322,8 @@ async function startCheckout(planType){
   if(!currentUser){
     pendingPlan = planType||'season';
     gaEvent('checkout_intent_preauth', { plan_type: pendingPlan });
+    // Close upgrade modal first so the auth modal is visible (they share z-index)
+    document.getElementById('upgradeOverlay').classList.add('hidden');
     promptDraftAuth();
     return;
   }
