@@ -1083,6 +1083,9 @@
       </div>
     </div>
     <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
+    <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
+      → Click a plan above. You'll create your account, then complete checkout — takes 20 seconds. Money-back guarantee.
+    </div>
     <button class="auth-close" onclick="document.getElementById('upgradeOverlay').classList.add('hidden')">Maybe later</button>
   </div>
 </div>
@@ -1257,6 +1260,14 @@ async function authSubmit(){
     if(typeof renderPlayerPool==='function'){renderPlayerPool();getRecommendations();}
     if(typeof loadSleepers==='function') loadSleepers();
     if(typeof loadScarcity==='function') loadScarcity();
+
+    // If user came from a pricing click, auto-resume checkout with the plan they chose
+    if(pendingPlan){
+      const plan = pendingPlan;
+      pendingPlan = null;
+      document.getElementById('upgradeOverlay').classList.add('hidden');
+      setTimeout(()=>startCheckout(plan), 200);
+    }
   }catch(e){
     errEl.textContent='Network error — try again';errEl.style.display='block';
   }
@@ -1300,11 +1311,21 @@ function promptDraftAuth(){
 
 function showUpgrade(){
   document.getElementById('upgradeOverlay').classList.remove('hidden');
+  // Show a hint for non-logged-in users so they know signup is part of the flow
+  const hint = document.getElementById('upgradeAuthHint');
+  if(hint) hint.style.display = currentUser ? 'none' : 'block';
   gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser });
 }
 
+let pendingPlan = null;
 async function startCheckout(planType){
-  if(!currentUser){promptDraftAuth();return;}
+  if(!currentUser){
+    pendingPlan = planType||'season';
+    gaEvent('checkout_intent_preauth', { plan_type: pendingPlan });
+    promptDraftAuth();
+    return;
+  }
+  pendingPlan = null;
   gaEvent('checkout_started', { plan_type: planType||'season' });
   try{
     const res = await fetch(API_BASE+'/stripe-checkout',{
