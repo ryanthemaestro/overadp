@@ -293,14 +293,15 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 """
 
     intro = {
-        "QB": "Quarterback is the easiest position for an ML model to beat consensus — weekly volume is stable and year-over-year correlation is high. Our walk-forward validation cut QB MAE by <strong>22% vs. consensus ADP</strong>.",
-        "RB": "Running back is the hardest position for projections: committee usage, injury rates, and coaching changes add noise. Our depth-chart-aware model still posts a <strong>36% MAE edge over ADP</strong> for RBs.",
+        "QB": "Quarterback is where ADP fails hardest — our walk-forward backtest shows ADP R² ≈ 0 for QB (consensus is essentially noise at the position). Our model posts a <strong>34% MAE edge over ADP</strong> for QBs.",
+        "RB": "Running back is the hardest position for projections: committee usage, injury rates, and coaching changes add noise. Our depth-chart-aware model still posts a <strong>38% MAE edge over ADP</strong> for RBs.",
         "WR": "Wide receiver projections live or die on target share and teammate competition. We explicitly encode prior-season teammate targets so when a star signs elsewhere, our model sees it. <strong>33% MAE edge over ADP</strong>.",
-        "TE": "Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cut TE MAE by <strong>42% — the biggest edge of any position.</strong>",
+        "TE": "Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cuts TE MAE by <strong>39% vs ADP</strong> — and the TE R² lift is the largest of any position (0.60 vs 0.03).",
     }[position]
 
     title_full = f"2026 Fantasy Football {title_pos} Rankings — Walk-Forward Validated Projections | OverADP"
-    desc = f"Top {limit} 2026 fantasy football {position} rankings with calibrated 80% confidence intervals. ML model cut {position} MAE by {'22%' if position=='QB' else '36%' if position=='RB' else '33%' if position=='WR' else '42%'} vs ADP on 2025 walk-forward validation. Updated {datetime.utcnow().strftime('%B %Y')}."
+    mae_edge = {'QB':'34%','RB':'38%','WR':'33%','TE':'39%'}[position]
+    desc = f"Top {limit} 2026 fantasy football {position} rankings with calibrated 80% confidence intervals. ML model cut {position} MAE by {mae_edge} vs ADP on 2022-2025 walk-forward validation. Updated {datetime.utcnow().strftime('%B %Y')}."
 
     schema = f"""<script type="application/ld+json">
 {{
@@ -339,7 +340,7 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 </div>
 
 <h2>What the model gets right that ADP misses</h2>
-<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2025 walk-forward validation, consensus ADP explained only <strong>15% of actual fantasy-point variance</strong>. Our model explained <strong>58%</strong> — a <a class="inline" href="/methodology/">4× improvement</a>.</p>
+<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>9% of actual fantasy-point variance</strong>. Our model explained <strong>59%</strong> — a <a class="inline" href="/methodology/">7× improvement</a>.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 """
 
@@ -503,15 +504,19 @@ def build_methodology() -> str:
 <h2>7. College + draft capital features for rookies</h2>
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
-<h2>The 2025 results</h2>
+<h2>The 2022-2025 walk-forward results</h2>
+<p>All numbers below are averages across four held-out test seasons (2022, 2023, 2024, 2025). The model only ever sees past seasons during training, never the season it's being tested on. ADP baseline is a per-position quadratic regression on log(ADP), fit on the same training seasons.</p>
 <table class="rank">
   <thead><tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Edge</th></tr></thead>
   <tbody>
-    <tr><td>R² (variance explained)</td><td class="positive">0.58</td><td class="negative">0.15</td><td class="positive">+4×</td></tr>
-    <tr><td>QB MAE</td><td class="positive">65.7</td><td class="negative">84.0</td><td class="positive">−22%</td></tr>
-    <tr><td>RB MAE</td><td class="positive">39.3</td><td class="negative">61.3</td><td class="positive">−36%</td></tr>
-    <tr><td>WR MAE</td><td class="positive">33.4</td><td class="negative">49.8</td><td class="positive">−33%</td></tr>
-    <tr><td>TE MAE</td><td class="positive">24.1</td><td class="negative">41.6</td><td class="positive">−42%</td></tr>
+    <tr><td>Overall R² (variance explained)</td><td class="positive">0.59</td><td class="negative">0.09</td><td class="positive">+7×</td></tr>
+    <tr><td>Overall MAE</td><td class="positive">38.4</td><td class="negative">62.7</td><td class="positive">−39%</td></tr>
+    <tr><td>QB MAE</td><td class="positive">71.2</td><td class="negative">107.8</td><td class="positive">−34%</td></tr>
+    <tr><td>RB MAE</td><td class="positive">40.4</td><td class="negative">65.0</td><td class="positive">−38%</td></tr>
+    <tr><td>WR MAE</td><td class="positive">34.4</td><td class="negative">51.2</td><td class="positive">−33%</td></tr>
+    <tr><td>TE MAE</td><td class="positive">24.2</td><td class="negative">39.6</td><td class="positive">−39%</td></tr>
+    <tr><td>QB R²</td><td class="positive">0.49</td><td class="negative">0.00</td><td class="positive">huge</td></tr>
+    <tr><td>TE R²</td><td class="positive">0.60</td><td class="negative">0.03</td><td class="positive">+20×</td></tr>
     <tr><td>80% CI coverage</td><td class="positive">83.5%</td><td>n/a</td><td class="positive">calibrated</td></tr>
   </tbody>
 </table>
