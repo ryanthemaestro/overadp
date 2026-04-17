@@ -1423,7 +1423,7 @@ async function loadData(){
     await restoreSession();
     checkPaymentReturn();
 
-    const _v='?v=20260416byefix'; // cache buster — LA Rams bye week fix (LAR→LA alias)
+    const _v='?v=20260417kdef'; // cache buster — restore K/DEF loader + data
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1438,6 +1438,13 @@ async function loadData(){
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
     rosterConfig=await rcRes.json();
+    // Load K/DEF (ADP-based, no ML projections)
+    try{const kdRes=await fetch('data/k_def.json'+_v);
+      if(!kdRes.ok)throw new Error('HTTP '+kdRes.status);
+      const kd=await kdRes.json();
+      console.log('K/DEF loaded:',kd.length,'players');
+      allPlayers=allPlayers.concat(kd);
+    }catch(e){console.error('K/DEF load failed:',e);}
     // Build player map
     playerMap={};
     allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
