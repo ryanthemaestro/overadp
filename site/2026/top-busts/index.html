@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8GM0JH1DM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8GM0JH1DM4');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Fantasy Football Busts — Overvalued by ADP | OverADP</title>
+<meta name="description" content="Top 2026 fantasy football busts our ML model ranks dramatically lower than consensus ADP. Walk-forward validated — correctly flagged Brian Thomas Jr. (ADP 13 → WR #33 in 15 games) and more in 2025.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://overadp.com/2026/top-busts/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:title" content="2026 Fantasy Football Busts — Overvalued by ADP | OverADP">
+<meta property="og:description" content="Top 2026 fantasy football busts our ML model ranks dramatically lower than consensus ADP. Walk-forward validated — correctly flagged Brian Thomas Jr. (ADP 13 → WR #33 in 15 games) and more in 2025.">
+<meta property="og:url" content="https://overadp.com/2026/top-busts/">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="2026 Fantasy Football Busts — Overvalued by ADP | OverADP">
+<meta name="twitter:description" content="Top 2026 fantasy football busts our ML model ranks dramatically lower than consensus ADP. Walk-forward validated — correctly flagged Brian Thomas Jr. (ADP 13 → WR #33 in 15 games) and more in 2025.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#05080a;--bg2:#0a0f13;--bg3:#0f1519;--bg4:#141c22;
+  --fg:#eef1f5;--fg2:#b8c4d0;--fg3:#98a8b8;
+  --green:#00ff6a;--green2:#00cc55;--red:#ff3344;--amber:#ffaa00;--blue:#3388ff;
+  --mono:'IBM Plex Mono',monospace;--display:'Chakra Petch',sans-serif;--body:'Outfit',sans-serif;
+  --grid:rgba(0,255,106,0.04);
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:60px 60px;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 32px;}
+nav{position:sticky;top:0;z-index:100;background:rgba(5,8,10,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,255,106,0.1);padding:16px 0;}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;}
+nav a.logo{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:2px;color:var(--fg);text-decoration:none;}
+nav a.logo span{color:var(--green);}
+nav .links{display:flex;gap:24px;font-family:var(--mono);font-size:12px;}
+nav .links a{color:var(--fg2);text-decoration:none;transition:color 0.2s;}
+nav .links a:hover{color:var(--green);}
+.btn{display:inline-block;padding:12px 24px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;text-decoration:none;border-radius:3px;transition:all 0.2s;cursor:pointer;border:1px solid transparent;}
+.btn-primary{background:var(--green);color:var(--bg);}
+.btn-primary:hover{background:var(--green2);transform:translateY(-1px);}
+.btn-ghost{background:transparent;border-color:var(--fg3);color:var(--fg);}
+.btn-ghost:hover{border-color:var(--green);color:var(--green);}
+main{padding:48px 0 96px;min-height:70vh;}
+.section-tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--green);text-transform:uppercase;margin-bottom:16px;padding:4px 12px;border:1px solid rgba(0,255,106,0.3);border-radius:2px;}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,5vw,56px);line-height:1.1;letter-spacing:0.5px;margin-bottom:20px;}
+h1 span.accent{color:var(--green);}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(22px,3vw,32px);margin:48px 0 20px;color:var(--fg);}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:24px 0 12px;color:var(--fg);}
+.lead{color:var(--fg2);font-size:17px;line-height:1.7;margin-bottom:32px;max-width:780px;}
+p{color:var(--fg2);margin-bottom:16px;line-height:1.7;}
+a.inline{color:var(--green);text-decoration:underline;text-decoration-color:rgba(0,255,106,0.3);text-underline-offset:3px;}
+a.inline:hover{text-decoration-color:var(--green);}
+strong{color:var(--fg);}
+.meta-strip{display:flex;flex-wrap:wrap;gap:16px;margin:24px 0;padding:12px 16px;background:var(--bg3);border:1px solid rgba(255,255,255,0.05);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg3);}
+.meta-strip strong{color:var(--green);}
+table.rank{width:100%;border-collapse:collapse;margin:24px 0;font-family:var(--mono);font-size:13px;}
+table.rank th{text-align:left;padding:12px 10px;background:var(--bg3);color:var(--fg3);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(0,255,106,0.15);}
+table.rank td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--fg2);}
+table.rank tr:hover td{background:rgba(0,255,106,0.02);}
+table.rank td.rank{color:var(--green);font-weight:600;}
+table.rank td.name{color:var(--fg);font-weight:500;}
+table.rank td.positive{color:var(--green);}
+table.rank td.negative{color:var(--red);}
+table.rank td.warn{color:var(--amber);}
+.verdict{display:inline-block;padding:2px 8px;font-size:10px;letter-spacing:1px;border-radius:2px;}
+.verdict.sleeper{background:rgba(0,255,106,0.1);color:var(--green);border:1px solid rgba(0,255,106,0.3);}
+.verdict.bust{background:rgba(255,51,68,0.1);color:var(--red);border:1px solid rgba(255,51,68,0.3);}
+.verdict.risky{background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);}
+.verdict.safe{background:rgba(51,136,255,0.1);color:var(--blue);border:1px solid rgba(51,136,255,0.3);}
+.callout{padding:20px 24px;background:linear-gradient(170deg,rgba(0,255,106,0.04),var(--bg3));border:1px solid rgba(0,255,106,0.15);border-radius:3px;margin:32px 0;}
+.callout h3{margin-top:0;color:var(--green);}
+.cta-block{margin:48px 0;padding:32px;background:linear-gradient(170deg,rgba(0,255,106,0.06),var(--bg3));border:1px solid rgba(0,255,106,0.2);border-radius:3px;text-align:center;}
+.cta-block h2{margin-top:0;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:24px 0;}
+.card{padding:20px;background:var(--bg3);border:1px solid rgba(255,255,255,0.06);border-radius:3px;}
+.card h4{font-family:var(--display);font-size:16px;color:var(--fg);margin-bottom:4px;}
+.card .sub{font-family:var(--mono);font-size:10px;color:var(--fg3);margin-bottom:12px;letter-spacing:1px;}
+.card .stat{font-family:var(--mono);font-size:12px;color:var(--fg2);margin:4px 0;}
+.card .stat strong{color:var(--green);}
+.card .reason{font-size:13px;color:var(--fg2);margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);line-height:1.5;}
+.crumbs{font-family:var(--mono);font-size:11px;color:var(--fg3);margin-bottom:24px;}
+.crumbs a{color:var(--fg3);text-decoration:none;}
+.crumbs a:hover{color:var(--green);}
+.related-hubs{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
+.related-hubs a{display:inline-block;padding:8px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg2);text-decoration:none;transition:all 0.2s;}
+.related-hubs a:hover{border-color:var(--green);color:var(--green);}
+footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
+footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
+footer a:hover{color:var(--green);}
+</style>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Article",
+  "headline":"2026 Fantasy Football Busts — Overvalued by ADP | OverADP",
+  "description":"Top 2026 fantasy football busts our ML model ranks dramatically lower than consensus ADP. Walk-forward validated — correctly flagged Brian Thomas Jr. (ADP 13 → WR #33 in 15 games) and more in 2025.",
+  "author":{"@type":"Organization","name":"OverADP"},
+  "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
+  "datePublished":"2026-04-17",
+  "dateModified":"2026-04-17",
+  "mainEntityOfPage":"https://overadp.com/2026/top-busts/"
+}
+</script>
+</head>
+<body>
+<nav><div class="wrap">
+  <a href="/" class="logo">OVER<span>ADP</span></a>
+  <div class="links">
+    <a href="/2026/top-sleepers/">Sleepers</a>
+    <a href="/2026/top-busts/">Busts</a>
+    <a href="/2026/qb-rankings/">QB</a>
+    <a href="/2026/rb-rankings/">RB</a>
+    <a href="/2026/wr-rankings/">WR</a>
+    <a href="/2026/te-rankings/">TE</a>
+    <a href="/methodology/">Methodology</a>
+    <a href="/app/" style="color:var(--green);">War Room →</a>
+  </div>
+</div></nav>
+<main><div class="wrap">
+
+<div class="crumbs"><a href="/">Home</a> / 2026 / Top Busts</div>
+<div class="section-tag">▼ 2026 Busts</div>
+<h1>2026 Fantasy <span class="accent">Busts</span> — Model vs ADP</h1>
+<p class="lead">The 2026 players our machine-learning model ranks <strong>well below consensus ADP</strong>. These are picks we think you should avoid at their current draft cost — the largest negative model-vs-crowd gaps.</p>
+
+<div class="meta-strip">
+  <span>📊 Source: <strong>walk-forward ML projections</strong></span>
+  <span>📅 Scoring: <strong>half-PPR</strong></span>
+  <span>🎯 2025 hit rate: <strong>Drake Maye ADP 128 → QB#2</strong></span>
+  <span>🔄 Updated: <strong>April 17, 2026</strong></span>
+</div>
+
+<h2>The Top 15</h2>
+<div class="card-grid">
+<div class="card">
+  <h4>Tyreek Hill</h4>
+  <div class="sub">WR · MIA · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#142</strong></div>
+  <div class="stat">ADP rank: <strong>#30</strong></div>
+  <div class="stat">Projected pts: <strong>59.0</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-112</strong></div>
+  <div class="reason">Model rank #142 vs ADP #30.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Kaleb Johnson</h4>
+  <div class="sub">RB · PIT · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#175</strong></div>
+  <div class="stat">ADP rank: <strong>#78</strong></div>
+  <div class="stat">Projected pts: <strong>20.9</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-96</strong></div>
+  <div class="reason">Model rank #175 vs ADP #78.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>James Conner</h4>
+  <div class="sub">RB · ARI · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#134</strong></div>
+  <div class="stat">ADP rank: <strong>#49</strong></div>
+  <div class="stat">Projected pts: <strong>63.3</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-84</strong></div>
+  <div class="reason">Model rank #134 vs ADP #50.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Brian Thomas Jr.</h4>
+  <div class="sub">WR · JAX · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#84</strong></div>
+  <div class="stat">ADP rank: <strong>#13</strong></div>
+  <div class="stat">Projected pts: <strong>93.0</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-70</strong></div>
+  <div class="reason">Model rank #84 vs ADP #14.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Xavier Worthy</h4>
+  <div class="sub">WR · KC · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#127</strong></div>
+  <div class="stat">ADP rank: <strong>#56</strong></div>
+  <div class="stat">Projected pts: <strong>66.3</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-70</strong></div>
+  <div class="reason">Model rank #127 vs ADP #56.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Malik Nabers</h4>
+  <div class="sub">WR · NYG · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#77</strong></div>
+  <div class="stat">ADP rank: <strong>#9</strong></div>
+  <div class="stat">Projected pts: <strong>96.5</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-68</strong></div>
+  <div class="reason">Model rank #77 vs ADP #9.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Matthew Golden</h4>
+  <div class="sub">WR · GB · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#157</strong></div>
+  <div class="stat">ADP rank: <strong>#89</strong></div>
+  <div class="stat">Projected pts: <strong>43.7</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-67</strong></div>
+  <div class="reason">Model rank #157 vs ADP #90.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Aaron Jones</h4>
+  <div class="sub">RB · MIN · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#124</strong></div>
+  <div class="stat">ADP rank: <strong>#63</strong></div>
+  <div class="stat">Projected pts: <strong>68.0</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-60</strong></div>
+  <div class="reason">Model rank #124 vs ADP #64.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>George Kittle</h4>
+  <div class="sub">TE · SF · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#95</strong></div>
+  <div class="stat">ADP rank: <strong>#39</strong></div>
+  <div class="stat">Projected pts: <strong>82.0</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-56</strong></div>
+  <div class="reason">Model rank #95 vs ADP #39.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Evan Engram</h4>
+  <div class="sub">TE · DEN · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#145</strong></div>
+  <div class="stat">ADP rank: <strong>#91</strong></div>
+  <div class="stat">Projected pts: <strong>55.1</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-54</strong></div>
+  <div class="reason">Model rank #145 vs ADP #91.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Jayden Reed</h4>
+  <div class="sub">WR · GB · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#161</strong></div>
+  <div class="stat">ADP rank: <strong>#108</strong></div>
+  <div class="stat">Projected pts: <strong>34.6</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-53</strong></div>
+  <div class="reason">Model rank #161 vs ADP #108.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>David Njoku</h4>
+  <div class="sub">TE · CLE · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#152</strong></div>
+  <div class="stat">ADP rank: <strong>#99</strong></div>
+  <div class="stat">Projected pts: <strong>48.9</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-52</strong></div>
+  <div class="reason">Model rank #152 vs ADP #100.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Mark Andrews</h4>
+  <div class="sub">TE · BAL · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#137</strong></div>
+  <div class="stat">ADP rank: <strong>#87</strong></div>
+  <div class="stat">Projected pts: <strong>62.5</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-49</strong></div>
+  <div class="reason">Model rank #137 vs ADP #88.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Ricky Pearsall</h4>
+  <div class="sub">WR · SF · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#132</strong></div>
+  <div class="stat">ADP rank: <strong>#83</strong></div>
+  <div class="stat">Projected pts: <strong>63.8</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-49</strong></div>
+  <div class="reason">Model rank #132 vs ADP #84.0 — BUST</div>
+</div>
+<div class="card">
+  <h4>Mike Evans</h4>
+  <div class="sub">WR · TB · <span class="verdict bust">▼ BUST</span></div>
+  <div class="stat">Model rank: <strong>#89</strong></div>
+  <div class="stat">ADP rank: <strong>#41</strong></div>
+  <div class="stat">Projected pts: <strong>87.4</strong></div>
+  <div class="stat" style="color:var(--red);">Gap vs ADP: <strong style="color:var(--red);">-47</strong></div>
+  <div class="reason">Model rank #89 vs ADP #42.0 — BUST</div>
+</div></div>
+
+<h2>Why trust these calls?</h2>
+<p>In 2025 walk-forward testing, the model flagged <strong>Brian Thomas Jr. as a bust</strong> — he was going ADP #13 (WR6-ish consensus) and our model had him overall #41. He finished the season at overall rank #102 with 124 points across <strong>15 games played</strong> — a real, non-injury bust. It also correctly flagged <strong>Bucky Irving (ADP #16 → actual RB#40)</strong> and flagged <strong>Isiah Pacheco (ADP #58 → actual RB#41)</strong>. Busts are harder to call than sleepers because injuries dominate the worst outcomes — but model-flagged busts consistently underperformed <em>even when healthy</em>.</p>
+<p>Methodology is public — walk-forward validation, conformal quantile regression for calibrated 80% intervals, depth-chart aware, no leakage. Read the full <a class="inline" href="/methodology/">model methodology</a> or open the <a class="inline" href="/app/">free draft board</a>.</p>
+
+<div class="callout">
+  <h3>How "sleeper" and "bust" are defined here</h3>
+  <p>A <strong>sleeper</strong> is a player whose model rank is meaningfully higher than ADP rank — they're being drafted later than we think they should be. A <strong>bust</strong> is the opposite: drafted earlier than the model thinks is justified. We rank by the absolute size of the gap. Players with no ADP (undrafted) are excluded.</p>
+</div>
+
+    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/methodology/">Methodology</a></div>
+    
+    <div class="cta-block">
+      <div class="section-tag">The Draft Tool</div>
+      <h2>Get the Full Model in Your Draft Room</h2>
+      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80% confidence interval, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. $6.99 for a single draft, $24.99 for the full season.</p>
+      <a href="/app/" class="btn btn-primary">ENTER THE WAR ROOM →</a>
+    </div>
+    
+  </div></main>
+<footer>
+  <div>Updated April 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+</footer>
+</body>
+</html>

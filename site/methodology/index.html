@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8GM0JH1DM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8GM0JH1DM4');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP</title>
+<meta name="description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://overadp.com/methodology/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:title" content="Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
+<meta property="og:description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<meta property="og:url" content="https://overadp.com/methodology/">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
+<meta name="twitter:description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#05080a;--bg2:#0a0f13;--bg3:#0f1519;--bg4:#141c22;
+  --fg:#eef1f5;--fg2:#b8c4d0;--fg3:#98a8b8;
+  --green:#00ff6a;--green2:#00cc55;--red:#ff3344;--amber:#ffaa00;--blue:#3388ff;
+  --mono:'IBM Plex Mono',monospace;--display:'Chakra Petch',sans-serif;--body:'Outfit',sans-serif;
+  --grid:rgba(0,255,106,0.04);
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:60px 60px;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 32px;}
+nav{position:sticky;top:0;z-index:100;background:rgba(5,8,10,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,255,106,0.1);padding:16px 0;}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;}
+nav a.logo{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:2px;color:var(--fg);text-decoration:none;}
+nav a.logo span{color:var(--green);}
+nav .links{display:flex;gap:24px;font-family:var(--mono);font-size:12px;}
+nav .links a{color:var(--fg2);text-decoration:none;transition:color 0.2s;}
+nav .links a:hover{color:var(--green);}
+.btn{display:inline-block;padding:12px 24px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;text-decoration:none;border-radius:3px;transition:all 0.2s;cursor:pointer;border:1px solid transparent;}
+.btn-primary{background:var(--green);color:var(--bg);}
+.btn-primary:hover{background:var(--green2);transform:translateY(-1px);}
+.btn-ghost{background:transparent;border-color:var(--fg3);color:var(--fg);}
+.btn-ghost:hover{border-color:var(--green);color:var(--green);}
+main{padding:48px 0 96px;min-height:70vh;}
+.section-tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--green);text-transform:uppercase;margin-bottom:16px;padding:4px 12px;border:1px solid rgba(0,255,106,0.3);border-radius:2px;}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,5vw,56px);line-height:1.1;letter-spacing:0.5px;margin-bottom:20px;}
+h1 span.accent{color:var(--green);}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(22px,3vw,32px);margin:48px 0 20px;color:var(--fg);}
+h3{font-family:var(--display);font-weight:600;font-size:20px;margin:24px 0 12px;color:var(--fg);}
+.lead{color:var(--fg2);font-size:17px;line-height:1.7;margin-bottom:32px;max-width:780px;}
+p{color:var(--fg2);margin-bottom:16px;line-height:1.7;}
+a.inline{color:var(--green);text-decoration:underline;text-decoration-color:rgba(0,255,106,0.3);text-underline-offset:3px;}
+a.inline:hover{text-decoration-color:var(--green);}
+strong{color:var(--fg);}
+.meta-strip{display:flex;flex-wrap:wrap;gap:16px;margin:24px 0;padding:12px 16px;background:var(--bg3);border:1px solid rgba(255,255,255,0.05);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg3);}
+.meta-strip strong{color:var(--green);}
+table.rank{width:100%;border-collapse:collapse;margin:24px 0;font-family:var(--mono);font-size:13px;}
+table.rank th{text-align:left;padding:12px 10px;background:var(--bg3);color:var(--fg3);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(0,255,106,0.15);}
+table.rank td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--fg2);}
+table.rank tr:hover td{background:rgba(0,255,106,0.02);}
+table.rank td.rank{color:var(--green);font-weight:600;}
+table.rank td.name{color:var(--fg);font-weight:500;}
+table.rank td.positive{color:var(--green);}
+table.rank td.negative{color:var(--red);}
+table.rank td.warn{color:var(--amber);}
+.verdict{display:inline-block;padding:2px 8px;font-size:10px;letter-spacing:1px;border-radius:2px;}
+.verdict.sleeper{background:rgba(0,255,106,0.1);color:var(--green);border:1px solid rgba(0,255,106,0.3);}
+.verdict.bust{background:rgba(255,51,68,0.1);color:var(--red);border:1px solid rgba(255,51,68,0.3);}
+.verdict.risky{background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);}
+.verdict.safe{background:rgba(51,136,255,0.1);color:var(--blue);border:1px solid rgba(51,136,255,0.3);}
+.callout{padding:20px 24px;background:linear-gradient(170deg,rgba(0,255,106,0.04),var(--bg3));border:1px solid rgba(0,255,106,0.15);border-radius:3px;margin:32px 0;}
+.callout h3{margin-top:0;color:var(--green);}
+.cta-block{margin:48px 0;padding:32px;background:linear-gradient(170deg,rgba(0,255,106,0.06),var(--bg3));border:1px solid rgba(0,255,106,0.2);border-radius:3px;text-align:center;}
+.cta-block h2{margin-top:0;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:24px 0;}
+.card{padding:20px;background:var(--bg3);border:1px solid rgba(255,255,255,0.06);border-radius:3px;}
+.card h4{font-family:var(--display);font-size:16px;color:var(--fg);margin-bottom:4px;}
+.card .sub{font-family:var(--mono);font-size:10px;color:var(--fg3);margin-bottom:12px;letter-spacing:1px;}
+.card .stat{font-family:var(--mono);font-size:12px;color:var(--fg2);margin:4px 0;}
+.card .stat strong{color:var(--green);}
+.card .reason{font-size:13px;color:var(--fg2);margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);line-height:1.5;}
+.crumbs{font-family:var(--mono);font-size:11px;color:var(--fg3);margin-bottom:24px;}
+.crumbs a{color:var(--fg3);text-decoration:none;}
+.crumbs a:hover{color:var(--green);}
+.related-hubs{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
+.related-hubs a{display:inline-block;padding:8px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg2);text-decoration:none;transition:all 0.2s;}
+.related-hubs a:hover{border-color:var(--green);color:var(--green);}
+footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
+footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
+footer a:hover{color:var(--green);}
+</style>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"TechArticle",
+  "headline":"Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP",
+  "description":"How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.",
+  "author":{"@type":"Organization","name":"OverADP"},
+  "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
+  "datePublished":"2026-04-17",
+  "dateModified":"2026-04-17",
+  "mainEntityOfPage":"https://overadp.com/methodology/"
+}
+</script>
+</head>
+<body>
+<nav><div class="wrap">
+  <a href="/" class="logo">OVER<span>ADP</span></a>
+  <div class="links">
+    <a href="/2026/top-sleepers/">Sleepers</a>
+    <a href="/2026/top-busts/">Busts</a>
+    <a href="/2026/qb-rankings/">QB</a>
+    <a href="/2026/rb-rankings/">RB</a>
+    <a href="/2026/wr-rankings/">WR</a>
+    <a href="/2026/te-rankings/">TE</a>
+    <a href="/methodology/">Methodology</a>
+    <a href="/app/" style="color:var(--green);">War Room →</a>
+  </div>
+</div></nav>
+<main><div class="wrap">
+
+<div class="crumbs"><a href="/">Home</a> / Methodology</div>
+<div class="section-tag">Transparency</div>
+<h1>How the <span class="accent">Model</span> Works</h1>
+<p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
+
+<h2>The one-sentence version</h2>
+<p>We train a per-position CatBoost ensemble on 7 years of NFL skill-position data (2019-2025), validated with rolling walk-forward splits so the model is only ever tested on seasons it hasn't seen, and we wrap point predictions with conformal quantile regression to produce 80% confidence intervals with empirically verified coverage.</p>
+
+<h2>1. Walk-forward validation (not random splits)</h2>
+<p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information — the model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
+<p>Walk-forward validation prevents this. We train on seasons 2019-N and test on season N+1, for every N. The 2025 results you see on this site come from a model that was trained on <strong>2019-2024 only</strong> and tested on 2025 out-of-sample. Every year is a truly held-out test.</p>
+
+<h2>2. Four-model ensemble</h2>
+<p>We run four models per position: Ridge regression, Random Forest, XGBoost, and CatBoost. In walk-forward validation, CatBoost wins every position after hyperparameter tuning with per-position temporal weights, so the production model uses CatBoost point predictions. The ensemble spread is also used for ensemble uncertainty (see below).</p>
+<p>Per-position tuning matters. QB rewards deeper trees (depth=6) with more iterations; RB/WR/TE prefer depth=4 with more aggressive L2. Temporal weighting (recent seasons weighted more heavily) cut QB MAE by 2.6% and RB MAE by 3.0% in validation.</p>
+
+<h2>3. Conformal quantile regression (CQR) for honest 80% intervals</h2>
+<p>Point predictions alone are dangerous in fantasy — every projection is wrong, the question is <em>by how much</em>. We train separate quantile CatBoost models at the 10th and 90th percentiles, then calibrate on the most recent held-out season using split-conformal CQR.</p>
+<p>The result: intervals with <strong>empirically verified 80% coverage</strong>. In 2025 walk-forward testing, raw quantile regression covered 56% of outcomes (badly miscalibrated), while conformal CQR covered <strong>83.5% on the test set</strong> — above the 80% target, with coverage error under 4 percentage points. This is real uncertainty, not a Bayesian band.</p>
+
+<h2>4. Depth-chart awareness (Week 1 snapshot)</h2>
+<p>One of our biggest 2026 feature additions. We pull pre-season depth charts from nflverse (Week 1 snapshot for 2019-2024; nearest-to-September-5 snapshot for 2025+) and encode each player's depth rank (1=starter, 2=backup, 3+=depth), plus binary is_starter and is_backup flags.</p>
+<p>Used for QB, WR, and TE projections. Excluded from RB because RBBC (running-back-by-committee) breaks the signal — a RB2 who gets 60% of carries produces more than a RB1 who splits. Walk-forward gain: QB MAE −3.4%, WR MAE −2.6%.</p>
+
+<h2>5. Target-competition features (prevent phantom breakouts)</h2>
+<p>Using prior-season teammate targets, we compute each WR's teammate_targets_prev and teammate_rec_yards_prev on their <em>current</em> team (so if Chase Claypool signs with the Jaguars, his projections reflect BTJ's 200+ targets ahead of him). We also compute teammate_carries_prev for RBs.</p>
+<p>Crucially: no leakage. We use prior-season teammate production on the current roster, never current-season production. This re-runs after free-agent and draft changes are reflected in the projection-season roster.</p>
+
+<h2>6. Conservative monotonic constraints</h2>
+<p>Aggregate production lags (prior-season fantasy points, targets, receptions, carries) should never have a <em>negative</em> marginal effect on projections. We encode positive monotonic constraints on exactly these features and leave everything else unconstrained. This adds sanity guardrails without overfitting — MAE stays within noise, but the model can't produce pathological projections where scoring more the prior year makes you project lower.</p>
+
+<h2>7. College + draft capital features for rookies</h2>
+<p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
+
+<h2>The 2025 results</h2>
+<table class="rank">
+  <thead><tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Edge</th></tr></thead>
+  <tbody>
+    <tr><td>R² (variance explained)</td><td class="positive">0.58</td><td class="negative">0.15</td><td class="positive">+4×</td></tr>
+    <tr><td>QB MAE</td><td class="positive">65.7</td><td class="negative">84.0</td><td class="positive">−22%</td></tr>
+    <tr><td>RB MAE</td><td class="positive">39.3</td><td class="negative">61.3</td><td class="positive">−36%</td></tr>
+    <tr><td>WR MAE</td><td class="positive">33.4</td><td class="negative">49.8</td><td class="positive">−33%</td></tr>
+    <tr><td>TE MAE</td><td class="positive">24.1</td><td class="negative">41.6</td><td class="positive">−42%</td></tr>
+    <tr><td>80% CI coverage</td><td class="positive">83.5%</td><td>n/a</td><td class="positive">calibrated</td></tr>
+  </tbody>
+</table>
+
+<h2>What the model doesn't do</h2>
+<p>Honest limitations:</p>
+<p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call — it was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
+<p><strong>It's only as good as the data.</strong> UDFAs and late-round rookies with missing college data get wider intervals and lower confidence. Coaching-change features were tested and rejected after walk-forward validation showed them adding noise rather than signal.</p>
+<p><strong>Fantasy football is high-variance.</strong> Even a perfect model won't hit every call. Our 80% CIs cover 83.5% of outcomes — which means 16.5% of players still blow through their interval in either direction.</p>
+
+<h2>What's next</h2>
+<p>We refresh the depth-chart features after the NFL draft (late April) and again in August once pre-season depth charts are final. Draft capital for 2026 rookies is already in the model, and team assignments update automatically when FA signings are reflected in the roster data.</p>
+<p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
+
+    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a></div>
+    
+    <div class="cta-block">
+      <div class="section-tag">The Draft Tool</div>
+      <h2>Get the Full Model in Your Draft Room</h2>
+      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80% confidence interval, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. $6.99 for a single draft, $24.99 for the full season.</p>
+      <a href="/app/" class="btn btn-primary">ENTER THE WAR ROOM →</a>
+    </div>
+    
+  </div></main>
+<footer>
+  <div>Updated April 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+</footer>
+</body>
+</html>

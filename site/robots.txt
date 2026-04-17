@@ -1,6 +1,6 @@
-# OverADP Robots.txt
 User-agent: *
 Allow: /
+Disallow: /app/data/
+Disallow: /.netlify/
 
-# Sitemap
 Sitemap: https://overadp.com/sitemap.xml
