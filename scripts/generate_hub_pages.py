@@ -85,7 +85,8 @@ table.rank td.warn{color:var(--amber);}
 .verdict.sleeper{background:rgba(0,255,106,0.1);color:var(--green);border:1px solid rgba(0,255,106,0.3);}
 .verdict.bust{background:rgba(255,51,68,0.1);color:var(--red);border:1px solid rgba(255,51,68,0.3);}
 .verdict.risky{background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);}
-.verdict.safe{background:rgba(51,136,255,0.1);color:var(--blue);border:1px solid rgba(51,136,255,0.3);}
+.verdict.safe{background:rgba(0,255,106,0.08);color:var(--green);border:1px solid rgba(0,255,106,0.25);}
+.verdict.medium{background:rgba(184,196,208,0.06);color:var(--fg2);border:1px solid rgba(184,196,208,0.2);}
 .callout{padding:20px 24px;background:linear-gradient(170deg,rgba(0,255,106,0.04),var(--bg3));border:1px solid rgba(0,255,106,0.15);border-radius:3px;margin:32px 0;}
 .callout h3{margin-top:0;color:var(--green);}
 .cta-block{margin:48px 0;padding:32px;background:linear-gradient(170deg,rgba(0,255,106,0.06),var(--bg3));border:1px solid rgba(0,255,106,0.2);border-radius:3px;text-align:center;}
@@ -234,10 +235,8 @@ def fmt_ci(p: dict) -> str:
 
 def risk_badge(p: dict) -> str:
     r = (p.get("risk") or "medium").lower()
-    cls = {"low": "safe", "medium": "", "high": "risky"}.get(r, "")
+    cls = {"low": "safe", "medium": "medium", "high": "risky"}.get(r, "medium")
     label = {"low": "LOW", "medium": "MED", "high": "HIGH"}.get(r, "MED")
-    if not cls:
-        return f'<span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">{label}</span>'
     return f'<span class="verdict {cls}">{label}</span>'
 
 

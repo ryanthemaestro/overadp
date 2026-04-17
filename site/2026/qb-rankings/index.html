@@ -76,7 +76,8 @@ table.rank td.warn{color:var(--amber);}
 .verdict.sleeper{background:rgba(0,255,106,0.1);color:var(--green);border:1px solid rgba(0,255,106,0.3);}
 .verdict.bust{background:rgba(255,51,68,0.1);color:var(--red);border:1px solid rgba(255,51,68,0.3);}
 .verdict.risky{background:rgba(255,170,0,0.1);color:var(--amber);border:1px solid rgba(255,170,0,0.3);}
-.verdict.safe{background:rgba(51,136,255,0.1);color:var(--blue);border:1px solid rgba(51,136,255,0.3);}
+.verdict.safe{background:rgba(0,255,106,0.08);color:var(--green);border:1px solid rgba(0,255,106,0.25);}
+.verdict.medium{background:rgba(184,196,208,0.06);color:var(--fg2);border:1px solid rgba(184,196,208,0.2);}
 .callout{padding:20px 24px;background:linear-gradient(170deg,rgba(0,255,106,0.04),var(--bg3));border:1px solid rgba(0,255,106,0.15);border-radius:3px;margin:32px 0;}
 .callout h3{margin-top:0;color:var(--green);}
 .cta-block{margin:48px 0;padding:32px;background:linear-gradient(170deg,rgba(0,255,106,0.06),var(--bg3));border:1px solid rgba(0,255,106,0.2);border-radius:3px;text-align:center;}
@@ -172,7 +173,7 @@ footer a:hover{color:var(--green);}
   <td>193.2</td>
   <td style="color:var(--fg3);">16–371</td>
   <td>106</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB3</td>
@@ -181,7 +182,7 @@ footer a:hover{color:var(--green);}
   <td>176.0</td>
   <td style="color:var(--fg3);">0–362</td>
   <td>128</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB4</td>
@@ -199,7 +200,7 @@ footer a:hover{color:var(--green);}
   <td>172.4</td>
   <td style="color:var(--fg3);">0–358</td>
   <td>169</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB6</td>
@@ -208,7 +209,7 @@ footer a:hover{color:var(--green);}
   <td>172.1</td>
   <td style="color:var(--fg3);">9–335</td>
   <td>78</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB7</td>
@@ -244,7 +245,7 @@ footer a:hover{color:var(--green);}
   <td>145.9</td>
   <td style="color:var(--fg3);">0–294</td>
   <td>115</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB11</td>
@@ -271,7 +272,7 @@ footer a:hover{color:var(--green);}
   <td>140.9</td>
   <td style="color:var(--fg3);">13–269</td>
   <td>30</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB14</td>
@@ -280,7 +281,7 @@ footer a:hover{color:var(--green);}
   <td>138.1</td>
   <td style="color:var(--fg3);">0–277</td>
   <td>104</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB15</td>
@@ -289,7 +290,7 @@ footer a:hover{color:var(--green);}
   <td>135.3</td>
   <td style="color:var(--fg3);">19–252</td>
   <td>101</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB16</td>
@@ -316,7 +317,7 @@ footer a:hover{color:var(--green);}
   <td>123.0</td>
   <td style="color:var(--fg3);">8–238</td>
   <td>154</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB19</td>
@@ -325,7 +326,7 @@ footer a:hover{color:var(--green);}
   <td>121.8</td>
   <td style="color:var(--fg3);">0–244</td>
   <td>24</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB20</td>
@@ -334,7 +335,7 @@ footer a:hover{color:var(--green);}
   <td>120.4</td>
   <td style="color:var(--fg3);">0–252</td>
   <td>96</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB21</td>
@@ -343,7 +344,7 @@ footer a:hover{color:var(--green);}
   <td>116.7</td>
   <td style="color:var(--fg3);">0–261</td>
   <td>183</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB22</td>
@@ -352,7 +353,7 @@ footer a:hover{color:var(--green);}
   <td>115.8</td>
   <td style="color:var(--fg3);">0–239</td>
   <td>165</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB23</td>
@@ -361,7 +362,7 @@ footer a:hover{color:var(--green);}
   <td>115.1</td>
   <td style="color:var(--fg3);">3–227</td>
   <td>120</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB24</td>
@@ -370,7 +371,7 @@ footer a:hover{color:var(--green);}
   <td>94.5</td>
   <td style="color:var(--fg3);">0–203</td>
   <td>186</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB25</td>
@@ -388,7 +389,7 @@ footer a:hover{color:var(--green);}
   <td>80.2</td>
   <td style="color:var(--fg3);">0–191</td>
   <td>175</td>
-  <td><span style="color:var(--fg3);font-size:10px;font-family:var(--mono);">MED</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB27</td>
