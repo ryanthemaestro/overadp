@@ -8,6 +8,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-8GM0JH1DM4');
+  function gaEvent(name, params){ try{ if(typeof gtag==='function') gtag('event', name, params||{}); }catch(e){} }
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1296,10 +1297,12 @@ function promptDraftAuth(){
 
 function showUpgrade(){
   document.getElementById('upgradeOverlay').classList.remove('hidden');
+  gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser });
 }
 
 async function startCheckout(planType){
   if(!currentUser){promptDraftAuth();return;}
+  gaEvent('checkout_started', { plan_type: planType||'season' });
   try{
     const res = await fetch(API_BASE+'/stripe-checkout',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -1307,13 +1310,14 @@ async function startCheckout(planType){
     });
     const data = await res.json();
     if(data.url){window.location.href=data.url;}
-  }catch(e){alert('Checkout error — try again');}
+  }catch(e){gaEvent('checkout_error',{plan_type:planType||'season'});alert('Checkout error — try again');}
 }
 
 // Check payment success on return
 function checkPaymentReturn(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
+    gaEvent('purchase_complete', { source: 'stripe_redirect' });
     // Refresh session to get updated plan
     restoreSession().then(()=>{
       if(userPlan==='paid'){
@@ -1403,6 +1407,7 @@ async function loadData(){
     ]);
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
+    gaEvent('app_loaded', { player_count: Array.isArray(allPlayers)?allPlayers.length:0, user_plan: userPlan||'free' });
     // Normalize: bye_weeks.json may have single ints or arrays
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();

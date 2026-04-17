@@ -8,6 +8,17 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-8GM0JH1DM4');
+  function gaEvent(name, params){ try{ if(typeof gtag==='function') gtag('event', name, params||{}); }catch(e){} }
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('a[href^="/app"], a[href*="overadp.com/app"]').forEach(function(a){
+      a.addEventListener('click', function(){
+        gaEvent('cta_click', {
+          cta_label: (a.textContent||'').trim().slice(0,60),
+          cta_location: a.closest('section')?.querySelector('.section-title, h1, h2')?.textContent?.trim().slice(0,60) || 'unknown'
+        });
+      });
+    });
+  });
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
