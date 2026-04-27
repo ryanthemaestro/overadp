@@ -36,6 +36,15 @@ def clean_seasonal_stats(df: pd.DataFrame, min_games: int = 3) -> pd.DataFrame:
     """Clean seasonal player stats.
 
     Combines REG and POST season types into a single row per player per season.
+
+    KNOWN BIAS: summing REG + POST inflates fantasy_points for playoff-team
+    players by 1-4 extra games. Most leagues score regular season only, so
+    projections may be slightly too high for players whose teams reach the
+    postseason. The bias is consistent between our model and the ADP baseline,
+    so relative accuracy comparisons remain valid; only absolute projection
+    magnitudes are affected. Future fix: filter to season_type == "REG" before
+    aggregation and retrain. (Tracked as a follow-up — not changed here to
+    avoid silently shifting deployed projections.)
     """
     df = df.copy()
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]

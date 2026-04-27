@@ -52,6 +52,8 @@ def main():
         compute_sos_features,
         compute_rookie_features,
         compute_teammate_dependency_features,
+        compute_depth_chart_features,
+        compute_target_competition_features,
     )
     from src.features.college import compute_college_features
     from src.scoring.calculator import add_fantasy_points_to_df
@@ -83,15 +85,30 @@ def main():
     team = clean_team_stats(data["team"])
     ol = clean_ol_metrics(data["ol"])
 
+    # Overlay Sleeper API team assignments on the projection season roster.
+    # Catches trades/signings that nfl_data_py hasn't ingested yet (Sleeper
+    # typically updates within hours; nflverse can lag by days or weeks).
+    # Only the projection-season rows are touched — historical seasons stay
+    # exactly as nflverse reported them.
+    try:
+        from src.data.sleeper_rosters import apply_sleeper_team_overrides
+        print(f"Overlaying Sleeper roster on {projection_season}...")
+        roster = apply_sleeper_team_overrides(roster, target_season=projection_season)
+    except Exception as e:
+        print(f"  Warning: Sleeper overlay skipped: {e}")
+
     df = build_feature_matrix(seasonal, roster, team, ol)
     df = add_fantasy_points_to_df(df, format=args.scoring)
     df = compute_regression_to_mean_features(df)
     df = compute_stacking_features(df)
 
     try:
-        adp_data = fetch_adp_data(seasons=[projection_season])
+        # Fetch ADP for ALL seasons (training rows need their own season's ADP, not just projection season)
+        adp_seasons = list(range(min(seasons), projection_season + 1))
+        adp_data = fetch_adp_data(seasons=adp_seasons)
         df = compute_adp_features(df, adp_data)
-    except Exception:
+    except Exception as e:
+        print(f"  Warning: ADP fetch/merge failed ({e.__class__.__name__}: {e}). Projections will lack ADP feature.")
         adp_data = None
 
     try:
@@ -105,10 +122,11 @@ def main():
         print(f"  Warning: injury data unavailable: {e}")
 
     df = compute_sos_features(df)
+    # Rookie features BEFORE college so interaction features work
     df = compute_rookie_features(df)
     df = compute_teammate_dependency_features(df)
 
-    # College/draft features (critical for rookies)
+    # College/draft features (critical for rookies, needs is_rookie/is_2nd_year)
     try:
         df = compute_college_features(
             df,
@@ -116,8 +134,39 @@ def main():
             combine_df=data.get("combine"),
             player_info_df=data.get("player_info"),
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  Warning: college features failed ({e.__class__.__name__}: {e}). Rookies will project from base features only.")
+
+    # Depth chart features (QB/WR/TE role identification; RB skipped due to RBBC)
+    try:
+        from src.data.fetch import fetch_depth_charts
+        depth_data = fetch_depth_charts(list(range(min(seasons), projection_season + 1)))
+
+        # Overlay Sleeper's current depth chart on the projection season (Level 3
+        # freshness). nflverse depth charts reflect the last regular season's
+        # Week-1 snapshot; Sleeper reflects today's team depth. Drop any stale
+        # projection-season rows from nflverse and replace with Sleeper.
+        try:
+            from src.data.sleeper_rosters import build_sleeper_depth_chart
+            print(f"Overlaying Sleeper depth chart on {projection_season}...")
+            sleeper_depth = build_sleeper_depth_chart(roster, target_season=projection_season)
+            if not sleeper_depth.empty:
+                depth_data = depth_data[depth_data["season"] != projection_season]
+                # Align columns before concat
+                for col in depth_data.columns:
+                    if col not in sleeper_depth.columns:
+                        sleeper_depth[col] = pd.NA
+                sleeper_depth = sleeper_depth[depth_data.columns]
+                depth_data = pd.concat([depth_data, sleeper_depth], ignore_index=True)
+        except Exception as e:
+            print(f"  Warning: Sleeper depth overlay skipped: {e}")
+
+        df = compute_depth_chart_features(df, depth_data)
+    except Exception as e:
+        print(f"  Warning: depth chart unavailable: {e}")
+
+    # Target/carry competition features (orthogonal to depth_rank: measures volume available)
+    df = compute_target_competition_features(df)
 
     # --- Train models ---
     print("Training models...")
@@ -166,12 +215,33 @@ def main():
                     proj_rows[old] = proj_rows[new].fillna(proj_rows[old])
                     proj_rows = proj_rows.drop(columns=[new])
 
+        # Rookie features BEFORE college for interaction features
+        proj_rows = compute_rookie_features(proj_rows)
         try:
             proj_rows = compute_college_features(proj_rows, draft_df=data.get("draft"), combine_df=data.get("combine"), player_info_df=data.get("player_info"))
-        except Exception:
-            pass
-        proj_rows = compute_rookie_features(proj_rows)
+        except Exception as e:
+            print(f"  Warning: college features for projection rows failed ({e.__class__.__name__}: {e}).")
+        # Re-run depth chart features for the projection season. Prefer the
+        # Sleeper-augmented depth chart we built above; fall back to nflverse.
+        try:
+            from src.data.sleeper_rosters import build_sleeper_depth_chart
+            proj_depth = build_sleeper_depth_chart(roster, target_season=projection_season, verbose=False)
+            if proj_depth.empty:
+                from src.data.fetch import fetch_depth_charts
+                proj_depth = fetch_depth_charts([projection_season])
+            for c in ["depth_rank", "is_starter", "is_backup"]:
+                if c in proj_rows.columns:
+                    proj_rows = proj_rows.drop(columns=[c])
+            proj_rows = compute_depth_chart_features(proj_rows, proj_depth)
+        except Exception as e:
+            print(f"  Warning: depth chart for projection rows failed ({e.__class__.__name__}: {e}).")
         df = pd.concat([df, proj_rows], ignore_index=True)
+
+        # Re-compute target competition on the full df (captures current-season roster + FAs + rookies)
+        for c in ["teammate_targets_prev", "teammate_rec_yards_prev", "teammate_carries_prev"]:
+            if c in df.columns:
+                df = df.drop(columns=[c])
+        df = compute_target_competition_features(df)
 
     # --- Generate projections ---
     projections = pipeline.predict(df, target_season=projection_season)
@@ -187,6 +257,13 @@ def main():
     if adp_data is not None and not adp_data.empty and "bye" in adp_data.columns:
         bye_map = adp_data[adp_data["bye"] > 0][["team", "bye"]].drop_duplicates("team")
         bye_dict = dict(zip(bye_map["team"], bye_map["bye"]))
+        # Add team-code aliases so roster variants (LA/LAR, JAX/JAC, WAS/WSH)
+        # all resolve to the FFC bye week. Without this, LA Rams players
+        # (team="LA" in nflverse rosters) miss their bye (keyed as "LAR" in FFC).
+        _aliases = {"LAR": "LA", "LA": "LAR", "JAC": "JAX", "JAX": "JAC", "WSH": "WAS", "WAS": "WSH"}
+        for src, alias in _aliases.items():
+            if src in bye_dict and alias not in bye_dict:
+                bye_dict[alias] = bye_dict[src]
         projections["bye"] = projections["team"].map(bye_dict).fillna(0).astype(int)
 
     # --- Add injury data to player records from feature matrix ---
@@ -199,6 +276,20 @@ def main():
             projections = projections.merge(inj_sub, on="player_id", how="left")
             for c in available_injury[1:]:
                 projections[c] = projections[c].fillna(0)
+
+    # --- Add projected receptions for scoring format adjustments ---
+    # Use receptions from the latest season (lag1 data) to estimate projected receptions
+    rec_col = None
+    for col_candidate in ["receptions_lag1", "receptions"]:
+        if col_candidate in projections.columns:
+            rec_col = col_candidate
+            break
+    if rec_col:
+        projections["projected_receptions"] = projections[rec_col].fillna(0).clip(lower=0).round(0).astype(int)
+    else:
+        # Estimate by position averages (rec per game * 17)
+        pos_rec = {"QB": 5, "RB": 31, "WR": 54, "TE": 48}
+        projections["projected_receptions"] = projections["position"].map(pos_rec).fillna(20).astype(int)
 
     # Clean NaN
     for col in projections.columns:
@@ -227,6 +318,22 @@ def main():
     if adp_data is not None and not adp_data.empty and "bye" in adp_data.columns:
         bye_rows = adp_data[adp_data["bye"] > 0][["team", "bye"]].drop_duplicates("team")
         bye_data = dict(zip(bye_rows["team"], bye_rows["bye"].astype(int)))
+
+    # Normalize team-code variants so the frontend lookup works regardless of
+    # which convention the roster data uses. FFC uses LAR/LAC/JAC/WSH etc.;
+    # nflverse rosters currently use LA/LAC/JAX/WAS. Populate BOTH keys so
+    # players.json team codes always resolve.
+    TEAM_CODE_ALIASES = {
+        "LAR": "LA",    # Rams — FFC uses LAR, nflverse uses LA
+        "LA": "LAR",
+        "JAC": "JAX",   # Jaguars — FFC uses JAC, nflverse uses JAX
+        "JAX": "JAC",
+        "WSH": "WAS",   # Commanders — some sources use WSH
+        "WAS": "WSH",
+    }
+    for src, alias in TEAM_CODE_ALIASES.items():
+        if src in bye_data and alias not in bye_data:
+            bye_data[alias] = bye_data[src]
     if not bye_data:
         bye_weeks = compute_bye_weeks(season=projection_season)
         if bye_weeks:
