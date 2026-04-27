@@ -975,13 +975,13 @@
     <p>Rookies and 2nd-year players get a 1.8× / 1.3× width multiplier on top of the calibrated interval to reflect their scarcer historical data.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our model explains <strong>58% of variance</strong> in fantasy points on held-out seasons. ADP alone (a linear projection from draft position) explains <strong>15%</strong> — nearly 4× worse. The breakdown by position on walk-forward validation (train 2019 to N-1, test season N, averaged across 2022-2025):</p>
+    <p>Our model explains <strong>57% of variance</strong> in fantasy points on held-out seasons. ADP alone (a learned curve from draft position to expected points) explains only <strong>6%</strong> — roughly 9× worse. Walk-forward validation: train 2021 to N-1, test season N, averaged across 2022-2025.</p>
     <table>
       <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
-      <tr><td><strong>QB</strong></td><td>65.4</td><td>83.5</td><td style="color:var(--rb)">-21.7%</td><td>0.52</td><td>0.03</td></tr>
-      <tr><td><strong>RB</strong></td><td>39.8</td><td>61.8</td><td style="color:var(--rb)">-35.7%</td><td>0.60</td><td>0.20</td></tr>
-      <tr><td><strong>WR</strong></td><td>33.2</td><td>49.7</td><td style="color:var(--rb)">-33.1%</td><td>0.62</td><td>0.25</td></tr>
-      <tr><td><strong>TE</strong></td><td>24.0</td><td>41.5</td><td style="color:var(--rb)">-42.1%</td><td>0.58</td><td>0.12</td></tr>
+      <tr><td><strong>QB</strong></td><td>66.7</td><td>107.8</td><td style="color:var(--rb)">-38.1%</td><td>0.52</td><td>0.00</td></tr>
+      <tr><td><strong>RB</strong></td><td>41.0</td><td>65.0</td><td style="color:var(--rb)">-36.9%</td><td>0.62</td><td>0.12</td></tr>
+      <tr><td><strong>WR</strong></td><td>33.4</td><td>51.2</td><td style="color:var(--rb)">-34.9%</td><td>0.59</td><td>0.10</td></tr>
+      <tr><td><strong>TE</strong></td><td>24.8</td><td>39.6</td><td style="color:var(--rb)">-37.4%</td><td>0.56</td><td>0.03</td></tr>
     </table>
     <p>When the model and ADP disagree strongly, it flags sleepers (model rank better than ADP) and busts (ADP rank better than model).</p>
 
@@ -1026,16 +1026,16 @@
     </ul>
 
     <h2>Accuracy (Walk-Forward Validated)</h2>
-    <p>Trained on 2019 through N-1, tested on season N, averaged across 2022-2025. Features are strictly lagged to prevent leakage. Calibration set for CQR is the most recent season in the training window.</p>
+    <p>Trained on 2021 through N-1, tested on season N, averaged across 2022-2025. Features are strictly lagged to prevent leakage. Calibration set for CQR is the most recent season in the training window. Numbers refreshed April 2026 after the NFL draft.</p>
     <table>
       <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
-      <tr><td><strong>QB</strong></td><td>65.4</td><td>83.5</td><td style="color:var(--rb)"><strong>-21.7%</strong></td><td>0.52</td><td>0.03</td></tr>
-      <tr><td><strong>RB</strong></td><td>39.8</td><td>61.8</td><td style="color:var(--rb)"><strong>-35.7%</strong></td><td>0.60</td><td>0.20</td></tr>
-      <tr><td><strong>WR</strong></td><td>33.2</td><td>49.7</td><td style="color:var(--rb)"><strong>-33.1%</strong></td><td>0.62</td><td>0.25</td></tr>
-      <tr><td><strong>TE</strong></td><td>24.0</td><td>41.5</td><td style="color:var(--rb)"><strong>-42.1%</strong></td><td>0.58</td><td>0.12</td></tr>
-      <tr><td><strong>Overall</strong></td><td>—</td><td>—</td><td style="color:var(--rb)"><strong>-33% avg</strong></td><td><strong>0.58</strong></td><td>0.15</td></tr>
+      <tr><td><strong>QB</strong></td><td>66.7</td><td>107.8</td><td style="color:var(--rb)"><strong>-38.1%</strong></td><td>0.52</td><td>0.00</td></tr>
+      <tr><td><strong>RB</strong></td><td>41.0</td><td>65.0</td><td style="color:var(--rb)"><strong>-36.9%</strong></td><td>0.62</td><td>0.12</td></tr>
+      <tr><td><strong>WR</strong></td><td>33.4</td><td>51.2</td><td style="color:var(--rb)"><strong>-34.9%</strong></td><td>0.59</td><td>0.10</td></tr>
+      <tr><td><strong>TE</strong></td><td>24.8</td><td>39.6</td><td style="color:var(--rb)"><strong>-37.4%</strong></td><td>0.56</td><td>0.03</td></tr>
+      <tr><td><strong>Overall</strong></td><td>41.5</td><td>65.9</td><td style="color:var(--rb)"><strong>-37% avg</strong></td><td><strong>0.57</strong></td><td>0.06</td></tr>
     </table>
-    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The model explains 4× more variance than ADP alone. The largest edge is at TE (42% less mean absolute error) and the smallest is still at QB (22%). ADP performs worst at QB (R² 0.03) because rushing production from dual-threat QBs is invisible to pure draft-position rankings.</p>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The model explains roughly 9× more variance than ADP alone. The largest edge is at QB (-38% MAE; ADP R² is essentially zero because rushing production from dual-threat QBs is invisible to pure draft-position rankings). TE and RB are close behind at -37%. The smallest edge — still substantial — is at WR (-35%).</p>
   </div>
 </div>
 
@@ -1062,7 +1062,7 @@
     <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
     <h2>Your Opponents May Already Have This Data</h2>
     <div style="margin:16px 0;">
-      <div class="upgrade-feature">✓ All 542 player projections &amp; VBD</div>
+      <div class="upgrade-feature">✓ All 540+ player projections &amp; VBD</div>
       <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
       <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
       <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>

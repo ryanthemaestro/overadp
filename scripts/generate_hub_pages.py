@@ -293,14 +293,14 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 """
 
     intro = {
-        "QB": "Quarterback is where ADP fails hardest — our walk-forward backtest shows ADP R² ≈ 0 for QB (consensus is essentially noise at the position). Our model posts a <strong>34% MAE edge over ADP</strong> for QBs.",
-        "RB": "Running back is the hardest position for projections: committee usage, injury rates, and coaching changes add noise. Our depth-chart-aware model still posts a <strong>38% MAE edge over ADP</strong> for RBs.",
-        "WR": "Wide receiver projections live or die on target share and teammate competition. We explicitly encode prior-season teammate targets so when a star signs elsewhere, our model sees it. <strong>33% MAE edge over ADP</strong>.",
-        "TE": "Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cuts TE MAE by <strong>39% vs ADP</strong> — and the TE R² lift is the largest of any position (0.60 vs 0.03).",
+        "QB": "Quarterback is where ADP fails hardest — our walk-forward backtest shows ADP R² ≈ 0 for QB (consensus is essentially noise at the position). Our model posts a <strong>38% MAE edge over ADP</strong> for QBs.",
+        "RB": "Running back is the hardest position for projections: committee usage, injury rates, and coaching changes add noise. Our depth-chart-aware model still posts a <strong>37% MAE edge over ADP</strong> for RBs.",
+        "WR": "Wide receiver projections live or die on target share and teammate competition. We explicitly encode prior-season teammate targets so when a star signs elsewhere, our model sees it. <strong>35% MAE edge over ADP</strong>.",
+        "TE": "Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cuts TE MAE by <strong>37% vs ADP</strong> — and the TE R² lift is one of the largest of any position (0.56 vs 0.03, a 20× improvement).",
     }[position]
 
     title_full = f"2026 Fantasy Football {title_pos} Rankings — Walk-Forward Validated Projections | OverADP"
-    mae_edge = {'QB':'34%','RB':'38%','WR':'33%','TE':'39%'}[position]
+    mae_edge = {'QB':'38%','RB':'37%','WR':'35%','TE':'37%'}[position]
     desc = f"Top {limit} 2026 fantasy football {position} rankings with calibrated 80% confidence intervals. ML model cut {position} MAE by {mae_edge} vs ADP on 2022-2025 walk-forward validation. Updated {datetime.utcnow().strftime('%B %Y')}."
 
     schema = f"""<script type="application/ld+json">
@@ -340,7 +340,7 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 </div>
 
 <h2>What the model gets right that ADP misses</h2>
-<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>9% of actual fantasy-point variance</strong>. Our model explained <strong>59%</strong> — a <a class="inline" href="/methodology/">7× improvement</a>.</p>
+<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>6% of actual fantasy-point variance</strong>. Our model explained <strong>57%</strong> — roughly <a class="inline" href="/methodology/">9× more variance explained</a>.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 """
 
@@ -509,14 +509,14 @@ def build_methodology() -> str:
 <table class="rank">
   <thead><tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Edge</th></tr></thead>
   <tbody>
-    <tr><td>Overall R² (variance explained)</td><td class="positive">0.59</td><td class="negative">0.09</td><td class="positive">+7×</td></tr>
-    <tr><td>Overall MAE</td><td class="positive">38.4</td><td class="negative">62.7</td><td class="positive">−39%</td></tr>
-    <tr><td>QB MAE</td><td class="positive">71.2</td><td class="negative">107.8</td><td class="positive">−34%</td></tr>
-    <tr><td>RB MAE</td><td class="positive">40.4</td><td class="negative">65.0</td><td class="positive">−38%</td></tr>
-    <tr><td>WR MAE</td><td class="positive">34.4</td><td class="negative">51.2</td><td class="positive">−33%</td></tr>
-    <tr><td>TE MAE</td><td class="positive">24.2</td><td class="negative">39.6</td><td class="positive">−39%</td></tr>
-    <tr><td>QB R²</td><td class="positive">0.49</td><td class="negative">0.00</td><td class="positive">huge</td></tr>
-    <tr><td>TE R²</td><td class="positive">0.60</td><td class="negative">0.03</td><td class="positive">+20×</td></tr>
+    <tr><td>Overall R² (variance explained)</td><td class="positive">0.57</td><td class="negative">0.06</td><td class="positive">+9×</td></tr>
+    <tr><td>Overall MAE</td><td class="positive">41.5</td><td class="negative">65.9</td><td class="positive">−37%</td></tr>
+    <tr><td>QB MAE</td><td class="positive">66.7</td><td class="negative">107.8</td><td class="positive">−38%</td></tr>
+    <tr><td>RB MAE</td><td class="positive">41.0</td><td class="negative">65.0</td><td class="positive">−37%</td></tr>
+    <tr><td>WR MAE</td><td class="positive">33.4</td><td class="negative">51.2</td><td class="positive">−35%</td></tr>
+    <tr><td>TE MAE</td><td class="positive">24.8</td><td class="negative">39.6</td><td class="positive">−37%</td></tr>
+    <tr><td>QB R²</td><td class="positive">0.52</td><td class="negative">0.00</td><td class="positive">huge</td></tr>
+    <tr><td>TE R²</td><td class="positive">0.56</td><td class="negative">0.03</td><td class="positive">+20×</td></tr>
     <tr><td>80% CI coverage</td><td class="positive">83.5%</td><td>n/a</td><td class="positive">calibrated</td></tr>
   </tbody>
 </table>
@@ -528,7 +528,7 @@ def build_methodology() -> str:
 <p><strong>Fantasy football is high-variance.</strong> Even a perfect model won't hit every call. Our 80% CIs cover 83.5% of outcomes — which means 16.5% of players still blow through their interval in either direction.</p>
 
 <h2>What's next</h2>
-<p>We refresh the depth-chart features after the NFL draft (late April) and again in August once pre-season depth charts are final. Draft capital for 2026 rookies is already in the model, and team assignments update automatically when FA signings are reflected in the roster data.</p>
+<p>The 2026 NFL draft just wrapped. Rookies are already on their NFL teams in our projections via the live Sleeper roster overlay, and depth charts have been refreshed accordingly. <em>Draft capital and college-production features for the 2026 class</em> will fill in over the next ~1 week as nflverse ingests the draft results — we'll re-export at that point. We also re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
 """
 
