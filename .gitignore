@@ -1,4 +1,6 @@
-data/
+/data/
+catboost_info/
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
