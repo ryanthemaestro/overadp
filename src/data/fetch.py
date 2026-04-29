@@ -642,7 +642,14 @@ def fetch_draft_picks(years: list[int] | None = None, cache: bool = True) -> pd.
     _ensure_data_dir()
     cache_path = DATA_DIR / "draft_picks.parquet"
     if cache and cache_path.exists():
-        return pd.read_parquet(cache_path)
+        df = pd.read_parquet(cache_path)
+        if years and "season" in df.columns:
+            available = set(df["season"].unique())
+            missing = set(years) - available
+            if missing:
+                print(f"  Warning: draft_picks cache missing seasons {sorted(missing)}. Proceeding with available data.")
+            return df[df["season"].isin(available & set(years))] if available & set(years) else df
+        return df
     if nfl is None:
         raise ImportError("nfl_data_py required: pip install nfl_data_py")
     df = nfl.import_draft_picks(years=years)
