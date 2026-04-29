@@ -153,9 +153,20 @@ def compute_college_features(
             # Use last_name matching since df has abbreviated names (L.Jackson)
             # and combine has full names (Lamar Jackson)
             cb["_merge_last"] = cb["player_name"].str.split().str[-1].str.lower().str.strip()
-            df["_merge_last"] = df["player_name"].str.split(".").str[-1].str.lower().str.strip()
-            cb = cb.drop_duplicates(subset=["_merge_last"])
+            df["_merge_last"] = df["player_name"].str.split().str[-1].str.lower().str.strip()
+            # Don't dedupe here - let pandas handle the merge, then we'll dedupe on df later
+            # Aggressive dedupe on last name alone drops the wrong rows (veteran vs rookie with same last name)
             merge_on = "_merge_last"
+
+        # Log merge stats for debugging
+        if merge_on:
+            before_len = len(df)
+            matched = df["_merge_last"].isin(cb["_merge_last"]).sum() if "_merge_last" in df.columns else 0
+            print(f"  College features: combine merge via {merge_on}, matched {matched}/{len(df)} rows")
+            # Show which last names matched
+            if "_merge_last" in df.columns and "_merge_last" in cb.columns:
+                matched_lasts = set(df[df["_merge_last"].isin(cb["_merge_last"])]["_merge_last"].dropna().unique())
+                print(f"    Matched last names: {sorted(matched_lasts)[:20]}")
 
         if merge_on:
             combine_cols = [merge_on]
@@ -165,6 +176,23 @@ def compute_college_features(
 
             if len(combine_cols) > 1:
                 cb_sub = cb[combine_cols].drop_duplicates(subset=[merge_on])
+                # Parse height from "6-5" format to inches
+                if "ht" in cb_sub.columns:
+                    def parse_ht(h):
+                        if pd.isna(h):
+                            return None
+                        s = str(h).strip()
+                        if "-" in s:
+                            try:
+                                feet, inches = s.split("-")
+                                return float(feet) * 12 + float(inches)
+                            except (ValueError, TypeError):
+                                return None
+                        try:
+                            return float(s)
+                        except (ValueError, TypeError):
+                            return None
+                    cb_sub["ht"] = cb_sub["ht"].apply(parse_ht)
                 rename_map = {
                     "forty": "combine_forty",
                     "bench": "combine_bench",
@@ -176,7 +204,14 @@ def compute_college_features(
                     "wt": "combine_wt",
                 }
                 cb_sub = cb_sub.rename(columns={k: v for k, v in rename_map.items() if k in cb_sub.columns})
-                df = df.merge(cb_sub, on=merge_on, how="left")
+                # Merge left, then only fill NaN values (don't clobber existing from Sleeper)
+                df_before = df.copy()
+                df = df.merge(cb_sub, on=merge_on, how="left", suffixes=("", "_new"))
+                # For each combine column, use existing if non-null, else use new value
+                for col in ["combine_forty", "combine_bench", "combine_vertical", "combine_broad", "combine_shuttle", "combine_cone", "combine_ht", "combine_wt"]:
+                    if f"{col}_new" in df.columns:
+                        df[col] = df[col].fillna(df[f"{col}_new"])
+                        df = df.drop(columns=[f"{col}_new"])
                 if "_merge_name" in df.columns:
                     df = df.drop(columns=["_merge_name"])
 

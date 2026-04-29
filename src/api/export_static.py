@@ -240,13 +240,33 @@ def main():
                 )
                 if not rookie_stubs.empty:
                     proj_rows = pd.concat([proj_rows, rookie_stubs], ignore_index=True)
+                    print(f"  Sleeper rookies added: {len(rookie_stubs)} rows")
         except Exception as e:
             print(f"  Warning: Sleeper rookie injection skipped: {e.__class__.__name__}: {e}")
 
         # Rookie features BEFORE college for interaction features
         proj_rows = compute_rookie_features(proj_rows)
         try:
-            proj_rows = compute_college_features(proj_rows, draft_df=data.get("draft"), combine_df=data.get("combine"), player_info_df=data.get("player_info"))
+            # Filter combine to target season for projection rows (avoid matching veterans from other years)
+            combine_full = data.get("combine")
+            combine_proj = combine_full[combine_full["season"] == projection_season] if combine_full is not None and "season" in combine_full.columns else combine_full
+            proj_rows = compute_college_features(proj_rows, draft_df=data.get("draft"), combine_df=combine_proj, player_info_df=data.get("player_info"))
+            # Debug: check if college features populated for rookies
+            rookie_mask = proj_rows.get("is_rookie", 0) == 1
+            if rookie_mask.any():
+                n_rookies = rookie_mask.sum()
+                has_athletic = proj_rows.loc[rookie_mask, "athletic_score"].notna().sum() if "athletic_score" in proj_rows.columns else 0
+                has_ht = proj_rows.loc[rookie_mask, "combine_ht"].notna().sum() if "combine_ht" in proj_rows.columns else 0
+                has_wt = proj_rows.loc[rookie_mask, "combine_wt"].notna().sum() if "combine_wt" in proj_rows.columns else 0
+                print(f"  College features for {n_rookies} rookies: athletic_score={has_athletic}, combine_ht={has_ht}, combine_wt={has_wt}")
+                # Show sample values
+                sample_rookies = proj_rows[rookie_mask].head(5)
+                for _, row in sample_rookies.iterrows():
+                    nm = row.get("player_name", "")[:20]
+                    ath = row.get("athletic_score", 0)
+                    ht = row.get("combine_ht", 0)
+                    wt = row.get("combine_wt", 0)
+                    print(f"    {nm}: athletic={ath:.2f}, ht={ht:.0f}, wt={wt:.0f}")
         except Exception as e:
             print(f"  Warning: college features for projection rows failed ({e.__class__.__name__}: {e}).")
         # Re-run depth chart features for the projection season. Prefer the

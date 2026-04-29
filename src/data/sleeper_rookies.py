@@ -227,6 +227,9 @@ def build_rookie_stub_rows(
         ("team", rookies["team"].values),
         ("season", [target_season] * len(rookies)),
         ("rookie_year", [target_season] * len(rookies)),
+        # Copy height/weight from Sleeper directly (better than combine merge)
+        ("combine_ht", rookies["height_in"].values if "height_in" in rookies.columns else [0] * len(rookies)),
+        ("combine_wt", rookies["weight_lb"].values if "weight_lb" in rookies.columns else [0] * len(rookies)),
         ("draft_year", [target_season] * len(rookies)),
         ("entry_year", [target_season] * len(rookies)),
         ("years_of_experience", [0] * len(rookies)),
