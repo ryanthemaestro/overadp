@@ -20,9 +20,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from src.utils.config import get_roster_config, get_scoring_rules
-from src.data.fetch import load_all_data, fetch_adp_data, fetch_injury_data
+from src.data.fetch import load_all_data, fetch_adp_data, fetch_injury_data, fetch_depth_charts
 from src.data.clean import clean_seasonal_stats, clean_roster_info, clean_team_stats, clean_ol_metrics
-from src.features.engineer import build_feature_matrix, compute_regression_to_mean_features, compute_adp_features, compute_injury_features, compute_sos_features, compute_rookie_features, compute_stacking_features, compute_teammate_dependency_features, compute_playmaker_features
+from src.features.engineer import build_feature_matrix, compute_regression_to_mean_features, compute_adp_features, compute_injury_features, compute_sos_features, compute_rookie_features, compute_stacking_features, compute_teammate_dependency_features, compute_playmaker_features, compute_depth_chart_features, compute_target_competition_features
 from src.features.college import compute_college_features
 from src.scoring.calculator import add_fantasy_points_to_df
 from src.models.ridge_model import RidgeModel
@@ -143,6 +143,9 @@ def load_data(req: LoadDataRequest):
         except Exception:
             pass  # Injury data not critical
 
+        # Add rookie features BEFORE college features so interaction features work
+        df = compute_rookie_features(df)
+
         # Add college/draft features (critical for rookies)
         try:
             df = compute_college_features(
@@ -154,8 +157,20 @@ def load_data(req: LoadDataRequest):
         except Exception:
             pass  # College data not critical for veterans
 
-        # Train per-position models
-        pipeline = PositionPipeline(models=[RidgeModel(), RandomForestModel(), XGBoostModel(), CatBoostModel()])
+        # Add depth chart features (QB/WR/TE role identification; skipped for RB due to RBBC)
+        # For the projection season, fetch_depth_charts returns the latest snapshot;
+        # re-run with force_refresh=True to pull post-draft/roster-cuts updates.
+        try:
+            depth_data = fetch_depth_charts(seasons)
+            df = compute_depth_chart_features(df, depth_data)
+        except Exception:
+            pass  # Depth chart not critical
+
+        # Add target/carry competition features (teammate volume signal)
+        df = compute_target_competition_features(df)
+
+        # Train per-position models (best model per position via walk-forward)
+        pipeline = PositionPipeline()
         pipeline.validate_all(df, min_train_seasons=3)
         pipeline.train_final(df)
 
@@ -207,6 +222,8 @@ def load_data(req: LoadDataRequest):
                     proj_rows["age"] = proj_rows["age_new"].fillna(proj_rows["age"])
                     proj_rows = proj_rows.drop(columns=["age_new"])
 
+            # Recompute rookie features for projection season (must be before college for interaction features)
+            proj_rows = compute_rookie_features(proj_rows)
             # Recompute college features for projection season (draft_year still valid)
             try:
                 proj_rows = compute_college_features(
@@ -217,8 +234,16 @@ def load_data(req: LoadDataRequest):
                 )
             except Exception:
                 pass
-            # Recompute rookie features for projection season
-            proj_rows = compute_rookie_features(proj_rows)
+            # Recompute depth chart features for projection season (use latest snapshot)
+            try:
+                proj_depth = fetch_depth_charts([projection_season])
+                # Drop stale depth_rank cols carried from latest_season before re-merging
+                for c in ["depth_rank", "is_starter", "is_backup"]:
+                    if c in proj_rows.columns:
+                        proj_rows = proj_rows.drop(columns=[c])
+                proj_rows = compute_depth_chart_features(proj_rows, proj_depth)
+            except Exception:
+                pass
 
             # Add projection rows to the dataframe
             df = pd.concat([df, proj_rows], ignore_index=True)
@@ -262,6 +287,8 @@ def load_data(req: LoadDataRequest):
                             if pos_col in new_rookies.columns:
                                 rookie_rows["position"] = new_rookies[pos_col].str.upper().values[:len(new_rookies)]
 
+                            # Compute rookie features first (needed for college interaction features)
+                            rookie_rows = compute_rookie_features(rookie_rows)
                             # Compute college features for rookies
                             try:
                                 rookie_rows = compute_college_features(
@@ -272,11 +299,27 @@ def load_data(req: LoadDataRequest):
                                 )
                             except Exception:
                                 pass
-                            rookie_rows = compute_rookie_features(rookie_rows)
+                            # Depth chart features for rookies (they'll be unranked at
+                            # pre-draft but populate once the post-draft snapshot is refreshed)
+                            try:
+                                rookie_depth = fetch_depth_charts([projection_season])
+                                for c in ["depth_rank", "is_starter", "is_backup"]:
+                                    if c in rookie_rows.columns:
+                                        rookie_rows = rookie_rows.drop(columns=[c])
+                                rookie_rows = compute_depth_chart_features(rookie_rows, rookie_depth)
+                            except Exception:
+                                pass
 
                             df = pd.concat([df, rookie_rows], ignore_index=True)
                             import logging
                             logging.info(f"Added {len(rookie_rows)} rookie rows for {projection_season}")
+
+        # Re-compute target competition using the full, updated roster (projection-season
+        # teams + rookies added). This ensures competition reflects FA moves and draft.
+        for c in ["teammate_targets_prev", "teammate_rec_yards_prev", "teammate_carries_prev"]:
+            if c in df.columns:
+                df = df.drop(columns=[c])
+        df = compute_target_competition_features(df)
 
         # Generate projections for the projection season
         projections = pipeline.predict(df, target_season=projection_season)

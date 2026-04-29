@@ -282,10 +282,29 @@ def compute_college_features(
         df["college_x_2nd_year"] = df["college_dominance"] * df["is_2nd_year"]
         df["draft_cap_x_2nd_year"] = df["draft_capital"] * df["is_2nd_year"]
 
+    # Add has_combine_data flag before filling NaN
+    combine_metric_cols = ["combine_forty", "combine_bench", "combine_vertical",
+                           "combine_broad", "combine_shuttle", "combine_cone"]
+    if any(c in df.columns for c in combine_metric_cols):
+        df["has_combine_data"] = df[combine_metric_cols].notna().any(axis=1).astype(int)
+    else:
+        df["has_combine_data"] = 0
+
+    # Restrict combine features to young players (<4 NFL years).
+    # Veteran combine scores from a decade ago add noise; their NFL stats dominate.
+    # Walk-forward testing showed this cutoff gives the best overall improvement.
+    if "draft_year" in df.columns and "season" in df.columns:
+        years_exp = df["season"] - df["draft_year"].fillna(df["season"])
+        veteran_mask = years_exp >= 4
+        combine_and_athletic = combine_metric_cols + ["athletic_score", "has_combine_data"]
+        for col in combine_and_athletic:
+            if col in df.columns:
+                df.loc[veteran_mask, col] = 0
+
     # Fill NaN for all new columns
     new_cols = ["draft_round", "draft_pick", "draft_capital",
                 "athletic_score", "college_dominance",
-                "early_declare", "p5_conference",
+                "early_declare", "p5_conference", "has_combine_data",
                 "combine_forty", "combine_bench", "combine_vertical",
                 "combine_broad", "combine_shuttle", "combine_cone",
                 "college_pass_yds_per_game", "college_pass_td_per_game",
@@ -296,7 +315,7 @@ def compute_college_features(
                 "college_x_2nd_year", "draft_cap_x_2nd_year"]
     for c in new_cols:
         if c in df.columns:
-            if c in ["early_declare", "p5_conference", "draft_round"]:
+            if c in ["early_declare", "p5_conference", "draft_round", "has_combine_data"]:
                 df[c] = df[c].fillna(0).astype(int)
             else:
                 df[c] = df[c].fillna(0)

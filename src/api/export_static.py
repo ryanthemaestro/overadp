@@ -215,6 +215,34 @@ def main():
                     proj_rows[old] = proj_rows[new].fillna(proj_rows[old])
                     proj_rows = proj_rows.drop(columns=[new])
 
+        # Inject rookies from Sleeper that nflverse hasn't ingested yet.
+        # Post-draft nflverse typically lags by 1-2 weeks; Sleeper updates
+        # within hours. Without this, the projection season is missing the
+        # entire incoming rookie class during that window.
+        try:
+            from src.data.sleeper_rookies import build_rookie_stub_rows
+            from src.data.sleeper_rosters import _normalize_name
+            existing_ids = set(proj_rows["player_id"].astype(str)) if "player_id" in proj_rows.columns else set()
+            existing_names = set()
+            for name_col in ("player_name", "football_name"):
+                if name_col in proj_rows.columns:
+                    for nm in proj_rows[name_col].dropna().astype(str):
+                        k = _normalize_name(nm)
+                        if k:
+                            existing_names.add(k)
+            template_row = proj_rows.iloc[0] if not proj_rows.empty else None
+            if template_row is not None:
+                rookie_stubs = build_rookie_stub_rows(
+                    target_season=projection_season,
+                    template_row=template_row,
+                    existing_player_ids=existing_ids,
+                    existing_names=existing_names,
+                )
+                if not rookie_stubs.empty:
+                    proj_rows = pd.concat([proj_rows, rookie_stubs], ignore_index=True)
+        except Exception as e:
+            print(f"  Warning: Sleeper rookie injection skipped: {e.__class__.__name__}: {e}")
+
         # Rookie features BEFORE college for interaction features
         proj_rows = compute_rookie_features(proj_rows)
         try:

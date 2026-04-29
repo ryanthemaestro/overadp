@@ -25,6 +25,7 @@ def walk_forward_validate(
     season_col: str = "season",
     position_col: Optional[str] = "position",
     min_train_seasons: int = 3,
+    temporal_weight: float = 0.0,
 ) -> pd.DataFrame:
     """Walk-forward validation for a single model.
 
@@ -70,7 +71,14 @@ def walk_forward_validate(
             model_clone = type(model)(**{k: v for k, v in getattr(model, "params", {}).items()
                                           if k in type(model).__init__.__code__.co_varnames})
 
-        model_clone.fit(X_tr, y_tr)
+        # Apply temporal weighting if specified
+        sw = None
+        if temporal_weight > 0 and season_col in df.columns:
+            max_s = df.loc[train_mask & valid_train, season_col].max()
+            years_ago = max_s - df.loc[train_mask & valid_train, season_col]
+            sw = np.exp(-temporal_weight * years_ago.values)
+
+        model_clone.fit(X_tr, y_tr, sample_weight=sw)
         preds = model_clone.predict(X_te)
 
         # Overall

@@ -13,6 +13,8 @@ from src.models.base import FantasyModel
 from src.models.ridge_model import RidgeModel
 from src.models.rf_model import RandomForestModel
 from src.models.xgboost_model import XGBoostModel
+from src.models.catboost_model import CatBoostModel, POSITION_CATBOOST_PARAMS, POSITION_TEMPORAL_WEIGHTS
+from src.models.ensemble import StackedEnsembleModel
 from src.models.compare import walk_forward_validate, summarize_comparison
 from src.features.engineer import get_feature_columns
 
@@ -23,11 +25,10 @@ POSITION_FEATURES = {
         "age", "age_squared", "is_prime",
         "years_from_prime", "years_from_prime_sq", "is_pre_prime", "is_prime_age", "is_post_prime",
         "passing_yards_lag1", "passing_yards_lag2", "passing_yards_roll3",
-        "passing_td_lag1", "passing_td_lag2",
-        "passing_int_lag1",
-        "qb_completion_rate_lag1", "team_pass_volume_lag1",
-        "team_sack_rate", "ol_pass_block_quality_lag1",
-        "rushing_yards_lag1", "rushing_td_lag1",
+        "passing_tds_lag1", "passing_tds_lag2",
+        "interceptions_lag1",
+        "ol_pass_block_quality_lag1",
+        "rushing_yards_lag1", "rushing_tds_lag1",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
@@ -35,10 +36,8 @@ POSITION_FEATURES = {
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features (lagged to prevent leakage)
         "def_rank_lag1", "pass_def_rank_lag1", "is_rookie", "is_2nd_year",
-        # Teammate dependency
-        "wr_corps_rank_lag1", "wr_total_pts_lag1",
         # Playmaker
-        "pts_per_opportunity_lag1", "pts_per_target_lag1",
+        "pts_per_target_lag1",
         # College/draft features
         "draft_capital", "athletic_score", "college_dominance",
         "college_pass_yds_per_game", "college_pass_td_per_game",
@@ -46,6 +45,12 @@ POSITION_FEATURES = {
         # College × experience interaction (supplements missing lag features)
         "college_x_rookie", "draft_cap_x_rookie", "athletic_x_rookie",
         "college_x_2nd_year", "draft_cap_x_2nd_year",
+        # Combine data availability flag
+        "has_combine_data",
+        # Depth chart role (pre-season snapshot)
+        "depth_rank", "is_starter", "is_backup",
+        # NOTE: coaching features (new_hc, hc_tenure_years) tested and rejected —
+        # added noise for RB/TE. Team context features already capture HC signal.
     ],
     "RB": [
         "age", "age_squared", "is_prime",
@@ -53,14 +58,13 @@ POSITION_FEATURES = {
         "rb_age_risk",
         "rushing_yards_lag1", "rushing_yards_lag2", "rushing_yards_roll3",
         "rushing_tds_lag1", "rushing_tds_lag2",
-        "rushing_attempts_lag1",
         "receiving_yards_lag1", "targets_lag1", "receptions_lag1",
-        "rush_att_per_game_lag1", "targets_per_game_lag1",
+        "targets_per_game_lag1",
         "rb_share_of_team_rush_lag1", "rb_share_of_team_rush_td_lag1",
-        "ol_quality_tier", "team_rush_ypa", "team_rush_td_rate",
+        "ol_quality_tier",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
-        "pts_roll2", "rush_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
+        "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
         # ADP & injury features
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features (lagged to prevent leakage)
@@ -72,17 +76,22 @@ POSITION_FEATURES = {
         # College × experience interaction
         "college_x_rookie", "draft_cap_x_rookie", "athletic_x_rookie",
         "college_x_2nd_year", "draft_cap_x_2nd_year",
+        # Combine data availability flag
+        "has_combine_data",
+        # NOTE: depth_rank not included for RB — RBBC (running back by committee)
+        # means depth chart labels are unreliable (e.g., Gibbs as "RB2" had 369 pts).
+        # Teammate competition (current roster + prior-season volume)
+        "teammate_carries_prev",
     ],
     "WR": [
         "age", "age_squared", "is_prime",
         "years_from_prime", "years_from_prime_sq", "is_pre_prime", "is_prime_age", "is_post_prime",
         "receiving_yards_lag1", "receiving_yards_lag2", "receiving_yards_roll3",
         "receiving_tds_lag1", "receiving_tds_lag2",
-        "targets_lag1", "targets_lag2", "targets_roll3",
+        "targets_lag1", "targets_lag2",
         "receptions_lag1",
         "target_share_lag1", "yards_per_target_lag1", "catch_rate_lag1",
         "targets_per_game_lag1", "rec_td_rate_lag1",
-        "team_pass_volume_lag1", "qb_completion_rate_lag1",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
@@ -97,17 +106,22 @@ POSITION_FEATURES = {
         # College × experience interaction
         "college_x_rookie", "draft_cap_x_rookie", "athletic_x_rookie",
         "college_x_2nd_year", "draft_cap_x_2nd_year",
+        # Combine data availability flag
+        "has_combine_data",
+        # Depth chart role (pre-season snapshot)
+        "depth_rank", "is_starter", "is_backup",
+        # Teammate competition (current roster + prior-season volume)
+        "teammate_targets_prev", "teammate_rec_yards_prev",
     ],
     "TE": [
         "age", "age_squared", "is_prime",
         "years_from_prime", "years_from_prime_sq", "is_pre_prime", "is_prime_age", "is_post_prime",
         "receiving_yards_lag1", "receiving_yards_lag2", "receiving_yards_roll3",
         "receiving_tds_lag1",
-        "targets_lag1", "targets_lag2", "targets_roll3",
+        "targets_lag1", "targets_lag2",
         "receptions_lag1",
         "target_share_lag1", "yards_per_target_lag1", "catch_rate_lag1",
         "targets_per_game_lag1", "rec_td_rate_lag1",
-        "team_pass_volume_lag1", "qb_completion_rate_lag1",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
@@ -122,6 +136,13 @@ POSITION_FEATURES = {
         # College × experience interaction
         "college_x_rookie", "draft_cap_x_rookie", "athletic_x_rookie",
         "college_x_2nd_year", "draft_cap_x_2nd_year",
+        # Combine data availability flag
+        "has_combine_data",
+        # Depth chart role (pre-season snapshot)
+        "depth_rank", "is_starter", "is_backup",
+        # NOTE: teammate competition NOT used for TE — most teams have only 1
+        # meaningful TE, so the signal is dominated by WR target share which is
+        # already captured by other features. Adding it caused +2% TE MAE.
     ],
 }
 
@@ -155,10 +176,29 @@ class PositionPipeline:
     5. Generate next-season projections
     """
 
-    def __init__(self, models: Optional[list[FantasyModel]] = None):
-        self.models = models or [RidgeModel(), RandomForestModel(), XGBoostModel()]
+    def __init__(self, models: Optional[list[FantasyModel]] = None, use_ensemble: bool = False,
+                 use_tuned_catboost: bool = True, use_conformal: bool = True, conformal_alpha: float = 0.2):
+        self.models = models or [RidgeModel(), RandomForestModel(), XGBoostModel(), CatBoostModel()]
+        self.use_ensemble = use_ensemble
+        self.use_tuned_catboost = use_tuned_catboost
+        self.use_conformal = use_conformal
+        self.conformal_alpha = conformal_alpha
         self.best_models: dict[str, FantasyModel] = {}
+        self.quantile_models: dict = {}  # pos -> ConformalQuantileModel
         self.validation_results: Optional[pd.DataFrame] = None
+
+    def _get_models_for_position(self, pos: str) -> list[FantasyModel]:
+        """Get model list, substituting per-position tuned CatBoost if enabled."""
+        if not self.use_tuned_catboost or pos not in POSITION_CATBOOST_PARAMS:
+            return self.models
+        tuned_params = POSITION_CATBOOST_PARAMS[pos]
+        models = []
+        for m in self.models:
+            if isinstance(m, CatBoostModel):
+                models.append(CatBoostModel(**tuned_params))
+            else:
+                models.append(m)
+        return models
 
     def validate_all(
         self,
@@ -190,12 +230,15 @@ class PositionPipeline:
 
             print(f"\n=== {pos} ({len(pos_df)} rows, {len(feat_cols)} features) ===")
 
-            for model in self.models:
+            pos_models = self._get_models_for_position(pos)
+            temporal_weight = POSITION_TEMPORAL_WEIGHTS.get(pos, 0.0) if self.use_tuned_catboost else 0.0
+            for model in pos_models:
                 print(f"  Validating: {model.name}...")
                 results = walk_forward_validate(
                     model, pos_df, feat_cols, target_col,
                     season_col=season_col, position_col=None,
                     min_train_seasons=min_train_seasons,
+                    temporal_weight=temporal_weight,
                 )
                 if not results.empty:
                     results["position"] = pos
@@ -210,13 +253,18 @@ class PositionPipeline:
         # Pick best model per position (lowest MAE)
         summary = summarize_comparison(combined)
         for pos in OFFENSIVE_POSITIONS:
-            pos_summary = summary[summary["position"] == pos]
-            if not pos_summary.empty:
-                best_name = pos_summary.iloc[0]["model"]
-                for m in self.models:
-                    if m.name == best_name:
-                        self.best_models[pos] = m
-                        break
+            if self.use_ensemble:
+                # Use stacked ensemble for production (combines all base models)
+                self.best_models[pos] = StackedEnsembleModel()
+            else:
+                pos_summary = summary[summary["position"] == pos]
+                if not pos_summary.empty:
+                    best_name = pos_summary.iloc[0]["model"]
+                    pos_models = self._get_models_for_position(pos)
+                    for m in pos_models:
+                        if m.name == best_name:
+                            self.best_models[pos] = m
+                            break
 
         return combined
 
@@ -229,17 +277,17 @@ class PositionPipeline:
         """Train final models on all available data using best model per position.
 
         Args:
-            temporal_weight: Decay rate for older seasons. 0 = no weighting,
-                higher = more aggressive discounting of old data.
-                0.15 means each year older gets 15% less weight.
+            temporal_weight: Default decay rate for older seasons. Overridden by
+                per-position POSITION_TEMPORAL_WEIGHTS when use_tuned_catboost is enabled.
+                0 = no weighting, higher = more aggressive discounting of old data.
         """
         available_cols = list(df.columns)
         trained = {}
 
         for pos in OFFENSIVE_POSITIONS:
             if pos not in self.best_models:
-                # Default to Ridge if no validation done
-                self.best_models[pos] = RidgeModel()
+                # Default to ensemble if enabled, else Ridge
+                self.best_models[pos] = StackedEnsembleModel() if self.use_ensemble else RidgeModel()
 
             pos_df = df[df["position"] == pos].copy()
             feat_cols = get_position_features(pos, available_cols)
@@ -260,13 +308,15 @@ class PositionPipeline:
 
             # Compute sample weights: recent seasons weighted more heavily
             # Combats concept drift (rule changes, usage patterns shift over time)
+            # Use per-position tuned weights when available
+            tw = POSITION_TEMPORAL_WEIGHTS.get(pos, temporal_weight) if self.use_tuned_catboost else temporal_weight
             sample_weight = None
-            if "season" in pos_df.columns and temporal_weight > 0:
+            if "season" in pos_df.columns and tw > 0:
                 max_season = pos_df.loc[valid, "season"].max()
                 seasons = pos_df.loc[valid, "season"]
                 years_ago = max_season - seasons
                 # Exponential decay: most recent season = 1.0, each year older decays
-                sample_weight = np.exp(-temporal_weight * years_ago)
+                sample_weight = np.exp(-tw * years_ago)
 
             # Fresh model instance via deepcopy
             import copy
@@ -276,6 +326,22 @@ class PositionPipeline:
             model.fit(X, y, sample_weight=sample_weight)
             trained[pos] = model
             print(f"Trained {model.name} for {pos} on {len(X)} rows")
+
+            # Train conformal quantile model for calibrated CIs
+            if self.use_conformal and "season" in pos_df.columns:
+                try:
+                    from src.models.conformal import ConformalQuantileModel
+                    seasons_series = pos_df.loc[valid, "season"].reset_index(drop=True)
+                    cat_params = POSITION_CATBOOST_PARAMS.get(pos, {}) if self.use_tuned_catboost else {}
+                    cqr = ConformalQuantileModel(alpha=self.conformal_alpha, cat_params=cat_params)
+                    cqr.fit(X.reset_index(drop=True), y.reset_index(drop=True),
+                            seasons=seasons_series, sample_weight=sample_weight)
+                    self.quantile_models[pos] = cqr
+                    ec = cqr.empirical_coverage
+                    print(f"  CQR {pos}: Q={cqr.Q:.2f}, n_cal={ec['n_cal']}, "
+                          f"cal-coverage {ec['pre_conformal']*100:.0f}% → {ec['post_conformal']*100:.0f}% (target {ec['target']*100:.0f}%)")
+                except Exception as e:
+                    print(f"  CQR {pos}: failed ({e})")
 
         self.best_models = trained
         return trained
@@ -366,6 +432,17 @@ class PositionPipeline:
                 pred_std = np.zeros(len(best_preds))
                 pred_mean = best_preds
 
+            # Conformal quantile intervals (calibrated ~80% coverage) —
+            # replaces the ad-hoc ensemble-std 1.28σ approximation when available.
+            cqr = self.quantile_models.get(pos) if self.use_conformal else None
+            if cqr is not None:
+                try:
+                    cqr_lo, cqr_hi = cqr.predict_interval(X)
+                except Exception:
+                    cqr_lo = cqr_hi = None
+            else:
+                cqr_lo = cqr_hi = None
+
             for i, (_, row) in enumerate(predict_pos.iterrows()):
                 proj_pts = float(pred_mean[i])
 
@@ -398,7 +475,7 @@ class PositionPipeline:
                 # Floor at 0
                 proj_pts = max(proj_pts, 0)
 
-                # Widen uncertainty for rookies/2nd-year players
+                # Widen uncertainty for rookies/2nd-year players (less historical data)
                 is_rookie = row.get("is_rookie", 0)
                 is_2nd_year = row.get("is_2nd_year", 0)
                 rookie_multiplier = 1.0
@@ -407,27 +484,31 @@ class PositionPipeline:
                 elif is_2nd_year:
                     rookie_multiplier = 1.3  # 30% wider for 2nd year
 
-                # Uncertainty: 80% confidence interval
                 std = float(pred_std[i]) if i < len(pred_std) else 0
-                std *= rookie_multiplier
-                ci_low = max(proj_pts - 1.28 * std, 0)
-                ci_high = proj_pts + 1.28 * std
 
-                # Risk tier based on relative uncertainty (coefficient of variation)
-                # The ensemble std measures model disagreement, not true prediction error.
-                # Top players naturally have CV 20-40% — that's normal, not "high risk".
-                # Truly risky players have CV > 60% (models strongly disagree).
-                # Injury history also factors in via injury features in the model.
+                # Prefer calibrated CQR intervals (~80% coverage guarantee);
+                # fall back to ensemble-std 1.28σ approximation when unavailable.
+                if cqr_lo is not None and cqr_hi is not None and i < len(cqr_lo):
+                    # Recenter CQR interval on the post-shrinkage proj_pts so the
+                    # width reflects uncertainty around the actual point prediction.
+                    half_width = (float(cqr_hi[i]) - float(cqr_lo[i])) / 2.0
+                    half_width *= rookie_multiplier
+                    ci_low = max(proj_pts - half_width, 0)
+                    ci_high = proj_pts + half_width
+                    interval_source = "cqr"
+                else:
+                    std_eff = std * rookie_multiplier
+                    ci_low = max(proj_pts - 1.28 * std_eff, 0)
+                    ci_high = proj_pts + 1.28 * std_eff
+                    interval_source = "ensemble_std"
+
+                # Risk tier computed LATER via position-relative percentiles (after all
+                # projections are built). Store raw rel_width and placeholder now.
                 if proj_pts > 0:
-                    cv = std / proj_pts  # coefficient of variation
+                    rel_width = (ci_high - ci_low) / proj_pts
                 else:
-                    cv = 1.0
-                if cv > 0.60:
-                    risk = "high"
-                elif cv > 0.25:
-                    risk = "medium"
-                else:
-                    risk = "low"
+                    rel_width = 99.0
+                risk = "medium"  # placeholder — overwritten in post-processing below
 
                 projections.append({
                     "player_id": row.get("player_id", f"player_{i}"),
@@ -439,9 +520,43 @@ class PositionPipeline:
                     "ci_high": round(ci_high, 1),
                     "uncertainty": round(std, 1),
                     "risk": risk,
+                    "rel_width": round(rel_width, 3),
+                    "interval_source": interval_source,
                     "adp": row.get("adp", 200),
                     "pts_lag1": row.get("pts_lag1", 0) or 0,
+                    "is_rookie": int(row.get("is_rookie", 0) or 0),
+                    "is_2nd_year": int(row.get("is_2nd_year", 0) or 0),
                     "model_used": f"ensemble({'+'.join(ensemble_preds.keys())})" if len(ensemble_preds) > 1 else self.best_models[pos].name,
                 })
 
-        return pd.DataFrame(projections)
+        result = pd.DataFrame(projections)
+        if result.empty:
+            return result
+
+        # === Position-relative risk tiers ===
+        # Absolute rel_width thresholds over-penalize high-variance positions (QB)
+        # and under-penalize low-variance ones (TE). Use within-position quartiles:
+        # bottom 25% rel_width → low, top 25% → high, middle 50% → medium. Only
+        # rank players with meaningful projections (> position-specific min) so
+        # depth-chart afterthoughts don't crowd the tiering.
+        result["risk"] = "medium"
+        min_proj_for_tier = {"QB": 50, "RB": 30, "WR": 30, "TE": 20}
+        for pos in OFFENSIVE_POSITIONS:
+            mask = (result["position"] == pos) & (result["projected_points"] >= min_proj_for_tier.get(pos, 20))
+            if mask.sum() < 4:
+                continue
+            sub = result.loc[mask, "rel_width"]
+            q25, q75 = sub.quantile(0.25), sub.quantile(0.75)
+            low_mask = mask & (result["rel_width"] <= q25)
+            high_mask = mask & (result["rel_width"] >= q75)
+            result.loc[low_mask, "risk"] = "low"
+            result.loc[high_mask, "risk"] = "high"
+            # Everything else stays "medium"
+
+        # Players below the per-position min_proj are low-impact; label them "high"
+        # since backups are inherently uncertain and shouldn't rank as "low"
+        for pos, min_p in min_proj_for_tier.items():
+            low_vol = (result["position"] == pos) & (result["projected_points"] < min_p)
+            result.loc[low_vol, "risk"] = "high"
+
+        return result

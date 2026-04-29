@@ -14,10 +14,11 @@
     --steel: #141a24;
     --iron: #1c2433;
     --rust: #2a3548;
-    --smoke: #4a5568;
-    --ash: #7a8599;
+    --smoke: #8896a8;
+    --ash: #b4bfcc;
     --chalk: #c8cdd8;
     --white: #eef0f4;
+    --fg3: #6b7a8d;
     --qb: #ff3b5c;
     --qb-glow: rgba(255,59,92,0.35);
     --rb: #3b82f6;
@@ -130,6 +131,13 @@
     box-shadow: 0 0 16px var(--rb-glow);
   }
   .btn-activate:hover { box-shadow: 0 0 24px var(--rb-glow); }
+  .btn-unlock {
+    background: linear-gradient(135deg, var(--green), #059669);
+    border-color: var(--green);
+    color: #fff;
+    box-shadow: 0 0 16px var(--wr-glow);
+  }
+  .btn-unlock:hover { box-shadow: 0 0 24px var(--wr-glow); }
   .btn-kill { border-color: var(--alert); color: var(--alert); }
   .btn-kill:hover { background: var(--alert); color: #fff; }
   .btn-sm { padding: 3px 8px; font-size: 10px; letter-spacing: 1px; }
@@ -233,9 +241,9 @@
   .roster-slot.empty { opacity: 0.35; border-style: dashed; }
   .roster-slot .slot-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 1px;
-    color: var(--ash);
+    color: var(--chalk);
     text-transform: uppercase;
   }
   .roster-slot .slot-player {
@@ -319,6 +327,25 @@
     border-color: var(--rb);
     background: rgba(59,130,246,0.12);
     box-shadow: 0 0 10px var(--rb-glow);
+  }
+  .scoring-btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    border: 1px solid var(--rust);
+    border-radius: 1px;
+    background: var(--steel);
+    color: var(--ash);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .scoring-btn:hover { border-color: var(--smoke); color: var(--chalk); }
+  .scoring-btn.active {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(0,255,106,0.08);
   }
   .pos-filter.on-qb { border-color: var(--qb); color: var(--qb); background: rgba(255,59,92,0.1); box-shadow: 0 0 10px var(--qb-glow); }
   .pos-filter.on-rb { border-color: var(--rb); color: var(--rb); background: rgba(59,130,246,0.1); box-shadow: 0 0 10px var(--rb-glow); }
@@ -536,6 +563,112 @@
     line-height: 1.5;
   }
 
+  /* Auth modal */
+  .auth-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,8,12,0.95);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-modal {
+    background: var(--steel);
+    border: 1px solid var(--rust);
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+  }
+  .auth-logo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    color: var(--white);
+  }
+  .auth-modal h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 6px 0;
+    background: var(--pit);
+    border: 1px solid var(--rust);
+    border-radius: 6px;
+    color: var(--white);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    outline: none;
+  }
+  .auth-input:focus { border-color: var(--rb); }
+  .auth-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    background: var(--wr);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .auth-btn:hover { opacity: 0.85; }
+  .auth-switch {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--smoke);
+  }
+  .auth-switch a { color: var(--rb); text-decoration: none; }
+  .auth-switch a:hover { text-decoration: underline; }
+  .auth-close {
+    margin-top: 16px;
+    background: none;
+    border: none;
+    color: var(--smoke);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+  .auth-close:hover { color: var(--chalk); }
+  .upgrade-feature {
+    text-align: left;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--chalk);
+  }
+  .paywall-cta {
+    text-align: center;
+    padding: 12px;
+    margin: 8px 0;
+    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(16,185,129,0.15));
+    border: 1px solid var(--rb);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .paywall-cta:hover { border-color: var(--wr); }
+  .paywall-cta-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rb);
+    letter-spacing: 1px;
+  }
+  .paywall-cta-sub {
+    font-size: 11px;
+    color: var(--smoke);
+    margin-top: 2px;
+  }
+
   /* Loading overlay */
   .loading-overlay {
     position: fixed;
@@ -670,6 +803,9 @@
       OverADP
     </div>
     <div class="top-actions">
+      <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
+      <button class="btn" id="loginBtn" onclick="promptDraftAuth()" style="font-size:11px;padding:4px 12px;display:none;">LOG IN</button>
+      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
       <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
@@ -690,6 +826,8 @@
     <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
     <div class="ticker-stat">WR <span class="val wr-c" id="wrCount">0</span></div>
     <div class="ticker-stat">TE <span class="val te-c" id="teCount">0</span></div>
+    <div class="ticker-stat">K <span class="val" id="kCount" style="color:var(--k);">0</span></div>
+    <div class="ticker-stat">DEF <span class="val" id="defCount" style="color:var(--def);">0</span></div>
   </div>
 
   <!-- LEFT — MY ROSTER -->
@@ -710,8 +848,14 @@
       <button class="pos-filter" data-pos="RB" onclick="filterPos('RB', this)">RB</button>
       <button class="pos-filter" data-pos="WR" onclick="filterPos('WR', this)">WR</button>
       <button class="pos-filter" data-pos="TE" onclick="filterPos('TE', this)">TE</button>
-      <input class="search-field" type="text" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)">
+      <button class="pos-filter" data-pos="K" onclick="filterPos('K', this)">K</button>
+      <button class="pos-filter" data-pos="DEF" onclick="filterPos('DEF', this)">DEF</button>
+      <!-- decoy inputs to absorb Chrome autofill -->
+      <input type="email" name="email" style="display:none" tabindex="-1" autocomplete="email">
+      <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
+      <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="this.removeAttribute('readonly');this.value='';" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
+      <button class="pos-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙</button>
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -756,41 +900,8 @@
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
-    <h2>OverADP — How It Works</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning models trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
-
-    <h2>The Model</h2>
-    <h3>Ensemble Approach</h3>
-    <p>Three models vote on each player's projection, then their predictions are averaged:</p>
-    <ul>
-      <li><span class="tag tag-blue">Ridge Regression</span> — Linear baseline, stable and unbiased</li>
-      <li><span class="tag tag-green">Random Forest</span> — Captures non-linear patterns (age cliffs, breakouts)</li>
-      <li><span class="tag tag-yellow">XGBoost</span> — Gradient boosting, best at complex feature interactions</li>
-    </ul>
-    <p>The model with the best cross-validation MAE for each position is selected as the "best" model. The ensemble average is used for the final projection.</p>
-
-    <h3>Features (40+ per position)</h3>
-    <table>
-      <tr><th>Category</th><th>What It Captures</th><th>Example</th></tr>
-      <tr><td><span class="tag tag-blue">Career Arc</span></td><td>Age, prime detection, regression risk</td><td>RB age cliff at 28+</td></tr>
-      <tr><td><span class="tag tag-green">Volume</span></td><td>Target share, rush share, snap counts</td><td>High volume = safer floor</td></tr>
-      <tr><td><span class="tag tag-yellow">Lag/Rolling</span></td><td>Prior year stats, 2-year rolling averages</td><td>YoY change signals breakout/bust</td></tr>
-      <tr><td><span class="tag tag-red">Injury</span></td><td>Injury history, games missed</td><td>Fragile players get risk flags</td></tr>
-      <tr><td><span class="tag tag-blue">ADP</span></td><td>Market wisdom — where others draft them</td><td>Model vs ADP gap = sleeper/bust</td></tr>
-      <tr><td><span class="tag tag-green">SOS</span></td><td>Strength of schedule, defensive quality</td><td>Hard schedule = lower ceiling</td></tr>
-      <tr><td><span class="tag tag-yellow">Teammate Dep.</span></td><td>QB quality → WR/TE, WR corps → QB, box-stack risk</td><td>Jefferson suffered with bad QB</td></tr>
-      <tr><td><span class="tag tag-blue">Playmaker</span></td><td>RACR, YAC share, domination score, WOPR</td><td>High RACR = creates own value</td></tr>
-      <tr><td><span class="tag tag-red">Rookie</span></td><td>First/second-year flag, wider uncertainty</td><td>Rookies get 80% wider CI</td></tr>
-      <tr><td><span class="tag tag-green">Stacking</span></td><td>QB + WR/TE same-team correlation</td><td>Amplifies upside and downside</td></tr>
-    </table>
-
-    <h3>Post-Prediction Adjustments</h3>
-    <ul>
-      <li><strong>Breakout shrinkage:</strong> If a player is coming off a breakout (>30% above average), the projection is shrunk 30% toward their 2-year rolling average to account for regression to the mean.</li>
-      <li><strong>RB age cliff:</strong> RBs over 28 get a ~3% per year penalty (0.97^age_over_27).</li>
-      <li><strong>Fringe player shrinkage:</strong> Backups with <10 pts last year who are projected >3x that are shrunk toward their actual performance.</li>
-      <li><strong>Rookie uncertainty:</strong> Rookies get 1.8x wider confidence intervals; 2nd-year players get 1.3x wider.</li>
-    </ul>
+    <h2>OverADP — How to Use the War Room</h2>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -834,7 +945,7 @@
 
     <h2>Key Concepts</h2>
     <h3>VBD (Value Based Drafting)</h3>
-    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last starter that would be rostered across all teams (e.g., the #24 RB in a 12-team league that starts 2 RBs). VBD tells you <em>how much better</em> this player is than what you could get for free off waivers.</p>
+    <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last player typically drafted at each position (including bench). This means even bench-worthy players get positive VBD, helping you compare value across all rounds — not just the early ones.</p>
 
     <h3>Positional Scarcity</h3>
     <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
@@ -851,7 +962,7 @@
     <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our ensemble model has a <strong>0.843 correlation</strong> with actual fantasy points, beating ADP's 0.384 (+119%). But ADP reflects real draft behavior, so when the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+    <p>Our CatBoost model has a <strong>0.752 average correlation</strong> with actual fantasy points, beating ADP's 0.678. The model's edge is largest at TE (+38% MAE improvement) and WR (+25%). When the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
 
     <h3>Handcuff Alerts</h3>
     <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
@@ -884,32 +995,79 @@
 
     <h2>Accuracy</h2>
     <table>
-      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (XGBoost)</th><th>MAE</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.634</td><td>0.630</td><td>~57 pts</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.728</td><td>0.721</td><td>~36 pts</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.669</td><td>0.663</td><td>~29 pts</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.744</td><td>0.738</td><td>~20 pts</td></tr>
+      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (ADP-only)</th><th>MAE vs ADP</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.440</td><td>0.224</td><td>+24% better</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.585</td><td>0.448</td><td>+3% better</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.604</td><td>0.408</td><td>+25% better</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.588</td><td>0.250</td><td>+38% better</td></tr>
     </table>
-    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated (train on past, test on future). No overfitting — train/test R² gaps < 0.02. CatBoost wins on 3 of 4 positions. Ensemble averages all 4 models for robustness. All features are lagged to prevent data leakage.</p>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated 2022-2025 (train on past, test on future). CatBoost wins all 4 positions. All features are lagged to prevent data leakage. R² measures out-of-sample accuracy — how well the model predicts players it's never seen before.</p>
 
     <h2>Model vs ADP — Head to Head</h2>
-    <p>We tested our model against ADP (Average Draft Position) on the 2025 season. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>crushes it</strong>:</p>
+    <p>We tested our model against ADP (Average Draft Position) using walk-forward validation on 2022-2025. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>beats it at every position</strong>:</p>
     <table>
       <tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Correlation with actual</strong></td><td>0.843</td><td>0.384</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>R² (explained variance)</strong></td><td>0.710</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>MAE (avg error)</strong></td><td>32.5 pts</td><td>N/A</td><td>—</td></tr>
-      <tr><td><strong>Top-20 hit rate</strong></td><td>12/20 (60%)</td><td>7/20 (35%)</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>Avg R²</strong></td><td>0.554</td><td>0.333</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>Avg Correlation</strong></td><td>0.752</td><td>0.678</td><td style="color:var(--rb)">OverADP</td></tr>
+      <tr><td><strong>Best edge</strong></td><td>TE +38% MAE</td><td>—</td><td style="color:var(--rb)">OverADP</td></tr>
     </table>
-    <p><strong>What this means:</strong> Our model correctly identified 12 of the 20 highest-scoring players in 2025. ADP only found 7. The model's correlation with actual production is 0.843 vs ADP's 0.384 — that's a <strong>119% improvement</strong>.</p>
+    <p><strong>What this means:</strong> Our model explains 55% of variance in fantasy points vs ADP's 33%. The biggest edge is at TE (38% less error) and WR (25% less error). ADP is already decent at RB, so the model's edge there is smaller (3%).</p>
     <table>
-      <tr><th>Position</th><th>Model Correlation</th><th>ADP Correlation</th><th>Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.798</td><td>0.048</td><td>+0.750</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.858</td><td>0.606</td><td>+0.252</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.823</td><td>0.427</td><td>+0.396</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.863</td><td>0.373</td><td>+0.490</td></tr>
+      <tr><th>Position</th><th>Model R²</th><th>ADP R²</th><th>MAE Improvement</th></tr>
+      <tr><td><strong>QB</strong></td><td>0.440</td><td>0.224</td><td>+24%</td></tr>
+      <tr><td><strong>RB</strong></td><td>0.585</td><td>0.448</td><td>+3%</td></tr>
+      <tr><td><strong>WR</strong></td><td>0.604</td><td>0.408</td><td>+25%</td></tr>
+      <tr><td><strong>TE</strong></td><td>0.588</td><td>0.250</td><td>+38%</td></tr>
     </table>
     <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="auth-overlay hidden" id="authOverlay">
+  <div class="auth-modal">
+    <div class="auth-logo">OVER<span style="color:var(--wr)">ADP</span></div>
+    <h2 id="authTitle">Access the War Room</h2>
+    <p id="authSubtitle" style="color:var(--smoke);font-size:13px;margin-bottom:16px;">Create a free account to start drafting</p>
+    <div id="authForm">
+      <input type="email" id="authEmail" placeholder="Email" class="auth-input" autocomplete="email">
+      <input type="password" id="authPassword" placeholder="Password (6+ chars)" class="auth-input" autocomplete="current-password">
+      <button class="auth-btn" id="authSubmitBtn" onclick="authSubmit()">CREATE ACCOUNT</button>
+      <div class="auth-switch" id="authSwitch">Already have an account? <a href="#" onclick="authToggle(event)">Log in</a></div>
+      <div id="authError" style="color:#ff4444;font-size:11px;margin-top:8px;display:none;"></div>
+    </div>
+    <button class="auth-close" onclick="authSkip()">Skip for now →</button>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="auth-overlay hidden" id="upgradeOverlay">
+  <div class="auth-modal" style="max-width:480px;">
+    <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
+    <h2>Your Opponents May Already Have This Data</h2>
+    <div style="margin:16px 0;">
+      <div class="upgrade-feature">✓ All 542 player projections &amp; VBD</div>
+      <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
+      <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
+      <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
+      <div class="upgrade-feature">✓ Draft better or your money back</div>
+    </div>
+    <div style="display:flex;gap:12px;margin:12px 0;">
+      <div style="flex:1;padding:12px;border:1px solid var(--rust);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('season')">
+        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Season Pass</div>
+        <div style="font-size:24px;font-weight:700;color:var(--rb);">$24.99</div>
+        <div style="font-size:10px;color:var(--green);">MOST POPULAR</div>
+        <div style="font-size:10px;color:var(--smoke);">Unlimited drafts, all season</div>
+      </div>
+      <div style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('draft')">
+        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Single Draft</div>
+        <div style="font-size:24px;font-weight:700;color:var(--fg);">$6.99</div>
+        <div style="font-size:10px;color:var(--smoke);">&nbsp;</div>
+        <div style="font-size:10px;color:var(--smoke);">One draft session</div>
+      </div>
+    </div>
+    <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
+    <button class="auth-close" onclick="document.getElementById('upgradeOverlay').classList.add('hidden')">Maybe later</button>
   </div>
 </div>
 
@@ -917,6 +1075,41 @@
   <div class="load-spinner"></div>
   <div class="load-text" id="loadingText">ACQUIRING DATA...</div>
   <div class="load-bar"><div class="load-bar-inner"></div></div>
+</div>
+
+<!-- SETTINGS OVERLAY -->
+<div class="info-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)toggleSettings()">
+  <div class="info-modal" style="max-width:480px;">
+    <button class="close-btn" onclick="toggleSettings()">&times;</button>
+    <h2>Draft Settings</h2>
+
+    <h3>Scoring Format</h3>
+    <div style="display:flex;gap:8px;margin:8px 0 16px;">
+      <button class="scoring-btn" data-scoring="standard" onclick="setScoring('standard',this)">Standard</button>
+      <button class="scoring-btn active" data-scoring="half_ppr" onclick="setScoring('half_ppr',this)">Half PPR</button>
+      <button class="scoring-btn" data-scoring="ppr" onclick="setScoring('ppr',this)">PPR</button>
+    </div>
+
+    <h3>League Size</h3>
+    <div style="display:flex;gap:8px;margin:8px 0 16px;">
+      <button class="scoring-btn" data-teams="8" onclick="setTeams(8,this)">8</button>
+      <button class="scoring-btn" data-teams="10" onclick="setTeams(10,this)">10</button>
+      <button class="scoring-btn active" data-teams="12" onclick="setTeams(12,this)">12</button>
+      <button class="scoring-btn" data-teams="14" onclick="setTeams(14,this)">14</button>
+    </div>
+
+    <h3>Roster Slots</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:8px 0 16px;font-family:var(--mono);font-size:12px;">
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">QB <input type="number" id="slotQB" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">RB <input type="number" id="slotRB" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">WR <input type="number" id="slotWR" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">TE <input type="number" id="slotTE" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">FLEX <input type="number" id="slotFlex" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">BNCH <input type="number" id="slotBench" value="6" min="0" max="10" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+    </div>
+
+    <button onclick="applySettings()" style="width:100%;padding:10px;background:var(--green);color:var(--bg);border:none;border-radius:2px;font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">Apply & Recalculate</button>
+  </div>
 </div>
 
 <script>
@@ -934,6 +1127,198 @@ let sleepersData = [];
 let bustsData = [];
 let rosterConfig = {};
 let playerMap = {};  // player_id → player object
+let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
+
+// ═══════════════════════════════════════
+// AUTH & PAYWALL
+// ═══════════════════════════════════════
+const API_BASE = '/.netlify/functions';
+let currentUser = null;   // { id, email, ... }
+let userPlan = 'free';    // 'free' | 'paid'
+let userPlanType = 'season'; // 'season' | 'draft'
+let isAuthMode = 'register'; // 'register' | 'login'
+// Paywall: free users see names/positions/teams/bye weeks for ALL players
+// Projections, VBD, CI, risk, and DRAFT buttons are gated
+// TAKEN is free on all rows (builds investment via IKEA effect)
+// Auth prompted when user tries to DRAFT, not on load
+
+function lsGetAuth(k,d){try{const v=localStorage.getItem('oa_'+k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSetAuth(k,v){localStorage.setItem('oa_'+k,JSON.stringify(v));}
+
+// Restore session on load
+async function restoreSession(){
+  let token = lsGetAuth('access_token',null);
+  const refreshToken = lsGetAuth('refresh_token',null);
+  if(!token) return;
+  try{
+    let res = await fetch(API_BASE+'/auth-session',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({access_token:token})
+    });
+    if(res.status===401 && refreshToken){
+      // Token expired — try refresh
+      const refRes = await fetch(API_BASE+'/auth-refresh',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:refreshToken})
+      });
+      if(refRes.ok){
+        const refData = await refRes.json();
+        token = refData.session?.access_token;
+        const newRefresh = refData.session?.refresh_token;
+        if(token) lsSetAuth('access_token',token);
+        if(newRefresh) lsSetAuth('refresh_token',newRefresh);
+        // Re-verify with new token
+        res = await fetch(API_BASE+'/auth-session',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({access_token:token})
+        });
+      } else {
+        lsSetAuth('access_token',null);
+        lsSetAuth('refresh_token',null);
+        return;
+      }
+    }
+    if(res.ok){
+      const data = await res.json();
+      currentUser = data.user;
+      userPlan = data.profile?.plan || 'free';
+      userPlanType = data.profile?.plan_type || 'season';
+      lsSetAuth('user',data.user);
+      lsSetAuth('plan',userPlan);
+      lsSetAuth('plan_type',userPlanType);
+      updateUserUI();
+    } else {
+      lsSetAuth('access_token',null);
+      lsSetAuth('refresh_token',null);
+    }
+  }catch(e){}
+}
+
+async function authSubmit(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.style.display='none';
+
+  if(!email||!password){errEl.textContent='Email and password required';errEl.style.display='block';return;}
+  if(password.length<6){errEl.textContent='Password must be 6+ characters';errEl.style.display='block';return;}
+
+  const endpoint = isAuthMode==='register' ? 'auth-register' : 'auth-login';
+  try{
+    const res = await fetch(API_BASE+'/'+endpoint,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password})
+    });
+    const data = await res.json();
+    if(!res.ok){errEl.textContent=data.error||'Auth failed';errEl.style.display='block';return;}
+
+    currentUser = data.user || data.session?.user;
+    const token = data.session?.access_token;
+    const refreshToken = data.session?.refresh_token;
+    if(token) lsSetAuth('access_token',token);
+    if(refreshToken) lsSetAuth('refresh_token',refreshToken);
+    lsSetAuth('user',currentUser);
+
+    // Get profile for login
+    if(isAuthMode==='login'){
+      userPlan = data.profile?.plan || 'free';
+      userPlanType = data.profile?.plan_type || 'season';
+    } else {
+      userPlan = 'free';
+      userPlanType = 'season';
+    }
+    lsSetAuth('plan',userPlan);
+    lsSetAuth('plan_type',userPlanType);
+    updateUserUI();
+    refreshAll();
+
+    document.getElementById('authOverlay').classList.add('hidden');
+  }catch(e){
+    errEl.textContent='Network error — try again';errEl.style.display='block';
+  }
+}
+
+function authToggle(e){
+  e.preventDefault();
+  isAuthMode = isAuthMode==='register'?'login':'register';
+  document.getElementById('authTitle').textContent = isAuthMode==='register'?'Access the War Room':'Welcome Back';
+  document.getElementById('authSubtitle').textContent = isAuthMode==='register'?'Create a free account to start drafting':'Log in to your account';
+  document.getElementById('authSubmitBtn').textContent = isAuthMode==='register'?'CREATE ACCOUNT':'LOG IN';
+  document.getElementById('authSwitch').innerHTML = isAuthMode==='register'
+    ?'Already have an account? <a href="#" onclick="authToggle(event)">Log in</a>'
+    :'Need an account? <a href="#" onclick="authToggle(event)">Sign up</a>';
+}
+
+function authSkip(){
+  document.getElementById('authOverlay').classList.add('hidden');
+  userPlan = 'free';
+}
+
+// Prompt auth when user tries to DRAFT (progressive engagement)
+function promptDraftAuth(){
+  if(currentUser){ showUpgrade(); return; }
+  document.getElementById('authTitle').textContent = 'DRAFT LIKE A PRO';
+  document.getElementById('authSubtitle').textContent = 'Create an account to unlock projections & start drafting';
+  document.getElementById('authSubmitBtn').textContent = 'CREATE ACCOUNT';
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+
+function showUpgrade(){
+  document.getElementById('upgradeOverlay').classList.remove('hidden');
+}
+
+async function startCheckout(planType){
+  if(!currentUser){promptDraftAuth();return;}
+  try{
+    const res = await fetch(API_BASE+'/stripe-checkout',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season'})
+    });
+    const data = await res.json();
+    if(data.url){window.location.href=data.url;}
+  }catch(e){alert('Checkout error — try again');}
+}
+
+// Check payment success on return
+function checkPaymentReturn(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('payment')==='success'){
+    // Refresh session to get updated plan
+    restoreSession().then(()=>{
+      if(userPlan==='paid'){
+        refreshAll();
+      }
+    });
+    window.history.replaceState({},'',window.location.pathname);
+  }
+}
+
+// Paywall: free users see all names but no projections
+function isPaid(){ return userPlan==='paid'; }
+function lockStyle(){ return 'color:var(--fg3);font-family:"JetBrains Mono",monospace;font-size:10px;'; }
+
+// Update top bar user status
+function updateUserUI(){
+  const statusEl = document.getElementById('userStatus');
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  const loginBtn = document.getElementById('loginBtn');
+  if(userPlan==='paid'){
+    statusEl.style.display='inline';
+    statusEl.textContent = '✓ PRO';
+    upgradeBtn.style.display = 'none';
+    loginBtn.style.display = 'none';
+  } else if(currentUser){
+    statusEl.style.display='inline';
+    statusEl.textContent = currentUser.email;
+    upgradeBtn.style.display = 'inline-block';
+    loginBtn.style.display = 'none';
+  } else {
+    statusEl.style.display='none';
+    upgradeBtn.style.display = 'inline-block';
+    loginBtn.style.display = 'inline-block';
+  }
+
+}
 
 const LS_KEY = 'warroom_';
 function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
@@ -945,6 +1330,8 @@ const ROSTER_SLOTS = [
   {key:'wr',label:'WR',pos:'WR',count:2},
   {key:'te',label:'TE',pos:'TE',count:1},
   {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:1},
+  {key:'k',label:'K',pos:'K',count:1},
+  {key:'def',label:'DEF',pos:'DEF',count:1},
   {key:'bench',label:'BN',pos:'ANY',count:6},
 ];
 
@@ -954,12 +1341,18 @@ function hideLoading(){document.getElementById('loadingOverlay').classList.add('
 async function loadData(){
   showLoading('ACQUIRING NFL DATA...');
   try{
+    // Restore auth session first
+    await restoreSession();
+    updateUserUI();
+    checkPaymentReturn();
+
+    const _v='?v=20260414g'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
-      fetch('data/players.json'),
-      fetch('data/bye_weeks.json'),
-      fetch('data/scarcity.json'),
-      fetch('data/roster_config.json'),
-      fetch('data/accuracy.json'),
+      fetch('data/players.json'+_v),
+      fetch('data/bye_weeks.json'+_v),
+      fetch('data/scarcity.json'+_v),
+      fetch('data/roster_config.json'+_v),
+      fetch('data/accuracy.json'+_v),
     ]);
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
@@ -967,21 +1360,31 @@ async function loadData(){
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
     rosterConfig=await rcRes.json();
+    // Load K/DEF (ADP-based, no ML projections)
+    try{const kdRes=await fetch('data/k_def.json'+_v);
+      if(!kdRes.ok)throw new Error('HTTP '+kdRes.status);
+      const kd=await kdRes.json();
+      console.log('K/DEF loaded:',kd.length,'players');
+      allPlayers=allPlayers.concat(kd);
+    }catch(e){console.error('K/DEF load failed:',e);}
     // Build player map
     playerMap={};
     allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
     // Load sleepers/busts
-    try{const sbRes=await fetch('data/sleepers_busts.json');const sb=await sbRes.json();
+    try{const sbRes=await fetch('data/sleepers_busts.json'+_v);const sb=await sbRes.json();
       if(Array.isArray(sb)){sleepersData=sb.filter(x=>x.label==='SLEEPER');bustsData=sb.filter(x=>x.label==='BUST');}
       else{sleepersData=sb.sleepers||[];bustsData=sb.busts||[];}
     }catch(e){}
     // Restore draft state from localStorage
     myTeamIds=lsGet('myTeam',[]);
     opponentIds=lsGet('opponentPicks',[]);
+    restoreSettings(); // apply saved scoring format & roster config
     computeClientVBD();
     getRecommendations();
     renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
     hideLoading();
+    // No auth gate on load — let users browse the board freely
+    // Auth is prompted when they try to DRAFT (progressive engagement)
   }catch(e){hideLoading();alert('ERROR: '+e.message);}
 }
 
@@ -1015,18 +1418,27 @@ function computeClientVBD(){
   const rawSlots=rosterConfig.roster_slots||{};
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const numTeams=rosterConfig.num_teams||12;
+  const benchSize=rosterConfig.bench_size||6;
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
-  // Step 1: Compute replacement level per base position (skip flex/bench)
+  // Step 1: Compute replacement level per position
+  // Use "last typically drafted" not just "last starter" — people draft bench players too
+  // Estimate: each team drafts (starters + bench/4) per position, minimum 1.5x starters
   replacementLevels={};
   const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
   for(const[k,v] of Object.entries(rawSlots)){
     if(k==='flex'||k==='bench')continue;
     const pos=keyMap[k]||k.toUpperCase();
     const nStarters=numTeams*v;
+    // Bench allocation: each position gets roughly bench/4 extra slots per team
+    // but RB/WR get more bench love. Use 1.5x starters as floor.
+    const benchAlloc=Math.max(v, Math.ceil(benchSize/4));
+    const nDrafted=numTeams*(v+benchAlloc);
     const posPlayers=available.filter(p=>p.position===pos).sort((a,b)=>b.projected_points-a.projected_points);
-    if(posPlayers.length>=nStarters){
-      replacementLevels[pos]=posPlayers[nStarters-1].projected_points;
+    // Use last typically drafted as replacement (gives positive VBD to bench-worthy players)
+    const repIdx=Math.min(nDrafted, posPlayers.length)-1;
+    if(repIdx>=0){
+      replacementLevels[pos]=posPlayers[repIdx].projected_points;
     }else if(posPlayers.length>0){
       replacementLevels[pos]=posPlayers[posPlayers.length-1].projected_points;
     }else{
@@ -1034,16 +1446,15 @@ function computeClientVBD(){
     }
   }
   // Step 2: Flex replacement = min replacement among flex-eligible positions
-  // This matches the backend: flex slot uses the cheapest replacement
   const flexReps=flexEligible.map(pos=>replacementLevels[pos]).filter(v=>v!==undefined);
   if(flexReps.length) replacementLevels.FLEX=Math.min(...flexReps);
   // Step 3: Compute VBD for each player
   // Flex-eligible players: VBD = max(above own position rep, above flex rep)
   // Non-flex players: VBD = above own position rep
   allPlayers.forEach(p=>{
+    if(p.position==='K'||p.position==='DEF'){p.vbd=0;return;} // No VBD for K/DEF
     const ownRep=replacementLevels[p.position]||0;
     const flexRep=replacementLevels.FLEX||ownRep;
-    // Flex-eligible players get the higher VBD (more valuable if they can fill flex)
     if(flexEligible.includes(p.position)){
       p.vbd=Math.max(0,p.projected_points-ownRep,p.projected_points-flexRep);
     }else{
@@ -1054,7 +1465,7 @@ function computeClientVBD(){
 
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
-  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id)&&p.position!=='K'&&p.position!=='DEF');
   // Sort by VBD with roster need bonus
   const myPosCount={};
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
@@ -1100,36 +1511,62 @@ function renderPlayerPool(){
   let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Always sort by VBD — it accounts for positional scarcity
-  // (QB raw points are high but replacement QB also scores a lot, so VBD is lower)
-  f=[...f].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
-  if(currentFilter!=='ALL')f=f.filter(p=>p.position===currentFilter);
+  // Sort: K/DEF by ADP, skill players by VBD then proj
+  const isKD=p=>p.position==='K'||p.position==='DEF';
+  const skillPlayers=[...f].filter(p=>!isKD(p)).sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
+  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(a.ktc_rank||99)-(b.ktc_rank||99));
+  if(currentFilter==='ALL'){
+    // Interleave: skill players first, then K/DEF at the bottom
+    f=[...skillPlayers,...kdPlayers];
+  }else if(currentFilter==='K'||currentFilter==='DEF'){
+    f=kdPlayers.filter(p=>p.position===currentFilter);
+  }else{
+    f=skillPlayers.filter(p=>p.position===currentFilter);
+  }
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
   const vbdHead=vbdMode?'<th>VBD</th>':'';
-  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  // K/DEF notice banner
+  if(currentFilter==='K'||currentFilter==='DEF'){
+    h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:6px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:11px;color:#ffaa00;text-align:center;">⚠ K & DEF are statistically unpredictable — rankings are consensus-based (KTC + FFC). Projections use regression to the mean. Draft last, stream weekly.</td></tr>`;
+  }
   f.forEach((p,i)=>{
-    const isR=recommendedIds.has(p.player_id);
-    const vbdCell=vbdMode?`<td class="vbd-cell">${(p.vbd||0).toFixed(1)}</td>`:'';
-    const ciLow=p.ci_low!=null?p.ci_low.toFixed(0):'—';
-    const ciHigh=p.ci_high!=null?p.ci_high.toFixed(0):'—';
-    const risk=p.risk||'low';
-    const riskColor={'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888';
+    const paid=isPaid();
+    const isR=paid&&recommendedIds.has(p.player_id);
+    const kd=isKD(p);
+    const adp=p.adp&&p.adp<200?Math.round(p.adp):'—';
+    const adpGap=adp!=='—'?(i+1-adp):0;
+    const adpStyle=adpGap>5?'color:#44ff44;font-weight:700;':adpGap<-5?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
+    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell" style="color:var(--smoke);">—</td>':'';
+    // K/DEF: show regression-based projection
+    let projCell;
+    if(kd){
+      const proj=p.projected_points>0?p.projected_points.toFixed(0):'—';
+      projCell=`<td class="pts-cell" style="color:var(--smoke);font-size:10px;" title="Regression-based projection">${proj}</td>`;
+    }else{
+      projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
+    }
+    const ciLow=kd&&p.ci_low!=null?p.ci_low.toFixed(0):(paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—');
+    const ciHigh=kd&&p.ci_high!=null?p.ci_high.toFixed(0):(paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—');
+    const risk=kd?(p.risk||'—'):(paid?(p.risk||'low'):'—');
+    const riskColor=kd?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):(paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555');
     const bye=byeWeeks[p.team]||[];
-    const byeStr=bye.length?bye.join(','):'—';
-    // Check if drafting this player creates a bye conflict
-    const byeConflict=checkByeConflictForPlayer(p);
+    const byeStr=bye.length?bye.join(','):('—');
+    const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
-    const draftBtn=byeConflict?
+    const draftBtn=paid?(byeConflict?
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
-      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`;
+      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
+      `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
       <td class="rank-cell">${i+1}</td>
       <td class="name-cell">${p.player_name||p.player_id}</td>
       <td>${posTag(p.position)}</td>
       <td class="team-cell">${p.team||'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
-      <td class="pts-cell">${(p.projected_points||0).toFixed(1)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}">${adp}</td>
+      ${projCell}
       ${vbdCell}
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
@@ -1137,6 +1574,15 @@ function renderPlayerPool(){
         ${draftBtn}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
       </td></tr>`;
+    // Insert upgrade CTA after rank 5 (first visible gap)
+    if(!paid&&i===4){
+      h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:0;">
+        <div class="paywall-cta" onclick="showUpgrade()">
+          <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
+          <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
+        </div>
+      </td></tr>`;
+    }
   });
   h+='</tbody></table>';c.innerHTML=h;
 }
@@ -1147,9 +1593,9 @@ function assignRosterSlots(players){
   const remaining=[...players].sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
   const slotAssignments=[]; // [{slot, player, slotLabel}]
 
-  // Pass 1: fill position-specific slots (QB->QB, RB->RB, etc.)
+  // Process all slots in ROSTER_SLOTS order so display order matches definition
   ROSTER_SLOTS.forEach(slot=>{
-    if(slot.key==='flex'||slot.key==='bench') return; // handle later
+    if(slot.key==='bench') return; // handle bench last
     for(let i=0;i<slot.count;i++){
       const posMatch=slot.pos.split('/'); // e.g. ['RB'] or ['RB','WR','TE'] for flex
       const idx=remaining.findIndex(p=>posMatch.includes(p.position));
@@ -1165,23 +1611,7 @@ function assignRosterSlots(players){
     }
   });
 
-  // Pass 2: fill FLEX slot (best remaining RB/WR/TE)
-  ROSTER_SLOTS.filter(s=>s.key==='flex').forEach(slot=>{
-    for(let i=0;i<slot.count;i++){
-      const flexPos=slot.pos.split('/');
-      const idx=remaining.findIndex(p=>flexPos.includes(p.position));
-      if(idx>=0){
-        const p=remaining.splice(idx,1)[0];
-        const label=slot.label;
-        slotAssignments.push({slot,label,player:p});
-        assigned.set(p.player_id,label);
-      }else{
-        slotAssignments.push({slot,label:slot.label,player:null});
-      }
-    }
-  });
-
-  // Pass 3: fill bench with remaining players
+  // Fill bench with remaining players
   ROSTER_SLOTS.filter(s=>s.key==='bench').forEach(slot=>{
     for(let i=0;i<slot.count;i++){
       if(remaining.length){
@@ -1209,15 +1639,15 @@ function renderMyTeam(){
       const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
     }
   });
   c.innerHTML=h;
-  const total=getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0);
-  document.getElementById('totalPts').textContent=total.toFixed(1);
+  const total=isPaid()?getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0):0;
+  document.getElementById('totalPts').textContent=isPaid()?total.toFixed(1):'🔒';
 }
 
 function renderOpponentPicks(){
@@ -1225,7 +1655,7 @@ function renderOpponentPicks(){
   const oppP=getOpponentPlayers();
   if(!oppP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">None yet.</div>';return;}
   c.innerHTML=oppP.map(p=>
-    `<div class="opp-entry"><div>${posTag(p.position)} ${p.player_name||p.player_id}</div><div style="display:flex;align-items:center;gap:6px;"><span class="opp-pts">${(p.projected_points||0).toFixed(1)}</span><button class="btn btn-sm" onclick="undoDraft('${p.player_id}')">✕</button></div></div>`
+    `<div class="opp-entry"><div>${posTag(p.position)} ${p.player_name||p.player_id}</div><div style="display:flex;align-items:center;gap:6px;"><span class="opp-pts">${isPaid()?(p.projected_points||0).toFixed(1):'🔒'}</span><button class="btn btn-sm" onclick="undoDraft('${p.player_id}')">✕</button></div></div>`
   ).join('');
 }
 
@@ -1236,9 +1666,9 @@ function renderRecommendations(recs){
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}</div>
-      <div class="intel-pts">${(r.projected_points||0).toFixed(1)} proj pts</div>
+      <div class="intel-pts">${isPaid()?(r.projected_points||0).toFixed(1)+' proj pts':'🔒 UNLOCK'}</div>
       <div class="intel-actions">
-        <button class="btn btn-sm btn-draft" onclick="draftPlayer('${r.player_id}','mine')">DRAFT</button>
+        ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
       </div>
     </div>`
@@ -1259,6 +1689,8 @@ function updateStatus(){
   document.getElementById('rbCount').textContent=posCounts['RB']||0;
   document.getElementById('wrCount').textContent=posCounts['WR']||0;
   document.getElementById('teCount').textContent=posCounts['TE']||0;
+  document.getElementById('kCount').textContent=posCounts['K']||0;
+  document.getElementById('defCount').textContent=posCounts['DEF']||0;
 }
 
 function filterPos(pos,btn){
@@ -1266,7 +1698,7 @@ function filterPos(pos,btn){
   document.querySelectorAll('.pos-filter').forEach(b=>{b.className='pos-filter';});
   if(pos==='ALL'){btn.classList.add('on');}
   else{
-    const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te'}[pos]||'on';
+    const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te','K':'on-k','DEF':'on-def'}[pos]||'on';
     btn.classList.add(cls);
   }
   renderPlayerPool();
@@ -1363,22 +1795,35 @@ function loadSleepers(){
     c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
     return;
   }
+  const paid=isPaid();
+  const sleeperLimit=paid?8:1;
+  const bustLimit=paid?8:1;
   let h='';
   if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
-    availSleepers.slice(0,8).forEach(s=>{
+    availSleepers.slice(0,sleeperLimit).forEach(s=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
         ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
       </div>`;
     });
+    if(!paid&&availSleepers.length>1){
+      h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
+        <div class="paywall-cta-title" style="font-size:11px;">+${availSleepers.length-1} SLEEPERS YOUR OPPONENTS SEE — UNLOCK</div>
+      </div>`;
+    }
   }
   if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
-    availBusts.slice(0,8).forEach(b=>{
+    availBusts.slice(0,bustLimit).forEach(b=>{
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
         ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
       </div>`;
     });
+    if(!paid&&availBusts.length>1){
+      h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
+        <div class="paywall-cta-title" style="font-size:11px;">+${availBusts.length-1} BUSTS TO AVOID — UNLOCK</div>
+      </div>`;
+    }
   }
   c.innerHTML=h;
 }
@@ -1387,6 +1832,13 @@ function loadHandcuffs(){
   const c=document.getElementById('handcuffPanel');
   const myTeamP=getMyTeamPlayers();
   if(!myTeamP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
+  if(userPlan!=='paid'){
+    c.innerHTML=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:8px;">
+      <div class="paywall-cta-title">🔒 HANDCUFF ALERTS — DON'T GET CAUGHT SHORT</div>
+      <div class="paywall-cta-sub">See backup RBs for your starters</div>
+    </div>`;
+    return;
+  }
   // Client-side handcuff detection
   const myRBs=myTeamP.filter(p=>p.position==='RB');
   if(!myRBs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
@@ -1411,6 +1863,92 @@ function loadHandcuffs(){
 function toggleInfo(){
   const overlay=document.getElementById('infoOverlay');
   overlay.classList.toggle('active');
+}
+
+function toggleSettings(){
+  const overlay=document.getElementById('settingsOverlay');
+  overlay.classList.toggle('hidden');
+  overlay.classList.toggle('active');
+}
+
+// Scoring format: adjust projected_points based on receptions
+// Baseline is half_ppr (0.5 pts/rec). PPR adds 0.5 more, Standard subtracts 0.5.
+function adjustScoring(){
+  const delta = scoringFormat==='ppr' ? 0.5 : scoringFormat==='standard' ? -0.5 : 0;
+  allPlayers.forEach(p=>{
+    const rec = p.projected_receptions || 0;
+    const base = p._base_proj !== undefined ? p._base_proj : p.projected_points;
+    p._base_proj = base; // store original half-PPR projection
+    p.projected_points = Math.round((base + rec * delta)*10)/10;
+    // Adjust CI similarly
+    const ciDelta = rec * delta;
+    if(p._base_ci_low !== undefined){
+      p.ci_low = Math.round((p._base_ci_low + ciDelta)*10)/10;
+      p.ci_high = Math.round((p._base_ci_high + ciDelta)*10)/10;
+    } else {
+      p._base_ci_low = p.ci_low;
+      p._base_ci_high = p.ci_high;
+      p.ci_low = Math.round((p.ci_low + ciDelta)*10)/10;
+      p.ci_high = Math.round((p.ci_high + ciDelta)*10)/10;
+    }
+  });
+}
+
+function setScoring(fmt, btn){
+  scoringFormat = fmt;
+  btn.parentElement.querySelectorAll('.scoring-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setTeams(n, btn){
+  btn.parentElement.querySelectorAll('.scoring-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function applySettings(){
+  // Update scoring
+  adjustScoring();
+  // Update roster config from inputs
+  const qbv=parseInt(document.getElementById('slotQB').value)||1;
+  const rbv=parseInt(document.getElementById('slotRB').value)||2;
+  const wrv=parseInt(document.getElementById('slotWR').value)||2;
+  const tev=parseInt(document.getElementById('slotTE').value)||1;
+  const flexv=parseInt(document.getElementById('slotFlex').value)||1;
+  const benchv=parseInt(document.getElementById('slotBench').value)||6;
+  const teamsBtn=document.querySelector('.scoring-btn.active[data-teams]');
+  const numTeams=teamsBtn?parseInt(teamsBtn.dataset.teams):12;
+  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:1,defense:1,bench:benchv};
+  rosterConfig.num_teams=numTeams;
+  rosterConfig.bench_size=benchv;
+  // Save to localStorage
+  lsSet('settings',{scoring:scoringFormat,numTeams,slots:rosterConfig.roster_slots,bench:benchv});
+  // Recalculate everything
+  refreshAll();
+  toggleSettings();
+}
+
+function restoreSettings(){
+  const s=lsGet('settings',null);
+  if(!s)return;
+  scoringFormat=s.scoring||'half_ppr';
+  if(s.numTeams)rosterConfig.num_teams=s.numTeams;
+  if(s.slots)rosterConfig.roster_slots=s.slots;
+  if(s.bench)rosterConfig.bench_size=s.bench;
+  // Update UI buttons
+  document.querySelectorAll('.scoring-btn[data-scoring]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.scoring===scoringFormat);
+  });
+  const teamsBtn=document.querySelector(`.scoring-btn[data-teams="${s.numTeams||12}"]`);
+  if(teamsBtn){document.querySelectorAll('.scoring-btn[data-teams]').forEach(b=>b.classList.remove('active'));teamsBtn.classList.add('active');}
+  if(s.slots){
+    document.getElementById('slotQB').value=s.slots.qb||1;
+    document.getElementById('slotRB').value=s.slots.rb||2;
+    document.getElementById('slotWR').value=s.slots.wr||2;
+    document.getElementById('slotTE').value=s.slots.te||1;
+    document.getElementById('slotFlex').value=s.slots.flex||1;
+    document.getElementById('slotBench').value=s.bench||6;
+  }
+  adjustScoring();
 }
 
 function toggleVBD(){
@@ -1449,6 +1987,8 @@ function loadScarcity(){
 
 // Auto-load data on page load
 loadData();
+// Clear any browser-autofilled search value
+document.getElementById('playerSearch').value='';
 </script>
 </body>
 </html>

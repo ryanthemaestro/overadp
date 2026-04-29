@@ -1,0 +1,1 @@
+{"QB": {"best_model": "xgboost", "mae": 60.61, "rmse": 75.84, "r2": 0.67}, "RB": {"best_model": "catboost", "mae": 40.18, "rmse": 53.95, "r2": 0.65}, "WR": {"best_model": "xgboost", "mae": 31.05, "rmse": 42.8, "r2": 0.61}, "TE": {"best_model": "xgboost", "mae": 23.93, "rmse": 34.27, "r2": 0.57}}

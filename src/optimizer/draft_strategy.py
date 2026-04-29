@@ -562,6 +562,13 @@ def detect_sleepers_and_busts(
         gap = row["adp_gap"]
         if abs(gap) >= threshold:
             label = "SLEEPER" if gap > 0 else "BUST"
+
+            # Skip bust flags for 2nd-year players with strong prior season data.
+            # The model over-regresses 2nd-year breakouts (67%+ regression vs 17-41% for veterans),
+            # so flagging them as busts is misleading — the model is wrong, not ADP.
+            if label == "BUST" and row.get("is_2nd_year", 0) == 1 and row.get("pts_lag1", 0) > 100:
+                continue
+
             results.append({
                 "player_name": row.get("player_name", ""),
                 "position": row.get("position", ""),

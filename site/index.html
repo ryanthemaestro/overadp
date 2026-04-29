@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverADP — AI Fantasy Football Draft Assistant That Beats ADP by 58%</title>
-<meta name="description" content="OverADP uses machine learning to predict fantasy football performance with 0.947 correlation — crushing ADP's 0.600. Find sleepers, avoid busts, dominate your draft.">
+<title>OverADP — AI Fantasy Football Draft Assistant That Beats ADP by Up to 38%</title>
+<meta name="description" content="OverADP uses machine learning to predict fantasy football performance — beating ADP by up to 38% at TE and 25% at WR. Walk-forward validated. Find sleepers, avoid busts, dominate your draft.">
 <meta name="keywords" content="fantasy football draft assistant, fantasy football predictions, VBD draft guide, fantasy football AI, fantasy football sleepers, fantasy draft tool, beat ADP">
-<meta property="og:title" content="OverADP — AI Fantasy Football Draft Tool That Beats ADP by 58%">
-<meta property="og:description" content="Our 4-model ensemble predicts fantasy points with 0.947 correlation vs ADP's 0.600. 16/20 top player hit rate vs ADP's 7/20.">
+<meta property="og:title" content="OverADP — AI Fantasy Football Draft Tool That Beats ADP by Up to 38%">
+<meta property="og:description" content="Our ML model beats ADP by up to 38% at TE, 25% at WR, and 24% at QB. Walk-forward validated on 2022-2025 seasons.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://overadp.com">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OverADP — Beat Your Draft With Machine Learning">
-<meta name="twitter:description" content="0.947 correlation vs ADP's 0.600. 16/20 top player hit rate. Free to start.">
+<meta name="twitter:description" content="ML model beats ADP by up to 38%. Walk-forward validated. Free to start.">
 <link rel="canonical" href="https://overadp.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -128,13 +128,13 @@ footer p{color:var(--fg2);font-size:13px;}
   <div class="container">
     <div class="hero-badge">⚡ 4-MODEL ML ENSEMBLE</div>
     <h1>Beat ADP.<br><span>Win Your Draft.</span></h1>
-    <p class="hero-sub">Our machine learning model predicts fantasy football performance with <strong style="color:var(--accent)">0.947 correlation</strong> — crushing ADP's 0.600. Stop following the crowd. Start drafting with data.</p>
+    <p class="hero-sub">Our machine learning model beats ADP by <strong style="color:var(--accent)">up to 38%</strong> at tight end, <strong style="color:var(--accent)">25%</strong> at wide receiver, and <strong style="color:var(--accent)">24%</strong> at quarterback. Walk-forward validated. No overfitting. Stop following the crowd. Start drafting with data.</p>
     <div class="hero-cta">
       <a href="/app/" class="btn btn-primary" style="font-size:18px;padding:16px 32px;">START FREE DRAFT →</a>
       <a href="#comparison" class="btn btn-outline" style="font-size:18px;padding:16px 32px;">SEE THE PROOF</a>
     </div>
     <div class="hero-stat">
-      Backtested on <strong>2024</strong> season · <strong>465</strong> players · <strong>4</strong> ML models · Walk-forward validated
+      Walk-forward validated on <strong>2022-2025</strong> seasons · <strong>542</strong> players · CatBoost ML · No data leakage
     </div>
   </div>
 </section>
@@ -143,28 +143,28 @@ footer p{color:var(--fg2);font-size:13px;}
 <section class="comparison" id="comparison">
   <div class="container">
     <div class="section-label">Head to Head</div>
-    <div class="section-title">OverADP vs ADP — Not Even Close</div>
-    <div class="section-sub">We tested our 4-model ensemble against ADP (Average Draft Position) on the 2024 NFL season. ADP represents where thousands of fantasy players draft. Our model destroys it.</div>
+    <div class="section-title">OverADP vs ADP — Real, Validated Results</div>
+    <div class="section-sub">We tested our ML model against ADP (Average Draft Position) using walk-forward validation on 2022-2025 seasons — training on past data, predicting the future. No data leakage. No overfitting. Our model beats ADP at every position.</div>
 
     <div class="compare-grid">
       <div class="compare-card winner">
         <div class="card-label">Machine Learning</div>
         <div class="card-name ours">OverADP</div>
         <div class="stat-row">
-          <span class="stat-label">Correlation with actual</span>
-          <span class="stat-value green">0.947</span>
+          <span class="stat-label">Avg R² (explained variance)</span>
+          <span class="stat-value green">0.554</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">R² (explained variance)</span>
-          <span class="stat-value green">0.870</span>
+          <span class="stat-label">Avg correlation with actual</span>
+          <span class="stat-value green">0.752</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Top-20 players identified</span>
-          <span class="stat-value green">16/20</span>
+          <span class="stat-label">MAE improvement vs ADP</span>
+          <span class="stat-value green">3-38%</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Mean Absolute Error</span>
-          <span class="stat-value green">13.5 pts</span>
+          <span class="stat-label">Best position edge</span>
+          <span class="stat-value green">TE +38%</span>
         </div>
         <div class="winner-badge">✓ WINNER</div>
       </div>
@@ -173,20 +173,20 @@ footer p{color:var(--fg2);font-size:13px;}
         <div class="card-label">Wisdom of the Crowd</div>
         <div class="card-name theirs">ADP</div>
         <div class="stat-row">
-          <span class="stat-label">Correlation with actual</span>
-          <span class="stat-value red">0.600</span>
+          <span class="stat-label">Avg R² (explained variance)</span>
+          <span class="stat-value red">0.333</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">R² (explained variance)</span>
-          <span class="stat-value" style="color:var(--fg2)">N/A</span>
+          <span class="stat-label">Avg correlation with actual</span>
+          <span class="stat-value red">0.678</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Top-20 players identified</span>
-          <span class="stat-value red">7/20</span>
+          <span class="stat-label">Best position R²</span>
+          <span class="stat-value" style="color:var(--fg2)">RB 0.448</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Mean Absolute Error</span>
-          <span class="stat-value" style="color:var(--fg2)">N/A</span>
+          <span class="stat-label">Weakest position</span>
+          <span class="stat-value red">TE R²=0.250</span>
         </div>
       </div>
     </div>
@@ -201,27 +201,27 @@ footer p{color:var(--fg2);font-size:13px;}
   </div>
   <div class="pos-card">
     <div class="pos-name qb">QB</div>
-    <div class="pos-r2">0.866</div>
-    <div class="pos-label">model correlation</div>
-    <div class="pos-delta">+0.32 vs ADP (0.544)</div>
+    <div class="pos-r2">0.440</div>
+    <div class="pos-label">model R²</div>
+    <div class="pos-delta">+24% MAE vs ADP (R² 0.224)</div>
   </div>
   <div class="pos-card">
     <div class="pos-name rb">RB</div>
-    <div class="pos-r2">0.970</div>
-    <div class="pos-label">model correlation</div>
-    <div class="pos-delta">+0.19 vs ADP (0.780)</div>
+    <div class="pos-r2">0.585</div>
+    <div class="pos-label">model R²</div>
+    <div class="pos-delta">+3% MAE vs ADP (R² 0.448)</div>
   </div>
   <div class="pos-card">
     <div class="pos-name wr">WR</div>
-    <div class="pos-r2">0.950</div>
-    <div class="pos-label">model correlation</div>
-    <div class="pos-delta">+0.25 vs ADP (0.704)</div>
+    <div class="pos-r2">0.604</div>
+    <div class="pos-label">model R²</div>
+    <div class="pos-delta">+25% MAE vs ADP (R² 0.408)</div>
   </div>
   <div class="pos-card">
     <div class="pos-name te">TE</div>
-    <div class="pos-r2">0.894</div>
-    <div class="pos-label">model correlation</div>
-    <div class="pos-delta">+0.21 vs ADP (0.688)</div>
+    <div class="pos-r2">0.588</div>
+    <div class="pos-label">model R²</div>
+    <div class="pos-delta">+38% MAE vs ADP (R² 0.250)</div>
   </div>
 </section>
 
@@ -278,7 +278,7 @@ footer p{color:var(--fg2);font-size:13px;}
 <!-- FOOTER -->
 <footer>
   <div class="container">
-    <p>© 2025 OverADP · Fantasy football draft tools powered by machine learning · Not affiliated with the NFL</p>
+    <p>© 2026 OverADP · Fantasy football draft tools powered by machine learning · Not affiliated with the NFL</p>
   </div>
 </footer>
 
@@ -290,7 +290,7 @@ footer p{color:var(--fg2);font-size:13px;}
   "name": "OverADP",
   "applicationCategory": "Sports",
   "operatingSystem": "Web",
-  "description": "AI-powered fantasy football draft assistant that beats ADP by 58%. 4-model ML ensemble with 0.947 correlation vs ADP's 0.600.",
+  "description": "AI-powered fantasy football draft assistant that beats ADP by up to 38%. Walk-forward validated ML model with R² 0.44-0.60 vs ADP 0.22-0.45.",
   "offers": {
     "@type": "Offer",
     "price": "0",
