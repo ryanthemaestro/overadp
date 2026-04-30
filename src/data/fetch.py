@@ -638,22 +638,58 @@ def fetch_draft_picks(years: list[int] | None = None, cache: bool = True) -> pd.
 
     Columns: season, round, pick, team, gsis_id, position, college,
     college passing/rushing/receiving stats, career approximate value.
+
+    Cache behaviour: if the cache exists but is missing requested seasons, this
+    function attempts to fetch only those missing seasons from nflverse and
+    appends them.  This means running the pipeline after nflverse publishes a
+    new draft class automatically updates the local cache without a full
+    re-download.
     """
     _ensure_data_dir()
     cache_path = DATA_DIR / "draft_picks.parquet"
+
     if cache and cache_path.exists():
-        df = pd.read_parquet(cache_path)
-        if years and "season" in df.columns:
-            available = set(df["season"].unique())
+        cached = pd.read_parquet(cache_path)
+        if years and "season" in cached.columns:
+            available = set(cached["season"].unique())
             missing = set(years) - available
-            if missing:
-                print(f"  Warning: draft_picks cache missing seasons {sorted(missing)}. Proceeding with available data.")
-            return df[df["season"].isin(available & set(years))] if available & set(years) else df
-        return df
+            if not missing:
+                return cached[cached["season"].isin(years)]
+
+            # Try to fetch the missing seasons and append to cache
+            print(f"  draft_picks: fetching missing seasons {sorted(missing)} from nflverse …")
+            if nfl is not None:
+                try:
+                    new_df = nfl.import_draft_picks(years=list(missing))
+                    if new_df is not None and not new_df.empty:
+                        # Normalize gsis_id "None" strings
+                        if "gsis_id" in new_df.columns:
+                            new_df["gsis_id"] = new_df["gsis_id"].replace("None", None)
+                        # Align columns before concat
+                        for col in cached.columns:
+                            if col not in new_df.columns:
+                                new_df[col] = None
+                        new_df = new_df[[c for c in cached.columns if c in new_df.columns]]
+                        combined = pd.concat([cached, new_df], ignore_index=True)
+                        combined.to_parquet(cache_path, index=False)
+                        print(f"  draft_picks cache updated → seasons {sorted(combined['season'].unique())}")
+                        return combined[combined["season"].isin(years)]
+                except Exception as exc:
+                    print(f"  draft_picks fetch for {sorted(missing)} failed: {exc}")
+
+            # nflverse failed — return whatever we have and warn
+            print(f"  Warning: draft_picks cache missing seasons {sorted(missing)}. "
+                  "Proceeding with available data only.")
+            return cached[cached["season"].isin(available & set(years))] if available & set(years) else cached
+        return cached
+
+    # No cache at all — fetch everything
     if nfl is None:
         raise ImportError("nfl_data_py required: pip install nfl_data_py")
     df = nfl.import_draft_picks(years=years)
-    if cache and not df.empty:
+    if df is not None and not df.empty and "gsis_id" in df.columns:
+        df["gsis_id"] = df["gsis_id"].replace("None", None)
+    if cache and df is not None and not df.empty:
         df.to_parquet(cache_path, index=False)
     return df
 

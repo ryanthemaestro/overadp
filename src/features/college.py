@@ -110,20 +110,85 @@ def compute_college_features(
                 dp["early_declare"] = (dp["age"].fillna(99) <= 21).astype(int)
 
             # Merge draft features
-            merge_cols = ["player_id"]
-            for c in ["draft_round", "draft_pick", "draft_capital",
-                       "college_pass_yds_per_game", "college_pass_td_per_game",
-                       "college_rush_yds_per_game", "college_rush_td_per_game",
-                       "college_rec_yds_per_game", "college_rec_td_per_game",
-                       "college_rec_per_game", "college_rush_att_per_game",
-                       "early_declare"]:
-                if c in dp.columns:
-                    merge_cols.append(c)
+            draft_feat_cols = ["draft_round", "draft_pick", "draft_capital",
+                               "college_pass_yds_per_game", "college_pass_td_per_game",
+                               "college_rush_yds_per_game", "college_rush_td_per_game",
+                               "college_rec_yds_per_game", "college_rec_td_per_game",
+                               "college_rec_per_game", "college_rush_att_per_game",
+                               "early_declare"]
+            available_draft_cols = [c for c in draft_feat_cols if c in dp.columns]
 
-            if len(merge_cols) > 1 and "player_id" in df.columns:
-                existing = [c for c in merge_cols if c not in df.columns or c == "player_id"]
-                if len(existing) > 1:
-                    df = df.merge(dp[existing], on="player_id", how="left")
+            # A row "needs draft data" if its draft_capital is NaN OR is zero and
+            # it's a rookie (Sleeper stubs template-zero all numeric columns, so a
+            # zero draft_capital on a rookie is indistinguishable from "never
+            # matched" without this check).
+            def _needs_draft(d: pd.DataFrame) -> "pd.Series[bool]":
+                is_rook = d.get("is_rookie", pd.Series(0, index=d.index)).astype(float).eq(1)
+                if "draft_capital" in d.columns:
+                    return d["draft_capital"].isna() | (d["draft_capital"].eq(0) & is_rook)
+                return pd.Series(True, index=d.index)
+
+            # Pass 1: merge by player_id / gsis_id (exact — covers veterans and
+            # rookies already in nflverse with a gsis_id assigned)
+            if available_draft_cols and "player_id" in df.columns:
+                dp_p1 = dp[["player_id"] + available_draft_cols].drop_duplicates("player_id")
+                df = df.merge(dp_p1, on="player_id", how="left", suffixes=("", "_dp1"))
+                for c in available_draft_cols:
+                    dp_col = f"{c}_dp1"
+                    if dp_col in df.columns:
+                        if c not in df.columns:
+                            df[c] = df[dp_col]
+                        else:
+                            # Overwrite where the existing value needs updating
+                            needs = _needs_draft(df) & df[dp_col].notna()
+                            df.loc[needs, c] = df.loc[needs, dp_col]
+                        df = df.drop(columns=[dp_col])
+
+            # Pass 2: name-based fallback for rows still missing draft_capital.
+            # Covers (a) Sleeper stubs whose player_id is "SL-<id>" with no
+            # gsis_id match, and (b) picks where nflverse hasn't assigned a
+            # gsis_id yet (typically ~10% of picks in the first few weeks after
+            # the draft).  We match on last name within the same projection
+            # season — low collision risk since we only touch rookie rows.
+            if "player_name" in df.columns:
+                unmatched_mask = _needs_draft(df)
+                if unmatched_mask.any():
+                    name_col = "pfr_player_name" if "pfr_player_name" in dp.columns else None
+                    if name_col:
+                        dp["_dp_last"] = dp[name_col].astype(str).str.split().str[-1].str.lower().str.strip()
+                        df.loc[unmatched_mask, "_df_last"] = (
+                            df.loc[unmatched_mask, "player_name"]
+                            .astype(str).str.split().str[-1].str.lower().str.strip()
+                        )
+                        # Only use draft picks from the target projection season
+                        # to avoid veteran/rookie last-name collisions
+                        if "season" in df.columns and "season" in dp.columns:
+                            proj_season = df.loc[unmatched_mask, "season"].max()
+                            dp_cur = dp[dp["season"] == proj_season].copy()
+                        else:
+                            dp_cur = dp.copy()
+
+                        dp_cur = dp_cur.drop_duplicates(subset=["_dp_last"])
+                        fallback_cols = ["_dp_last"] + [c for c in available_draft_cols if c in dp_cur.columns]
+                        if len(fallback_cols) > 1:
+                            dp_fb = dp_cur[fallback_cols].rename(
+                                columns={c: f"_fb_{c}" for c in fallback_cols if c != "_dp_last"}
+                            )
+                            df = df.merge(dp_fb, left_on="_df_last", right_on="_dp_last", how="left")
+                            n_before = unmatched_mask.sum()
+                            for c in available_draft_cols:
+                                fb_col = f"_fb_{c}"
+                                if fb_col in df.columns:
+                                    if c not in df.columns:
+                                        df[c] = np.nan
+                                    still_needs = _needs_draft(df) & df[fb_col].notna()
+                                    df.loc[still_needs, c] = df.loc[still_needs, fb_col]
+                                    df = df.drop(columns=[fb_col])
+                            n_filled = n_before - _needs_draft(df).sum()
+                            if n_filled > 0:
+                                print(f"  draft_capital name-fallback: filled {n_filled} rows "
+                                      f"(Sleeper stubs / no gsis_id)")
+                        df = df.drop(columns=["_df_last", "_dp_last"], errors="ignore")
 
     # --- Combine data: athletic metrics ---
     if combine_df is not None and not combine_df.empty:
@@ -312,7 +377,10 @@ def compute_college_features(
     if "is_rookie" in df.columns:
         df["college_x_rookie"] = df["college_dominance"] * df["is_rookie"]
         df["draft_cap_x_rookie"] = df["draft_capital"] * df["is_rookie"]
-        df["athletic_x_rookie"] = df["athletic_score"] * df["is_rookie"]
+        if "athletic_score" in df.columns:
+            df["athletic_x_rookie"] = df["athletic_score"] * df["is_rookie"]
+        else:
+            df["athletic_x_rookie"] = 0.0
     if "is_2nd_year" in df.columns:
         df["college_x_2nd_year"] = df["college_dominance"] * df["is_2nd_year"]
         df["draft_cap_x_2nd_year"] = df["draft_capital"] * df["is_2nd_year"]
