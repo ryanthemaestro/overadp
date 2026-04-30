@@ -513,73 +513,104 @@ def _build_reason(row, pos_lower, needs, must_draft, have, slot_count):
 def detect_sleepers_and_busts(
     projections: pd.DataFrame,
     adp_data: Optional[pd.DataFrame] = None,
-    threshold: float = 40,
+    pos_rank_threshold: int = 6,
 ) -> list[dict]:
     """Detect sleepers (model >> ADP) and busts (ADP >> model).
 
-    A sleeper is a player the model ranks much higher than the market.
-    A bust is a player the market overvalues vs our model.
+    Uses positional rank gap rather than overall rank delta — a WR ranked
+    WR15 by the model but going at WR35 in ADP is actionable; an overall
+    pick-count delta is polluted by position density and ADP=0 noise.
+
+    Only players with a real ADP (> 0, within draftable range) are
+    considered.  ADP=0 means the market hasn't ranked them at all, so
+    there's no market signal to compare against.
 
     Args:
-        threshold: Minimum ADP gap to flag (in pick positions).
+        pos_rank_threshold: Minimum positional rank gap to flag (default 6).
     """
     if adp_data is None or adp_data.empty or projections.empty:
         return []
 
-    # Merge projections with ADP
+    # Merge projections with ADP if not already present
     if "adp" not in projections.columns:
         proj = projections.copy()
         if "player_name" in adp_data.columns and "player_name" in proj.columns:
-            adp_sub = adp_data[["player_name", "adp"]].dropna(subset=["adp"]).drop_duplicates("player_name")
+            adp_sub = (adp_data[["player_name", "adp"]]
+                       .dropna(subset=["adp"])
+                       .drop_duplicates("player_name"))
             proj = proj.merge(adp_sub, on="player_name", how="left", suffixes=("", "_adp"))
         if "adp" not in proj.columns:
             return []
+        df = proj
+    else:
+        df = projections.copy()
 
-    df = projections if "adp" in projections.columns else proj
-    df = df[df["adp"].notna() & (df["adp"] < 200)].copy()
+    # --- Hard filters ---
+    # Must have a real ADP: market has ranked this player and they're draftable.
+    # adp=0 means unranked; adp>=250 means undraftable in standard leagues.
+    df = df[df["adp"].notna() & (df["adp"] > 0) & (df["adp"] < 250)].copy()
 
-    # Exclude K and DEF — their projections are from historical averages, not the model,
-    # so comparing them to ADP always produces false sleepers/busts
+    # Skill positions only (K/DEF use historical averages, not the ML model)
     if "position" in df.columns:
-        df = df[~df["position"].isin(["K", "DEF", "DST"])]
+        df = df[df["position"].isin(["QB", "RB", "WR", "TE"])]
 
-    # Exclude fringe players with near-zero projections (no meaningful data)
+    # Fantasy-relevant only: at least ~3 good games worth of points
     if "projected_points" in df.columns:
-        df = df[df["projected_points"] > 20]
+        df = df[df["projected_points"] >= 40]
 
     if df.empty:
         return []
 
-    # Model rank vs ADP rank
-    df["model_rank"] = df["projected_points"].rank(ascending=False)
-    df["adp_rank"] = df["adp"]
+    # --- Positional ranks ---
+    # Model positional rank: 1 = best projected at position
+    df["model_pos_rank"] = (df.groupby("position")["projected_points"]
+                             .rank(ascending=False, method="min"))
 
-    # Gap: positive = sleeper (model ranks higher), negative = bust
-    df["adp_gap"] = df["adp_rank"] - df["model_rank"]
+    # ADP positional rank: derive from overall ADP within position
+    # (sort by ADP within position, assign 1..N)
+    df = df.sort_values("adp")
+    df["adp_pos_rank"] = (df.groupby("position")["adp"]
+                           .rank(ascending=True, method="min"))
+
+    # Gap: positive = sleeper (model ranks them higher than ADP does)
+    df["pos_gap"] = df["adp_pos_rank"] - df["model_pos_rank"]
 
     results = []
     for _, row in df.iterrows():
-        gap = row["adp_gap"]
-        if abs(gap) >= threshold:
-            label = "SLEEPER" if gap > 0 else "BUST"
+        gap = row["pos_gap"]
+        if abs(gap) < pos_rank_threshold:
+            continue
 
-            # Skip bust flags for 2nd-year players with strong prior season data.
-            # The model over-regresses 2nd-year breakouts (67%+ regression vs 17-41% for veterans),
-            # so flagging them as busts is misleading — the model is wrong, not ADP.
-            if label == "BUST" and row.get("is_2nd_year", 0) == 1 and row.get("pts_lag1", 0) > 100:
-                continue
+        label = "SLEEPER" if gap > 0 else "BUST"
 
-            results.append({
-                "player_name": row.get("player_name", ""),
-                "position": row.get("position", ""),
-                "team": row.get("team", ""),
-                "projected_points": round(row.get("projected_points", 0), 1),
-                "model_rank": int(row["model_rank"]),
-                "adp": round(row["adp"], 1),
-                "adp_gap": round(gap, 1),
-                "label": label,
-                "reason": f"Model rank #{int(row['model_rank'])} vs ADP #{round(row['adp'], 0)} — {label}",
-            })
+        # Skip bust flags for confirmed 2nd-year breakout players —
+        # the model over-regresses these and ADP is likely right.
+        if (label == "BUST"
+                and row.get("is_2nd_year", 0) == 1
+                and row.get("pts_lag1", 0) > 100):
+            continue
+
+        pos = row.get("position", "")
+        model_pr = int(row["model_pos_rank"])
+        adp_pr = int(row["adp_pos_rank"])
+        reason = (
+            f"Model {pos}{model_pr} · ADP {pos}{adp_pr} "
+            f"({'undervalued' if label == 'SLEEPER' else 'overvalued'} by {int(abs(gap))} spots)"
+        )
+
+        results.append({
+            "player_name": row.get("player_name", ""),
+            "position": pos,
+            "team": row.get("team", ""),
+            "projected_points": round(row.get("projected_points", 0), 1),
+            "model_rank": int(row.get("model_rank", model_pr)),
+            "model_pos_rank": model_pr,
+            "adp": round(row["adp"], 1),
+            "adp_pos_rank": adp_pr,
+            "adp_gap": round(gap, 1),
+            "label": label,
+            "reason": reason,
+        })
 
     return sorted(results, key=lambda x: abs(x["adp_gap"]), reverse=True)
 
