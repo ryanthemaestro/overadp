@@ -1346,7 +1346,7 @@ async function loadData(){
     updateUserUI();
     checkPaymentReturn();
 
-    const _v='?v=20260414g'; // cache buster
+    const _v='?v=20260430a'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
