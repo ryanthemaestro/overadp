@@ -372,13 +372,21 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
     cards = []
     for p in top:
         gap = p.get("adp_gap", 0) or 0
-        gap_display = f"+{int(gap)}" if gap > 0 else str(int(gap))
+        gap_display = f"+{int(abs(gap))} spots" if gap > 0 else f"−{int(abs(gap))} spots"
+        pos = p.get("position", "")
+        # Use positional rank if available (new format), fall back to overall rank
+        if p.get("model_pos_rank"):
+            rank_line = f"Model rank: <strong>{pos}{int(p['model_pos_rank'])}</strong>"
+            adp_line  = f"ADP rank: <strong>{pos}{int(p['adp_pos_rank'])}</strong>"
+        else:
+            rank_line = f"Model rank: <strong>#{int(p.get('model_rank', 0))}</strong>"
+            adp_line  = f"ADP rank: <strong>#{int(p.get('adp', 0))}</strong>"
         cards.append(f"""
 <div class="card">
   <h4>{p['player_name']}</h4>
-  <div class="sub">{p['position']} · {p.get('team','FA')} · <span class="verdict {verdict_cls}">{arrow} {kind}</span></div>
-  <div class="stat">Model rank: <strong>#{int(p.get('model_rank', 0))}</strong></div>
-  <div class="stat">ADP rank: <strong>#{int(p.get('adp', 0))}</strong></div>
+  <div class="sub">{pos} · {p.get('team','FA')} · <span class="verdict {verdict_cls}">{arrow} {kind}</span></div>
+  <div class="stat">{rank_line}</div>
+  <div class="stat">{adp_line}</div>
   <div class="stat">Projected pts: <strong>{p.get('projected_points', 0):.1f}</strong></div>
   <div class="stat" style="color:var(--{color});">Gap vs ADP: <strong style="color:var(--{color});">{gap_display}</strong></div>
   <div class="reason">{p.get('reason', '')}</div>
@@ -528,7 +536,7 @@ def build_methodology() -> str:
 <p><strong>Fantasy football is high-variance.</strong> Even a perfect model won't hit every call. Our 80% CIs cover 83.5% of outcomes — which means 16.5% of players still blow through their interval in either direction.</p>
 
 <h2>What's next</h2>
-<p>The 2026 NFL draft just wrapped. Rookies are already on their NFL teams in our projections via the live Sleeper roster overlay, and depth charts have been refreshed accordingly. <em>Draft capital and college-production features for the 2026 class</em> will fill in over the next ~1 week as nflverse ingests the draft results — we'll re-export at that point. We also re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
+<p>The 2026 NFL draft wrapped April 23–25. All 257 picks are now in the model — draft capital, college production, and combine features for the full 2026 rookie class are live. Jeremiyah Love (#3 overall), Carnell Tate (#4), and Kenyon Sadiq (#16) are already projecting with their correct draft-capital priors. We re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
 """
 
