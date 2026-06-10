@@ -11,18 +11,18 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP</title>
-<meta name="description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<title>Methodology — OverADP Projection Model + RL Draft Target Intel</title>
+<meta name="description" content="How OverADP works: walk-forward CatBoost projections, conformal quantile regression for 80% confidence intervals, leakage-controlled features, and RL-informed snake-draft Target Intel validated on held-out seasons.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/methodology/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta property="og:title" content="Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
-<meta property="og:description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<meta property="og:title" content="Methodology — OverADP Projection Model + RL Draft Target Intel">
+<meta property="og:description" content="How OverADP works: walk-forward CatBoost projections, calibrated intervals, leakage-controlled features, and RL-informed snake-draft Target Intel.">
 <meta property="og:url" content="https://overadp.com/methodology/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
-<meta name="twitter:description" content="How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.">
+<meta name="twitter:title" content="Methodology — OverADP Projection Model + RL Draft Target Intel">
+<meta name="twitter:description" content="Walk-forward CatBoost projections, calibrated intervals, leakage-controlled features, and RL-informed snake-draft Target Intel.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -103,12 +103,12 @@ footer a:hover{color:var(--green);}
 {
   "@context":"https://schema.org",
   "@type":"TechArticle",
-  "headline":"Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP",
-  "description":"How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results.",
+  "headline":"Methodology — OverADP Projection Model + RL Draft Target Intel",
+  "description":"How OverADP works: walk-forward CatBoost projections, calibrated intervals, leakage-controlled features, and RL-informed snake-draft Target Intel.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
-  "datePublished":"2026-04-30",
-  "dateModified":"2026-04-30",
+  "datePublished":"2026-04-29",
+  "dateModified":"2026-06-10",
   "mainEntityOfPage":"https://overadp.com/methodology/"
 }
 </script>
@@ -132,10 +132,10 @@ footer a:hover{color:var(--green);}
 <div class="crumbs"><a href="/">Home</a> / Methodology</div>
 <div class="section-tag">Transparency</div>
 <h1>How the <span class="accent">Model</span> Works</h1>
-<p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
+<p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, how the War Room chooses next-pick targets, and how we validate without leaking future information into the past.</p>
 
 <h2>The one-sentence version</h2>
-<p>We train a per-position CatBoost ensemble on 7 years of NFL skill-position data (2019-2025), validated with rolling walk-forward splits so the model is only ever tested on seasons it hasn't seen, and we wrap point predictions with conformal quantile regression to produce 80% confidence intervals with empirically verified coverage.</p>
+<p>We train per-position CatBoost projection models on historical NFL skill-position data, validate them with rolling walk-forward splits, wrap point predictions with conformal quantile regression, and use a separate RL-informed snake-draft policy layer to turn projections, ADP, VBD, roster settings, and current draft state into live Target Intel.</p>
 
 <h2>1. Walk-forward validation (not random splits)</h2>
 <p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information — the model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
@@ -163,7 +163,25 @@ footer a:hover{color:var(--green);}
 <h2>7. College + draft capital features for rookies</h2>
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
-<h2>The 2022-2025 walk-forward results</h2>
+<h2>8. RL-informed Target Intel for live drafts</h2>
+<p>Point projections answer "how many points should this player score?" Drafting asks a different question: "given my roster, my league settings, who has already been drafted, and how opponents are likely to pick, who should I target next?" OverADP handles that with a separate Target Intel policy.</p>
+<p>The policy was developed in a 12-team snake-draft simulator. One simulated episode is a full draft. Opponents draft from ADP, projections, VBD, roster needs, and noise. The controlled team sees the same live board signals the app has: projected points, VBD, ADP, roster holes, flex fit, position counts, rookie flags, and pick number. Reward is held-out actual starter/flex fantasy points, not projected points.</p>
+<p>The production War Room uses a distilled version of the successful policy. It is not retraining inside your browser. It is a fast roster-aware scorer that starts from ADP, VBD, and need logic, then adds the learned RB-scarcity and roster-shape preferences. That is why Target Intel updates instantly after every DRAFT, TAKEN, undo, reset, and roster-setting change.</p>
+
+<table class="rank">
+  <thead><tr><th>Snake-Draft Policy Test</th><th>Starter Points</th><th>Avg Rank</th><th>Win Rate</th><th>Top-3 Rate</th></tr></thead>
+  <tbody>
+    <tr><td class="name">RL-informed Target Intel</td><td class="positive">1624.9</td><td class="positive">3.94</td><td class="positive">24.2%</td><td class="positive">60.0%</td></tr>
+    <tr><td class="name">ADP baseline</td><td>1603.2</td><td>4.70</td><td>16.7%</td><td>40.8%</td></tr>
+    <tr><td class="name">VBD baseline</td><td>1531.0</td><td>6.44</td><td>2.5%</td><td>27.5%</td></tr>
+    <tr><td class="name">CatBoost rank baseline</td><td>1511.7</td><td>6.98</td><td>4.2%</td><td>16.7%</td></tr>
+  </tbody>
+</table>
+<p>Setup: train the draft policy on 2023 and 2024 simulated draft boards, evaluate on 2025, 120 held-out draft episodes, 12 teams, QB/RB/WR/TE starter+flex scoring. This is draft-strategy validation, not point-projection validation. It is evidence that the live target policy can improve draft decisions in this environment, not a guarantee for every league.</p>
+<p>We also stress-tested randomized roster formats across 10/12/14-team leagues, 1-2 QB, 1-3 RB, 2-3 WR, 0-3 FLEX, and 5-10 bench slots. In that mixed-format test, ADP remained the strongest overall baseline, so the production War Room now scales Target Intel confidence by roster shape. Standard-ish formats get the full RL blend; unusual formats automatically lean more on VBD, ADP value, and direct roster needs until they have separate validation.</p>
+<p>A follow-up 2,000-episode mixed-format test added an ADP-guarded policy: ADP remains the price anchor, but the policy overrides it when VBD, roster need, scarcity, and next-turn availability say a player is worth taking now. That policy averaged 1689.6 starter points versus 1669.5 for ADP, with a 18.3% win rate versus 14.1% for ADP and a 44.2% top-3 rate versus 37.3% for ADP. This is now the default production blend.</p>
+
+<h2>The 2022-2025 walk-forward projection results</h2>
 <p>All numbers below are averages across four held-out test seasons (2022, 2023, 2024, 2025). The model only ever sees past seasons during training, never the season it's being tested on. ADP baseline is a per-position quadratic regression on log(ADP), fit on the same training seasons.</p>
 <table class="rank">
   <thead><tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Edge</th></tr></thead>
@@ -185,9 +203,10 @@ footer a:hover{color:var(--green);}
 <p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call — it was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
 <p><strong>It's only as good as the data.</strong> UDFAs and late-round rookies with missing college data get wider intervals and lower confidence. Coaching-change features were tested and rejected after walk-forward validation showed them adding noise rather than signal.</p>
 <p><strong>Fantasy football is high-variance.</strong> Even a perfect model won't hit every call. Our 80% CIs cover 83.5% of outcomes — which means 16.5% of players still blow through their interval in either direction.</p>
+<p><strong>RL Target Intel is not magic.</strong> The draft-policy layer was tested in scripted snake-draft environments. It currently captures roster-aware draft incentives, especially RB scarcity in standard-ish formats, but it does not model every human opponent, waiver behavior, trade behavior, weekly lineup decisions, or in-season management. Unusual roster settings receive lower policy confidence and a heavier VBD/ADP blend.</p>
 
 <h2>What's next</h2>
-<p>The 2026 NFL draft wrapped April 23–25. All 257 picks are now in the model — draft capital, college production, and combine features for the full 2026 rookie class are live. Jeremiyah Love (#3 overall), Carnell Tate (#4), and Kenyon Sadiq (#16) are already projecting with their correct draft-capital priors. We re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
+<p>The 2026 NFL draft just wrapped. Rookies are already on their NFL teams in our projections via the live Sleeper roster overlay (206 incoming rookies across QB/RB/WR/TE), and depth charts have been refreshed accordingly. Combine features are populated from nflverse's combine data. <em>Draft capital (pick number) for the 2026 class</em> will fill in over the next ~1 week as nflverse ingests the draft results — the model is robust to missing draft_capital in the interim. We also re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
 
     <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a></div>
@@ -195,13 +214,13 @@ footer a:hover{color:var(--green);}
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
       <h2>Get the Full Model in Your Draft Room</h2>
-      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80% confidence interval, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. $6.99 for a single draft, $24.99 for the full season.</p>
+      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80% confidence interval, risk tier, sleeper/bust call, and RL-informed next-pick target — live, in a single-page draft command center. Free to browse. $6.99 for a single draft, $24.99 for the full season.</p>
       <a href="/app/" class="btn btn-primary">ENTER THE WAR ROOM →</a>
     </div>
     
   </div></main>
 <footer>
-  <div>Updated April 30, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated June 10, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
 </footer>
 </body>
 </html>

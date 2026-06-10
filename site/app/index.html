@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8GM0JH1DM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8GM0JH1DM4');
+  function gaEvent(name, params){ try{ if(typeof gtag==='function') gtag('event', name, params||{}); }catch(e){} }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WAR ROOM — Fantasy Draft Command</title>
@@ -14,11 +23,11 @@
     --steel: #141a24;
     --iron: #1c2433;
     --rust: #2a3548;
-    --smoke: #8896a8;
-    --ash: #b4bfcc;
-    --chalk: #c8cdd8;
-    --white: #eef0f4;
-    --fg3: #6b7a8d;
+    --smoke: #a8b4c2;
+    --ash: #c8d0da;
+    --chalk: #dce0e8;
+    --white: #f0f2f6;
+    --fg3: #98a8b8;
     --qb: #ff3b5c;
     --qb-glow: rgba(255,59,92,0.35);
     --rb: #3b82f6;
@@ -328,6 +337,17 @@
     background: rgba(59,130,246,0.12);
     box-shadow: 0 0 10px var(--rb-glow);
   }
+  .settings-filter {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,255,106,0.08);
+    white-space: nowrap;
+  }
+  .settings-filter:hover {
+    color: var(--bg);
+    background: var(--green);
+    border-color: var(--green);
+  }
   .scoring-btn {
     font-family: 'Oswald', sans-serif;
     font-size: 12px;
@@ -430,6 +450,39 @@
     font-size: 13px;
     color: var(--white);
   }
+  .player-sub {
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--smoke);
+  }
+  .intel-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+  }
+  .intel-badge.sleeper {
+    color: #44ff44;
+    border: 1px solid rgba(68,255,68,0.45);
+    background: rgba(68,255,68,0.08);
+  }
+  .intel-badge.bust {
+    color: #ff4444;
+    border: 1px solid rgba(255,68,68,0.45);
+    background: rgba(255,68,68,0.08);
+  }
+  .edge-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+  }
   .pts-cell {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
@@ -445,7 +498,14 @@
     font-size: 9px;
     color: var(--smoke);
   }
-  .actions-cell { display: flex; gap: 4px; }
+  .actions-cell {
+    white-space: nowrap;
+  }
+  .actions-wrap {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
 
   /* Position tag */
   .pos-tag {
@@ -476,10 +536,10 @@
     background: var(--steel);
     border: 1px solid var(--rb);
     border-radius: 2px;
-    padding: 12px;
-    margin-bottom: 6px;
+    padding: 10px 12px 12px;
+    margin-bottom: 8px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: all 0.15s;
   }
   .intel-card::before {
@@ -495,28 +555,44 @@
   }
   .intel-rank {
     font-family: 'Oswald', sans-serif;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--rb);
     line-height: 1;
+    margin-bottom: 4px;
   }
   .intel-name {
     font-size: 15px;
     font-weight: 700;
     color: var(--white);
-    margin-top: 4px;
+    margin-top: 2px;
+    line-height: 1.15;
   }
   .intel-pts {
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     font-weight: 700;
     color: var(--wr);
-    margin-top: 2px;
+    margin-top: 5px;
   }
   .intel-actions {
     margin-top: 8px;
+    padding-top: 0;
+    border-top: 0;
     display: flex;
-    gap: 4px;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+  }
+  .intel-actions .btn {
+    height: 22px;
+    min-width: 54px;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 9px;
   }
 
   /* Opponent picks list */
@@ -804,7 +880,8 @@
     </div>
     <div class="top-actions">
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
-      <button class="btn" id="loginBtn" onclick="promptDraftAuth()" style="font-size:11px;padding:4px 12px;display:none;">LOG IN</button>
+      <button class="btn" id="loginBtn" onclick="showAuth()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);">LOG IN</button>
+      <button class="btn" id="logoutBtn" onclick="logOut()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);display:none;">LOG OUT</button>
       <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
@@ -855,7 +932,7 @@
       <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
       <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="this.removeAttribute('readonly');this.value='';" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
-      <button class="pos-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙</button>
+      <button class="pos-filter settings-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙ SETTINGS</button>
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -901,7 +978,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on 7 years of NFL data to project player performance and guide your draft picks in real-time.</p>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>conformalized quantile regression</strong> for calibrated confidence intervals. Target Intel now adds an <strong>RL-informed snake-draft policy</strong> that adapts to roster settings, live picks, VBD, ADP, flex paths, and RB scarcity. Updated June 2026 with current Sleeper roster/depth data and a clean 825-player draft board.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -912,30 +989,32 @@
     </ul>
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
-      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Above Replacement — how many more points this player scores vs a replacement-level player at the same position. Higher = more valuable.</td></tr>
-      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the season (half-PPR by default).</td></tr>
-      <tr><td><span class="tag tag-yellow">CI</span></td><td>80% Confidence Interval [low–high]. Wider = more uncertain. Rookies have much wider CIs.</td></tr>
-      <tr><td><span class="tag tag-red">RISK</span></td><td>low / medium / high — based on prediction uncertainty. High risk = boom-or-bust.</td></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Based Drafting — projected points above the replacement level at each position. Higher = more valuable relative to a waiver-wire fill-in.</td></tr>
+      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
+      <tr><td><span class="tag tag-yellow">CI</span></td><td><strong>Conformalized 80% Confidence Interval</strong> [low–high]. Validated on held-out seasons: when we say the 80% CI is 110–180 pts, the truth actually lands in that range ~80% of the time. Rookies have wider CIs (1.8× widening); second-year players 1.3×.</td></tr>
+      <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high — computed as a <em>position-relative quartile</em> on relative CI width (range width ÷ projection). Low = a tight projection range. High = wide CI or near-replacement-level depth.</td></tr>
+      <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>low / medium / high — an explainable draft-value score using CI uncertainty, recent injury history, rookie/second-year unknowns, ADP overpay, and low VBD at cost. It is a decision aid, not a medical projection.</td></tr>
       <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
-      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player. Sleepers = model rank better than ADP; busts = worse.</td></tr>
     </table>
     <h3>Draft Board Sort</h3>
-    <p>Players are interleaved by position (RB → WR → QB → TE) within each VBD tier, so you don't see 50 RBs in a row. This mimics how a real draft flows.</p>
+    <p>Offensive players (QB/RB/WR/TE) are sorted by VBD (value over replacement) and interleaved by position within each tier, so you don't see 50 RBs in a row — the order mimics how a real draft flows. Kickers (K) and Defenses (DEF) are sorted by projected points since they have no meaningful VBD signal.</p>
 
     <h3>My Team (Center Panel)</h3>
-    <p>Players are auto-assigned to roster slots based on position:</p>
+    <p>Roster slots are driven by your league configuration (Settings). Players are auto-assigned in priority order:</p>
     <ul>
-      <li><span class="tag tag-blue">QB</span> → QB slot</li>
-      <li><span class="tag tag-green">RB</span> → RB1, RB2, then Flex, then Bench</li>
-      <li><span class="tag tag-yellow">WR</span> → WR1, WR2, then Flex, then Bench</li>
-      <li><span class="tag tag-red">TE</span> → TE slot, then Flex, then Bench</li>
+      <li><span class="tag tag-blue">QB</span> → QB slot(s), then Superflex (if configured)</li>
+      <li><span class="tag tag-green">RB</span> → RB1, RB2 (or however many RB slots), then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">WR</span> → WR slots, then Flex, then Bench</li>
+      <li><span class="tag tag-red">TE</span> → TE slot(s), then Flex, then Bench</li>
+      <li><span class="tag tag-yellow">K</span> / <span class="tag tag-blue">DEF</span> → their dedicated slots (configurable count)</li>
     </ul>
-    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter.</p>
+    <p>Bye weeks are shown next to each player. Red = bye conflict with another starter at the same position.</p>
 
     <h3>Right Sidebar Panels</h3>
     <table>
       <tr><th>Panel</th><th>What It Shows</th></tr>
-      <tr><td><strong>Pick Advice</strong></td><td>Top 5 recommendations based on VBD + roster need bonuses. "MUST DRAFT" = starter slot still open late.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Top 5 recommendations from the RL-informed draft policy, blended with VBD, live roster holes, flex needs, positional scarcity, ADP edge, sleeper/bust flags, draft risk, and late-round K/DEF timing.</td></tr>
       <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
       <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
       <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
@@ -946,6 +1025,12 @@
     <h2>Key Concepts</h2>
     <h3>VBD (Value Based Drafting)</h3>
     <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last player typically drafted at each position (including bench). This means even bench-worthy players get positive VBD, helping you compare value across all rounds — not just the early ones.</p>
+
+    <h3>RL Target Intel</h3>
+    <p>Target Intel is separate from the point-projection model. It was tuned in a snake-draft simulator where the controlled team drafted against ADP/model/VBD opponents and was scored by actual held-out starter/flex fantasy points. The live app uses the distilled policy, not browser retraining, so recommendations update instantly after every DRAFT, TAKEN, undo, reset, or roster-setting change.</p>
+    <p>In the latest held-out 2025 simulation, the RL-informed policy averaged 1624.9 starter points versus 1603.2 for the ADP baseline, with a 24.2% win rate versus 16.7% for ADP. Treat that as draft-strategy evidence, not a guarantee: the policy does not model every human opponent, waiver behavior, trades, or in-season lineup management.</p>
+    <p>The newest recommendation layer is ADP-guarded: ADP remains the price anchor, but the app boosts players with enough VBD, roster need, and scarcity to justify taking them now, especially when the next-turn estimate says they probably will not make it back.</p>
+    <p>Roster settings matter. Standard formats get the highest RL confidence. No-flex, multi-flex, 2QB, unusual starter counts, and very shallow or deep benches are still format-aware, but the app automatically blends the policy back toward VBD, ADP value, and direct roster needs until those formats have their own stronger validation.</p>
 
     <h3>Positional Scarcity</h3>
     <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
@@ -958,11 +1043,21 @@
     </table>
     <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
 
-    <h3>Confidence Intervals</h3>
-    <p>The 80% CI shows the range where the model expects the player's actual points to land. Narrow CI = reliable projection. Wide CI = uncertain. Rookies, injured players, and players with changing situations have wider CIs.</p>
+    <h3>Confidence Intervals (CQR)</h3>
+    <p>The 80% CI is built via <strong>Conformalized Quantile Regression</strong> — we train separate quantile models at the 10th and 90th percentiles, then apply a conformal adjustment learned on a held-out calibration season to guarantee marginal coverage.</p>
+    <p><strong>Empirical coverage</strong> targets 80% marginal coverage. The latest calibration lands around 81-82% by position after the conformal adjustment; raw quantile intervals were meaningfully undercovered before that correction.</p>
+    <p>Rookies and 2nd-year players get a 1.8× / 1.3× width multiplier on top of the calibrated interval to reflect their scarcer historical data.</p>
 
     <h3>Model vs ADP</h3>
-    <p>Our CatBoost model has a <strong>0.752 average correlation</strong> with actual fantasy points, beating ADP's 0.678. The model's edge is largest at TE (+38% MAE improvement) and WR (+25%). When the model and ADP disagree strongly, it flags sleepers (model > ADP) and busts (ADP > model).</p>
+    <p>Our model explains <strong>63% of variance</strong> in fantasy points on held-out seasons. ADP alone (a learned curve from draft position to expected points) explains only <strong>6%</strong> — roughly 10× worse. Walk-forward validation: train 2021 to N-1, test season N, averaged across 2022-2025.</p>
+    <table>
+      <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
+      <tr><td><strong>QB</strong></td><td>65.0</td><td>107.8</td><td style="color:var(--rb)">-39.7%</td><td>0.57</td><td>0.00</td></tr>
+      <tr><td><strong>RB</strong></td><td>38.0</td><td>65.0</td><td style="color:var(--rb)">-41.5%</td><td>0.66</td><td>0.12</td></tr>
+      <tr><td><strong>WR</strong></td><td>30.6</td><td>51.2</td><td style="color:var(--rb)">-40.3%</td><td>0.66</td><td>0.10</td></tr>
+      <tr><td><strong>TE</strong></td><td>22.3</td><td>39.6</td><td style="color:var(--rb)">-43.8%</td><td>0.64</td><td>0.03</td></tr>
+    </table>
+    <p>When the model and ADP disagree strongly, it flags sleepers (model rank better than ADP) and busts (ADP rank better than model).</p>
 
     <h3>Handcuff Alerts</h3>
     <p>A <strong>handcuff</strong> is a backup RB on the same NFL team as your starting RB. If your starter gets injured, their backup typically takes over the starting role and inherits most of the carries — making them extremely valuable as insurance.</p>
@@ -975,51 +1070,48 @@
     </table>
     <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance — you hope you never need it, but if you do, it saves your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
 
-    <h3>Ensemble Model</h3>
-    <p>OverADP uses a <strong>4-model ensemble</strong> — Ridge Regression, Random Forest, XGBoost, and CatBoost. Each model makes predictions independently, and the final projection is the <em>average</em> of all four. This reduces overfitting and produces more reliable projections than any single model alone.</p>
+    <h3>Model Architecture</h3>
+    <p>OverADP currently runs tuned <strong>CatBoost models per position</strong>, selected after walk-forward experiments against simpler baselines. The production models use per-position feature sets, temporal sample weighting (more recent seasons matter more), and leakage-controlled lag features so current-season outcomes never feed their own predictions.</p>
+    <p>Calibrated confidence intervals come from a parallel <strong>Conformalized Quantile Regression</strong> pipeline (see Confidence Intervals section above).</p>
     <table>
-      <tr><th>Model</th><th>Strength</th><th>Best For</th></tr>
-      <tr><td><strong>Ridge</strong></td><td>Linear relationships, stable with small data</td><td>Baseline — prevents wild predictions</td></tr>
-      <tr><td><strong>Random Forest</strong></td><td>Non-linear patterns, resistant to outliers</td><td>Capturing interactions without overfitting</td></tr>
-      <tr><td><strong>XGBoost</strong></td><td>Gradient boosting, strong on tabular data</td><td>RB/TE projections</td></tr>
-      <tr><td><strong>CatBoost</strong></td><td>Ordered boosting, best generalization</td><td>QB/WR/TE — wins validation on most positions</td></tr>
+      <tr><th>Model</th><th>Role</th></tr>
+      <tr><td><strong>CatBoost</strong> (production)</td><td>Ordered boosting for the QB/RB/WR/TE projection models.</td></tr>
+      <tr><td><strong>RL Target Policy</strong></td><td>Snake-draft simulation layer distilled into live next-pick scoring.</td></tr>
+      <tr><td><strong>ADP Baseline</strong></td><td>Held out as the market comparison, not used as a target leak.</td></tr>
+      <tr><td><strong>Conformal Quantiles</strong></td><td>Parallel interval pipeline for the 80% confidence ranges.</td></tr>
+      <tr><td><strong>K/DEF</strong></td><td>Consensus/regression-to-mean board support, not overfit ML projections.</td></tr>
     </table>
-    <p><strong>Feature selection:</strong> We ran an ablation study and found that derived features (teammate dependency, playmaker metrics like RACR/WOPR) were <em>harmful</em> — they're collinear with base lag features and added noise. The model performs best with clean lag features + ADP + age curves + regression-to-mean adjustments.</p>
+
+    <h3>Key Features (June 2026)</h3>
+    <ul>
+      <li><strong>Current roster overlay</strong> — Sleeper roster/depth data keeps teams, bye weeks, and post-draft movement aligned with the board.</li>
+      <li><strong>Target / carry competition</strong> — Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
+      <li><strong>College &amp; draft pipeline</strong> — Draft capital, draft-pick value, combine athleticism, college per-game production, Power 5 flags, and rookie interaction features.</li>
+      <li><strong>Injury-adjusted regression</strong> — Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
+      <li><strong>Contract signals</strong> — Prior-year contract context helps capture role stability, especially in WR/TE experiments.</li>
+      <li><strong>Conformal 80% CIs</strong> — Latest calibration lands around the 80% target across positions.</li>
+      <li><strong>ADP matching</strong> — Robust via <code>football_name</code> (handles apostrophes, suffixes, nicknames).</li>
+    </ul>
 
     <h2>Data Sources</h2>
     <ul>
-      <li><strong>nflverse</strong> (via nfl_data_py) — Seasonal stats, roster info, team stats, OL metrics, snap counts, injuries</li>
-      <li><strong>FantasyPros</strong> — ADP (Average Draft Position) data</li>
-      <li><strong>NFL Schedule</strong> — Bye week derivation</li>
+      <li><strong>nflverse</strong> (via <code>nfl_data_py</code>) — Seasonal stats, rosters, team stats, OL metrics, snap counts, injuries, depth charts</li>
+      <li><strong>Fantasy Football Calculator</strong> — ADP (half-PPR) and bye weeks</li>
+      <li><strong>FantasyPros</strong> — K and DEF projections (ML is not reliable for these; we use consensus instead)</li>
+      <li><strong>Pro-Football-Reference</strong> — Combine data, draft capital, college production stats</li>
     </ul>
 
-    <h2>Accuracy</h2>
+    <h2>Accuracy (Walk-Forward Validated)</h2>
+    <p>Trained on 2021 through N-1, tested on season N, averaged across 2022-2025. Features are strictly lagged to prevent leakage. Calibration set for CQR is the most recent season in the training window. Numbers refreshed June 2026 after the roster/depth, draft-value, and contract-signal updates.</p>
     <table>
-      <tr><th>Position</th><th>R² (CatBoost)</th><th>R² (ADP-only)</th><th>MAE vs ADP</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.440</td><td>0.224</td><td>+24% better</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.585</td><td>0.448</td><td>+3% better</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.604</td><td>0.408</td><td>+25% better</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.588</td><td>0.250</td><td>+38% better</td></tr>
+      <tr><th>Position</th><th>Model MAE</th><th>ADP MAE</th><th>MAE Edge</th><th>Model R²</th><th>ADP R²</th></tr>
+      <tr><td><strong>QB</strong></td><td>65.0</td><td>107.8</td><td style="color:var(--rb)"><strong>-39.7%</strong></td><td>0.57</td><td>0.00</td></tr>
+      <tr><td><strong>RB</strong></td><td>38.0</td><td>65.0</td><td style="color:var(--rb)"><strong>-41.5%</strong></td><td>0.66</td><td>0.12</td></tr>
+      <tr><td><strong>WR</strong></td><td>30.6</td><td>51.2</td><td style="color:var(--rb)"><strong>-40.3%</strong></td><td>0.66</td><td>0.10</td></tr>
+      <tr><td><strong>TE</strong></td><td>22.3</td><td>39.6</td><td style="color:var(--rb)"><strong>-43.8%</strong></td><td>0.64</td><td>0.03</td></tr>
+      <tr><td><strong>Overall</strong></td><td>39.0</td><td>65.9</td><td style="color:var(--rb)"><strong>-41% avg</strong></td><td><strong>0.63</strong></td><td>0.06</td></tr>
     </table>
-    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">Walk-forward validated 2022-2025 (train on past, test on future). CatBoost wins all 4 positions. All features are lagged to prevent data leakage. R² measures out-of-sample accuracy — how well the model predicts players it's never seen before.</p>
-
-    <h2>Model vs ADP — Head to Head</h2>
-    <p>We tested our model against ADP (Average Draft Position) using walk-forward validation on 2022-2025. ADP represents the "wisdom of the crowd" — where thousands of fantasy players are drafting. Our model <strong>beats it at every position</strong>:</p>
-    <table>
-      <tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Winner</th></tr>
-      <tr><td><strong>Avg R²</strong></td><td>0.554</td><td>0.333</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>Avg Correlation</strong></td><td>0.752</td><td>0.678</td><td style="color:var(--rb)">OverADP</td></tr>
-      <tr><td><strong>Best edge</strong></td><td>TE +38% MAE</td><td>—</td><td style="color:var(--rb)">OverADP</td></tr>
-    </table>
-    <p><strong>What this means:</strong> Our model explains 55% of variance in fantasy points vs ADP's 33%. The biggest edge is at TE (38% less error) and WR (25% less error). ADP is already decent at RB, so the model's edge there is smaller (3%).</p>
-    <table>
-      <tr><th>Position</th><th>Model R²</th><th>ADP R²</th><th>MAE Improvement</th></tr>
-      <tr><td><strong>QB</strong></td><td>0.440</td><td>0.224</td><td>+24%</td></tr>
-      <tr><td><strong>RB</strong></td><td>0.585</td><td>0.448</td><td>+3%</td></tr>
-      <tr><td><strong>WR</strong></td><td>0.604</td><td>0.408</td><td>+25%</td></tr>
-      <tr><td><strong>TE</strong></td><td>0.588</td><td>0.250</td><td>+38%</td></tr>
-    </table>
-    <p><strong>Why we beat ADP:</strong> ADP is a popularity contest — it reflects name recognition and recency bias. Our model uses statistical regression, age curves, and ensemble machine learning to find players the market misvalues. The biggest edge is at <strong>QB</strong> — ADP consistently undervalues dual-threat QBs (Lamar Jackson, Josh Allen) because their rushing value isn't obvious from traditional stats.</p>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The model explains roughly 10× more variance than ADP alone. The strongest MAE edge is TE (-43.8%), with RB (-41.5%), WR (-40.3%), and QB (-39.7%) all clearing a roughly 40% error reduction versus ADP.</p>
   </div>
 </div>
 
@@ -1046,7 +1138,7 @@
     <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
     <h2>Your Opponents May Already Have This Data</h2>
     <div style="margin:16px 0;">
-      <div class="upgrade-feature">✓ All 542 player projections &amp; VBD</div>
+      <div class="upgrade-feature">✓ 825-player board with projections, ADP, VBD &amp; K/DEF</div>
       <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
       <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
       <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
@@ -1067,6 +1159,9 @@
       </div>
     </div>
     <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
+    <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
+      → Click a plan above. You'll create your account, then complete checkout — takes 20 seconds. Money-back guarantee.
+    </div>
     <button class="auth-close" onclick="document.getElementById('upgradeOverlay').classList.add('hidden')">Maybe later</button>
   </div>
 </div>
@@ -1098,6 +1193,11 @@
       <button class="scoring-btn" data-teams="14" onclick="setTeams(14,this)">14</button>
     </div>
 
+    <h3>Draft Position</h3>
+    <div style="display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0 16px;font-family:var(--mono);font-size:12px;">
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">SLOT <input type="number" id="draftSlot" value="6" min="1" max="14" style="width:48px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+    </div>
+
     <h3>Roster Slots</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:8px 0 16px;font-family:var(--mono);font-size:12px;">
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">QB <input type="number" id="slotQB" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
@@ -1105,6 +1205,8 @@
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">WR <input type="number" id="slotWR" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">TE <input type="number" id="slotTE" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">FLEX <input type="number" id="slotFlex" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">K <input type="number" id="slotK" value="1" min="0" max="2" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
+      <label style="display:flex;justify-content:space-between;color:var(--fg2);">DEF <input type="number" id="slotDEF" value="1" min="0" max="2" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">BNCH <input type="number" id="slotBench" value="6" min="0" max="10" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
     </div>
 
@@ -1125,6 +1227,7 @@ let byeWeeks = {};
 let scarcityData = [];
 let sleepersData = [];
 let bustsData = [];
+let intelByPlayerKey = {};
 let rosterConfig = {};
 let playerMap = {};  // player_id → player object
 let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
@@ -1145,22 +1248,35 @@ let isAuthMode = 'register'; // 'register' | 'login'
 function lsGetAuth(k,d){try{const v=localStorage.getItem('oa_'+k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function lsSetAuth(k,v){localStorage.setItem('oa_'+k,JSON.stringify(v));}
 
+function fetchWithTimeout(url, opts={}, timeoutMs=3500){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  return fetch(url, {...opts, signal: controller.signal}).finally(()=>clearTimeout(timer));
+}
+
+function hydrateCachedAuth(){
+  currentUser = lsGetAuth('user', null);
+  userPlan = lsGetAuth('plan', 'free') || 'free';
+  userPlanType = lsGetAuth('plan_type', 'season') || 'season';
+  updateUserUI();
+}
+
 // Restore session on load
-async function restoreSession(){
+async function restoreSession(timeoutMs=3500){
   let token = lsGetAuth('access_token',null);
   const refreshToken = lsGetAuth('refresh_token',null);
   if(!token) return;
   try{
-    let res = await fetch(API_BASE+'/auth-session',{
+    let res = await fetchWithTimeout(API_BASE+'/auth-session',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({access_token:token})
-    });
+    },timeoutMs);
     if(res.status===401 && refreshToken){
       // Token expired — try refresh
-      const refRes = await fetch(API_BASE+'/auth-refresh',{
+      const refRes = await fetchWithTimeout(API_BASE+'/auth-refresh',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({refresh_token:refreshToken})
-      });
+      },timeoutMs);
       if(refRes.ok){
         const refData = await refRes.json();
         token = refData.session?.access_token;
@@ -1168,10 +1284,10 @@ async function restoreSession(){
         if(token) lsSetAuth('access_token',token);
         if(newRefresh) lsSetAuth('refresh_token',newRefresh);
         // Re-verify with new token
-        res = await fetch(API_BASE+'/auth-session',{
+        res = await fetchWithTimeout(API_BASE+'/auth-session',{
           method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({access_token:token})
-        });
+        },timeoutMs);
       } else {
         lsSetAuth('access_token',null);
         lsSetAuth('refresh_token',null);
@@ -1191,7 +1307,9 @@ async function restoreSession(){
       lsSetAuth('access_token',null);
       lsSetAuth('refresh_token',null);
     }
-  }catch(e){}
+  }catch(e){
+    // Do not block the draft board on a cold auth function or a flaky session check.
+  }
 }
 
 async function authSubmit(){
@@ -1230,9 +1348,23 @@ async function authSubmit(){
     lsSetAuth('plan',userPlan);
     lsSetAuth('plan_type',userPlanType);
     updateUserUI();
-    refreshAll();
+
+    gaEvent(isAuthMode==='register' ? 'sign_up' : 'login', { method: 'email', user_plan: userPlan });
 
     document.getElementById('authOverlay').classList.add('hidden');
+
+    // Re-render board so paid content (projections, VBD, CI, risk) unlocks immediately
+    if(typeof renderPlayerPool==='function'){renderPlayerPool();getRecommendations();}
+    if(typeof loadSleepers==='function') loadSleepers();
+    if(typeof loadScarcity==='function') loadScarcity();
+
+    // If user came from a pricing click, auto-resume checkout with the plan they chose
+    if(pendingPlan){
+      const plan = pendingPlan;
+      pendingPlan = null;
+      document.getElementById('upgradeOverlay').classList.add('hidden');
+      setTimeout(()=>startCheckout(plan), 200);
+    }
   }catch(e){
     errEl.textContent='Network error — try again';errEl.style.display='block';
   }
@@ -1254,9 +1386,20 @@ function authSkip(){
   userPlan = 'free';
 }
 
+// Show auth modal (for top-bar LOG IN button)
+function showAuth(){
+  isAuthMode = 'login';
+  document.getElementById('authTitle').textContent = 'Log In';
+  document.getElementById('authSubtitle').textContent = 'Log in to your account';
+  document.getElementById('authSubmitBtn').textContent = 'LOG IN';
+  document.getElementById('authSwitch').innerHTML = 'Need an account? <a href="#" onclick="authToggle(event)">Sign up</a>';
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+
 // Prompt auth when user tries to DRAFT (progressive engagement)
 function promptDraftAuth(){
   if(currentUser){ showUpgrade(); return; }
+  gaEvent('auth_prompted', { source: 'draft_gate', trigger: 'locked_feature' });
   document.getElementById('authTitle').textContent = 'DRAFT LIKE A PRO';
   document.getElementById('authSubtitle').textContent = 'Create an account to unlock projections & start drafting';
   document.getElementById('authSubmitBtn').textContent = 'CREATE ACCOUNT';
@@ -1265,10 +1408,24 @@ function promptDraftAuth(){
 
 function showUpgrade(){
   document.getElementById('upgradeOverlay').classList.remove('hidden');
+  // Show a hint for non-logged-in users so they know signup is part of the flow
+  const hint = document.getElementById('upgradeAuthHint');
+  if(hint) hint.style.display = currentUser ? 'none' : 'block';
+  gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser });
 }
 
+let pendingPlan = null;
 async function startCheckout(planType){
-  if(!currentUser){promptDraftAuth();return;}
+  if(!currentUser){
+    pendingPlan = planType||'season';
+    gaEvent('checkout_intent_preauth', { plan_type: pendingPlan });
+    // Close upgrade modal first so the auth modal is visible (they share z-index)
+    document.getElementById('upgradeOverlay').classList.add('hidden');
+    promptDraftAuth();
+    return;
+  }
+  pendingPlan = null;
+  gaEvent('checkout_started', { plan_type: planType||'season' });
   try{
     const res = await fetch(API_BASE+'/stripe-checkout',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -1276,16 +1433,17 @@ async function startCheckout(planType){
     });
     const data = await res.json();
     if(data.url){window.location.href=data.url;}
-  }catch(e){alert('Checkout error — try again');}
+  }catch(e){gaEvent('checkout_error',{plan_type:planType||'season'});alert('Checkout error — try again');}
 }
 
 // Check payment success on return
 function checkPaymentReturn(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
+    gaEvent('purchase_complete', { source: 'stripe_redirect' });
     // Refresh session to get updated plan
     restoreSession().then(()=>{
-      if(userPlan==='paid'){
+      if(userPlan==='paid'&&allPlayers.length){
         refreshAll();
       }
     });
@@ -1302,38 +1460,197 @@ function updateUserUI(){
   const statusEl = document.getElementById('userStatus');
   const upgradeBtn = document.getElementById('upgradeBtn');
   const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
   if(userPlan==='paid'){
     statusEl.style.display='inline';
     statusEl.textContent = '✓ PRO';
     upgradeBtn.style.display = 'none';
     loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
   } else if(currentUser){
     statusEl.style.display='inline';
     statusEl.textContent = currentUser.email;
     upgradeBtn.style.display = 'inline-block';
     loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
   } else {
     statusEl.style.display='none';
     upgradeBtn.style.display = 'inline-block';
     loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
   }
+}
 
+function logOut(){
+  currentUser = null;
+  userPlan = 'free';
+  lsSetAuth('access_token',null);
+  lsSetAuth('refresh_token',null);
+  lsSetAuth('user',null);
+  lsSetAuth('plan','free');
+  updateUserUI();
+  if(typeof renderPlayerPool==='function'){renderPlayerPool();getRecommendations();}
 }
 
 const LS_KEY = 'warroom_';
 function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function lsSet(k,v){localStorage.setItem(LS_KEY+k,JSON.stringify(v));}
 
-const ROSTER_SLOTS = [
-  {key:'qb',label:'QB',pos:'QB',count:1},
-  {key:'rb',label:'RB',pos:'RB',count:2},
-  {key:'wr',label:'WR',pos:'WR',count:2},
-  {key:'te',label:'TE',pos:'TE',count:1},
-  {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:1},
-  {key:'k',label:'K',pos:'K',count:1},
-  {key:'def',label:'DEF',pos:'DEF',count:1},
-  {key:'bench',label:'BN',pos:'ANY',count:6},
-];
+function getRosterSlots(){
+  const s=rosterConfig.roster_slots||{};
+  return [
+    {key:'qb',label:'QB',pos:'QB',count:s.qb!=null?s.qb:1},
+    {key:'rb',label:'RB',pos:'RB',count:s.rb!=null?s.rb:2},
+    {key:'wr',label:'WR',pos:'WR',count:s.wr!=null?s.wr:2},
+    {key:'te',label:'TE',pos:'TE',count:s.te!=null?s.te:1},
+    {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:s.flex!=null?s.flex:1},
+    {key:'k',label:'K',pos:'K',count:s.k!=null?s.k:1},
+    {key:'def',label:'DEF',pos:'DEF',count:s.defense!=null?s.defense:1},
+    {key:'bench',label:'BN',pos:'ANY',count:rosterConfig.bench_size||s.bench||6},
+  ];
+}
+
+function normalizePlayerKey(name, pos){
+  const clean = String(name || '')
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv|v)\.?\b/g, '')
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${clean}|${String(pos || '').toUpperCase()}`;
+}
+
+function formatAdpCost(adp){
+  const n = Number(adp);
+  if(!Number.isFinite(n) || n >= 200 || n <= 0) return 'UDFA';
+  const round = Math.max(1, Math.ceil(n / 12));
+  const pick = ((Math.round(n) - 1) % 12) + 1;
+  return `R${round}.${String(pick).padStart(2,'0')}`;
+}
+
+function riskTierColor(tier, fallback='#888'){
+  return {'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[String(tier||'').toLowerCase()] || fallback;
+}
+
+function normalizeRiskTier(tier){
+  const v=String(tier||'').toLowerCase();
+  return v==='high'||v==='medium'||v==='low'?v:'low';
+}
+
+function computeDraftRisk(p){
+  if(!p || p.position==='K' || p.position==='DEF'){
+    return {tier:'low', score:0, reasons:[]};
+  }
+  const reasons=[];
+  const uncertainty=normalizeRiskTier(p.risk || p.uncertainty);
+  let score=uncertainty==='high'?2:uncertainty==='medium'?1:0;
+  if(uncertainty==='high') reasons.push('wide CI');
+  if(uncertainty==='medium') reasons.push('moderate CI');
+
+  const gamesMissed=Number(p.games_missed_lag1||0);
+  const injLag1=Number(p.injury_count_lag1||0);
+  const injRoll3=Number(p.injury_count_roll3||0);
+  let injuryScore=0;
+  if(gamesMissed>=4) injuryScore+=2;
+  else if(gamesMissed>=2) injuryScore+=1;
+  if(injLag1>=8) injuryScore+=1;
+  if(injRoll3>=14) injuryScore+=1;
+  injuryScore=Math.min(3, injuryScore);
+  if(injuryScore>0){
+    score+=injuryScore;
+    reasons.push(gamesMissed>=2?'missed games':'injury history');
+  }
+
+  if(Number(p.is_rookie)===1){
+    score+=2;
+    reasons.push('rookie profile');
+  }else if(Number(p.is_2nd_year)===1){
+    score+=1;
+    reasons.push('2nd-year range');
+  }
+
+  const adpEdge=Number(p.adp_edge);
+  const adpRank=Number(p.adp_rank);
+  if(Number.isFinite(adpEdge)){
+    if(adpEdge<-18){
+      score+=2;
+      reasons.push('market overpay');
+    }else if(adpEdge<-8){
+      score+=1;
+      reasons.push('pricey vs model');
+    }
+    if(Number.isFinite(adpRank) && adpRank<=36 && adpEdge<0){
+      score+=1;
+      reasons.push('early cost');
+    }
+    if(adpEdge>=18 || p.intel_label==='SLEEPER'){
+      score=Math.max(0, score-1);
+    }
+  }
+
+  if(Number.isFinite(adpRank) && adpRank<=72 && Number(p.vbd||0)<=0){
+    score+=1;
+    reasons.push('low VBD at cost');
+  }
+
+  const floorByPos={QB:170,RB:80,WR:90,TE:60};
+  const floor=floorByPos[p.position];
+  if(floor && Number.isFinite(adpRank) && adpRank<180 && Number(p.projected_points||0)<floor){
+    score+=1;
+    reasons.push('thin projection');
+  }
+
+  let tier='low';
+  if(score>=4) tier='high';
+  else if(score>=2) tier='medium';
+  return {tier, score, reasons:[...new Set(reasons)].slice(0,3)};
+}
+
+function annotateDraftRisks(){
+  allPlayers.forEach(p=>{
+    const risk=computeDraftRisk(p);
+    p.draft_risk=risk.tier;
+    p.draft_risk_score=risk.score;
+    p.draft_risk_reasons=risk.reasons;
+  });
+}
+
+function buildDraftIntel(){
+  const skill = allPlayers.filter(p=>!['K','DEF'].includes(p.position));
+  const byModel = [...skill].sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
+  byModel.forEach((p,i)=>{ p.model_rank = i + 1; });
+
+  ['QB','RB','WR','TE','K','DEF'].forEach(pos=>{
+    allPlayers
+      .filter(p=>p.position===pos)
+      .sort((a,b)=>(b.projected_points||0)-(a.projected_points||0))
+      .forEach((p,i)=>{ p.model_pos_rank = i + 1; });
+  });
+
+  allPlayers.forEach(p=>{
+    const adp = Number(p.adp);
+    p.adp_cost = formatAdpCost(adp);
+    p.adp_rank = Number.isFinite(adp) && adp > 0 && adp < 200 ? Math.round(adp) : null;
+    p.adp_edge = p.adp_rank && p.model_rank ? p.adp_rank - p.model_rank : null;
+  });
+
+  intelByPlayerKey = {};
+  [...sleepersData, ...bustsData].forEach(item=>{
+    intelByPlayerKey[normalizePlayerKey(item.player_name, item.position)] = item;
+  });
+  allPlayers.forEach(p=>{
+    const intel = intelByPlayerKey[normalizePlayerKey(p.player_name, p.position)];
+    if(intel){
+      p.intel_label = intel.label;
+      p.intel_reason = intel.reason;
+      p.model_rank = intel.model_rank || p.model_rank;
+      p.model_pos_rank = intel.model_pos_rank || p.model_pos_rank;
+      p.adp_gap = intel.adp_gap;
+      p.adp_pos_rank = intel.adp_pos_rank;
+    }
+  });
+  annotateDraftRisks();
+}
 
 function showLoading(t){document.getElementById('loadingText').textContent=t;document.getElementById('loadingOverlay').classList.remove('hidden');}
 function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden');}
@@ -1341,12 +1658,11 @@ function hideLoading(){document.getElementById('loadingOverlay').classList.add('
 async function loadData(){
   showLoading('ACQUIRING NFL DATA...');
   try{
-    // Restore auth session first
-    await restoreSession();
-    updateUserUI();
+    // Use cached auth immediately, but never block board data on auth/session checks.
+    hydrateCachedAuth();
     checkPaymentReturn();
 
-    const _v='?v=20260430b'; // cache buster
+    const _v='?v=20260603contracts'; // cache buster — 2026 refresh with contracts + Sleeper overlay
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1356,6 +1672,7 @@ async function loadData(){
     ]);
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
+    gaEvent('app_loaded', { player_count: Array.isArray(allPlayers)?allPlayers.length:0, user_plan: userPlan||'free' });
     // Normalize: bye_weeks.json may have single ints or arrays
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
@@ -1375,6 +1692,7 @@ async function loadData(){
       if(Array.isArray(sb)){sleepersData=sb.filter(x=>x.label==='SLEEPER');bustsData=sb.filter(x=>x.label==='BUST');}
       else{sleepersData=sb.sleepers||[];bustsData=sb.busts||[];}
     }catch(e){}
+    buildDraftIntel();
     // Restore draft state from localStorage
     myTeamIds=lsGet('myTeam',[]);
     opponentIds=lsGet('opponentPicks',[]);
@@ -1383,6 +1701,11 @@ async function loadData(){
     getRecommendations();
     renderPlayerPool();renderMyTeam();renderOpponentPicks();updateStatus();loadScarcity();loadByeConflicts();loadSleepers();loadHandcuffs();
     hideLoading();
+    restoreSession().then(()=>{
+      if(allPlayers.length){
+        refreshAll();
+      }
+    });
     // No auth gate on load — let users browse the board freely
     // Auth is prompted when they try to DRAFT (progressive engagement)
   }catch(e){hideLoading();alert('ERROR: '+e.message);}
@@ -1419,6 +1742,7 @@ function computeClientVBD(){
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const numTeams=rosterConfig.num_teams||12;
   const benchSize=rosterConfig.bench_size||6;
+  const flexSlots=rawSlots.flex!=null?rawSlots.flex:1;
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
   // Step 1: Compute replacement level per position
@@ -1430,13 +1754,9 @@ function computeClientVBD(){
     if(k==='flex'||k==='bench')continue;
     const pos=keyMap[k]||k.toUpperCase();
     const nStarters=numTeams*v;
-    // Bench allocation: flex-eligible positions (RB/WR/TE) get deep replacement
-    // because managers roster backups and handcuffs.
-    // QB is streamed — nobody benches a QB. Replacement = last starter (QB12),
-    // so Allen/Hurts/etc. VBD is correctly modest vs elite RBs/WRs.
-    const isFlexPos=flexEligible.includes(pos);
-    const benchAlloc=isFlexPos?Math.max(v,Math.ceil(benchSize/4)):0;
-    const nDrafted=numTeams*(v+benchAlloc);
+    // Position-specific bench depth: QB/TE rarely get 2+ bench spots, RB/WR do
+    const benchMultiplier={'QB':0.3,'TE':0.5,'RB':1.0,'WR':1.0,'K':0,'DEF':0}[pos]||0.5;
+    const nDrafted=Math.round(numTeams*v*(1+benchMultiplier));
     const posPlayers=available.filter(p=>p.position===pos).sort((a,b)=>b.projected_points-a.projected_points);
     // Use last typically drafted as replacement (gives positive VBD to bench-worthy players)
     const repIdx=Math.min(nDrafted, posPlayers.length)-1;
@@ -1450,7 +1770,7 @@ function computeClientVBD(){
   }
   // Step 2: Flex replacement = min replacement among flex-eligible positions
   const flexReps=flexEligible.map(pos=>replacementLevels[pos]).filter(v=>v!==undefined);
-  if(flexReps.length) replacementLevels.FLEX=Math.min(...flexReps);
+  if(flexSlots>0&&flexReps.length) replacementLevels.FLEX=Math.min(...flexReps);
   // Step 3: Compute VBD for each player
   // Flex-eligible players: VBD = max(above own position rep, above flex rep)
   // Non-flex players: VBD = above own position rep
@@ -1458,34 +1778,264 @@ function computeClientVBD(){
     if(p.position==='K'||p.position==='DEF'){p.vbd=0;return;} // No VBD for K/DEF
     const ownRep=replacementLevels[p.position]||0;
     const flexRep=replacementLevels.FLEX||ownRep;
-    if(flexEligible.includes(p.position)){
+    if(flexSlots>0&&flexEligible.includes(p.position)){
       p.vbd=Math.max(0,p.projected_points-ownRep,p.projected_points-flexRep);
     }else{
       p.vbd=Math.max(0,p.projected_points-ownRep);
     }
   });
+  annotateDraftRisks();
+}
+
+function getPositionCounts(ids){
+  const counts={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
+  ids.forEach(id=>{const p=playerMap[id];if(p&&counts[p.position]!=null)counts[p.position]++;});
+  return counts;
+}
+
+function getRosterPlan(){
+  const rawSlots=rosterConfig.roster_slots||{};
+  const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
+  const bench=rosterConfig.bench_size!=null?rosterConfig.bench_size:(rawSlots.bench!=null?rawSlots.bench:6);
+  const numTeams=rosterConfig.num_teams||12;
+  const draftSlot=Math.max(1,Math.min(numTeams,Number(rosterConfig.draft_slot||Math.ceil(numTeams/2))||Math.ceil(numTeams/2)));
+  const starters={
+    QB:rawSlots.qb!=null?rawSlots.qb:1,
+    RB:rawSlots.rb!=null?rawSlots.rb:2,
+    WR:rawSlots.wr!=null?rawSlots.wr:2,
+    TE:rawSlots.te!=null?rawSlots.te:1,
+    FLEX:rawSlots.flex!=null?rawSlots.flex:1
+  };
+  const maxByPos={
+    QB:Math.max(starters.QB+1,2),
+    RB:Math.max(starters.RB+starters.FLEX+Math.ceil(bench*0.45),starters.RB+starters.FLEX),
+    WR:Math.max(starters.WR+starters.FLEX+Math.ceil(bench*0.50),starters.WR+starters.FLEX),
+    TE:Math.max(starters.TE+1,2)
+  };
+  return {starters,flexEligible,bench,maxByPos,numTeams,draftSlot};
+}
+
+function rosterNeeds(counts,plan){
+  const needs={
+    QB:Math.max(0,plan.starters.QB-(counts.QB||0)),
+    RB:Math.max(0,plan.starters.RB-(counts.RB||0)),
+    WR:Math.max(0,plan.starters.WR-(counts.WR||0)),
+    TE:Math.max(0,plan.starters.TE-(counts.TE||0))
+  };
+  const flexOverflow=Math.max(0,(counts.RB||0)-plan.starters.RB)+Math.max(0,(counts.WR||0)-plan.starters.WR)+Math.max(0,(counts.TE||0)-plan.starters.TE);
+  needs.FLEX=Math.max(0,plan.starters.FLEX-flexOverflow);
+  return needs;
+}
+
+function pickTargetPosition(counts,needs,plan){
+  const entries=['RB','WR','QB','TE'].map(pos=>{
+    let s=0;
+    s+=(needs[pos]||0)*3;
+    if(plan.flexEligible.includes(pos))s+=(needs.FLEX||0);
+    if(pos==='RB')s+=1.2;
+    if((counts[pos]||0)>=((plan.maxByPos||{})[pos]||99))s-=5;
+    return {pos,s};
+  }).sort((a,b)=>b.s-a.s);
+  return entries[0]?.pos||'RB';
+}
+
+function policyConfidence(plan){
+  const s=plan.starters||{};
+  let c=1.0;
+  if((plan.numTeams||12)!==12)c-=0.12;
+  if((s.QB||1)!==1)c-=0.30;
+  c-=Math.min(0.18,Math.abs((s.RB||2)-2)*0.09);
+  c-=Math.min(0.18,Math.abs((s.WR||2)-2)*0.09);
+  if((s.TE||1)!==1)c-=0.10;
+  if((s.FLEX||0)===0)c-=0.28;
+  else if((s.FLEX||0)>1)c-=Math.min(0.24,((s.FLEX||0)-1)*0.12);
+  if((plan.bench||6)<5||(plan.bench||6)>8)c-=0.08;
+  return Math.max(0.35,Math.min(1,c));
+}
+
+function rlDraftScore(p,counts,needs,plan,round){
+  if(p.position==='K'||p.position==='DEF')return 0;
+  const pos=p.position;
+  const adp=Math.min(Number(p.adp||200),250);
+  const proj=Number(p.projected_points||0);
+  const vbd=Number(p.vbd||0);
+  const starterNeed=needs[pos]||0;
+  const flexNeed=plan.flexEligible.includes(pos)?needs.FLEX:0;
+  const posCount=counts[pos]||0;
+  const atCap=posCount>=((plan.maxByPos||{})[pos]||99);
+  const lateNeed=(round>=8&&starterNeed>0)?1:0;
+  let logit=0.35*(proj/300)+0.45*(vbd/150)-2.80*(adp/250)-0.90*(Math.log1p(Math.max(adp,1))/Math.log(251));
+  logit+=0.65*starterNeed+0.25*flexNeed-0.15*(posCount/7)-0.15*Number(p.is_rookie||0)+0.35*lateNeed;
+  if(pos==='RB')logit+=0.18;
+  if(atCap)logit-=2.5;
+  return logit;
+}
+
+function sigmoid(x){
+  return 1/(1+Math.exp(-Math.max(-30,Math.min(30,x))));
+}
+
+function snakeSlotForPick(pickNum,numTeams){
+  const inRound=((pickNum-1)%numTeams)+1;
+  const round=Math.floor((pickNum-1)/numTeams)+1;
+  return round%2===0 ? numTeams-inRound+1 : inRound;
+}
+
+function nextOwnPickAtOrAfter(pickNum,numTeams,draftSlot){
+  for(let p=pickNum;p<=pickNum+numTeams*2+2;p++){
+    if(snakeSlotForPick(p,numTeams)===draftSlot)return p;
+  }
+  return pickNum+Math.max(1,Math.round(numTeams*1.7));
+}
+
+function nextOwnPickAfter(pickNum,numTeams,draftSlot){
+  return nextOwnPickAtOrAfter(pickNum+1,numTeams,draftSlot);
+}
+
+function adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round){
+  if(p.position==='K'||p.position==='DEF')return {score:0,urgency:0,reach:0,pGone:0};
+  const pos=p.position;
+  const adp=Math.min(Number(p.adp||200),250);
+  const proj=Number(p.projected_points||0);
+  const vbd=Number(p.vbd||0);
+  const pickGap=Math.max(1,nextPick-pickNum);
+  const goneScale=Math.max(6,Math.min(16,pickGap/2.5));
+  const pGone=sigmoid((nextPick-adp)/goneScale);
+  let waitSame=0;
+  (ownList||[]).forEach(x=>{
+    if(x.player_id===p.player_id)return;
+    const xAdp=Math.min(Number(x.adp||200),250);
+    const xAvail=1-sigmoid((nextPick-xAdp)/goneScale);
+    waitSame=Math.max(waitSame,Number(x.vbd||0)*xAvail);
+  });
+  const starterNeed=needs[pos]||0;
+  const flexNeed=plan.flexEligible.includes(pos)?(needs.FLEX||0):0;
+  const lateNeed=(round>=8&&starterNeed>0)?1:0;
+  const posCount=counts[pos]||0;
+  const urgency=pGone*Math.max(0,vbd-waitSame);
+  const adpValue=Math.max(0,Math.min(45,pickNum-adp));
+  const reach=Math.max(0,Math.min(90,adp-pickNum-pickGap*0.65));
+  const needBonus=24*starterNeed+9*flexNeed+10*lateNeed;
+  const depthPenalty=Math.max(0,posCount-starterNeed-flexNeed-1)*3;
+  const score=-adp+0.10*proj+0.34*vbd+needBonus+1.25*urgency+0.45*adpValue-0.85*reach-depthPenalty+(pos==='RB'?2.5:0);
+  return {score,urgency,reach,pGone};
 }
 
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
-  const available=allPlayers.filter(p=>!drafted.has(p.player_id)&&p.position!=='K'&&p.position!=='DEF');
-  // Sort by VBD with roster need bonus
+  const available=allPlayers.filter(p=>!drafted.has(p.player_id));
   const myPosCount={};
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
+  const rlPlan=getRosterPlan();
+  const rlNeeds=rosterNeeds(myPosCount,rlPlan);
+  const rlTarget=pickTargetPosition(myPosCount,rlNeeds,rlPlan);
+  const rlConfidence=policyConfidence(rlPlan);
   const rawSlots=rosterConfig.roster_slots||{};
-  const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',flex:'FLEX',k:'K',defense:'DEF'};
-  const slots={};
+  const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
+  const starterSlots={};
   for(const[k,v] of Object.entries(rawSlots)){
     const pos=keyMap[k]||k.toUpperCase();
-    if(pos!=='BN'&&pos!=='FLEX') slots[pos]=v;
+    if(pos!=='BN'&&pos!=='FLEX'&&k!=='bench'&&k!=='flex') starterSlots[pos]=v;
   }
+  const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
+  const flexSlots=rawSlots.flex||0;
+  const numTeams=rlPlan.numTeams||12;
+  const draftSlot=rlPlan.draftSlot||Math.ceil(numTeams/2);
+  const totalRosterSlots=Object.values(rawSlots).reduce((sum,n)=>sum+(Number(n)||0),0);
+  const round=Math.floor((myTeamIds.length+opponentIds.length)/numTeams)+1;
+  const boardPickNum=myTeamIds.length+opponentIds.length+1;
+  const pickNum=nextOwnPickAtOrAfter(boardPickNum,numTeams,draftSlot);
+  const nextPickEstimate=nextOwnPickAfter(pickNum,numTeams,draftSlot);
+  const totalRounds=Math.max(1, Math.ceil(totalRosterSlots));
+  const directFlexUsed=flexEligible.reduce((sum,pos)=>{
+    const extra=Math.max(0,(myPosCount[pos]||0)-(starterSlots[pos]||0));
+    return sum+extra;
+  },0);
+  const flexOpen=Math.max(0,flexSlots-Math.min(flexSlots,directFlexUsed));
+  const benchOpen=Math.max(0,totalRosterSlots-myTeamIds.length);
+  const missingKDef=['K','DEF'].reduce((sum,pos)=>sum+Math.max(0,(starterSlots[pos]||0)-(myPosCount[pos]||0)),0);
+  const maxTierGap=Math.max(1,...scarcityData.map(d=>Number(d.tier_gap)||0));
+  const scarcityByPos={};
+  scarcityData.forEach(d=>{scarcityByPos[d.position]=d;});
+  const availableByPos={};
+  available.forEach(p=>{
+    if(!availableByPos[p.position])availableByPos[p.position]=[];
+    availableByPos[p.position].push(p);
+  });
+  Object.values(availableByPos).forEach(list=>list.sort((a,b)=>(b.projected_points||0)-(a.projected_points||0)));
   const scored=available.map(p=>{
-    let score=p.vbd||0;
-    const needed=Math.max(0,(slots[p.position]||0)-(myPosCount[p.position]||0));
-    if(needed>0)score+=15; // Need bonus
-    const round=Math.floor((myTeamIds.length+opponentIds.length)/12)+1;
-    if(round>=8&&needed>0)score+=25; // Late-round need urgency
-    return {...p,score};
+    const reasons=[];
+    const kd=p.position==='K'||p.position==='DEF';
+    const directNeed=Math.max(0,(starterSlots[p.position]||0)-(myPosCount[p.position]||0));
+    const flexNeed=!kd&&flexEligible.includes(p.position)&&directNeed===0&&flexOpen>0;
+    const ownList=availableByPos[p.position]||[];
+    const nextSame=ownList.find(x=>x.player_id!==p.player_id);
+    const liveCliff=Math.max(0,(p.projected_points||0)-(nextSame?.projected_points||0));
+    const scarcity=scarcityByPos[p.position]||{};
+    const scarcityWeight=(Number(scarcity.tier_gap)||0)/maxTierGap;
+    const adpEdge=Number.isFinite(p.adp_edge)?p.adp_edge:0;
+    const rlScore=rlDraftScore(p,myPosCount,rlNeeds,rlPlan,round);
+    const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,rlNeeds,rlPlan,round);
+
+    let score=(p.vbd||0);
+    if(kd) score=(p.projected_points||0)*0.15;
+    if(!kd){
+      const rlBlend=24*rlConfidence;
+      score+=Math.max(-35*rlConfidence,Math.min(35*rlConfidence,rlScore*rlBlend));
+      score+=Math.max(-32,Math.min(46,guarded.score*0.45));
+      if(guarded.urgency>=12)reasons.push("won't come back");
+      if(p.position===rlTarget)reasons.push(rlConfidence>=0.75?'RL target':'format target');
+      if(p.position==='RB')reasons.push('RB scarcity');
+    }
+
+    if(directNeed>0){
+      score+=kd?18:42;
+      reasons.push('starter need');
+    }else if(flexNeed){
+      score+=22;
+      reasons.push('flex need');
+    }else if(!kd&&benchOpen>0&&(p.position==='RB'||p.position==='WR')){
+      score+=6;
+      reasons.push('bench depth');
+    }
+
+    if(!kd&&(directNeed>0||flexNeed)){
+      const scarcityBonus=Math.min(24,scarcityWeight*18+liveCliff*0.12);
+      score+=scarcityBonus;
+      if(scarcityBonus>=8)reasons.push('scarcity cliff');
+    }
+
+    if(adpEdge>0){
+      const valueBonus=Math.min(24,adpEdge*0.45);
+      score+=valueBonus;
+      if(adpEdge>=12)reasons.push('ADP value');
+    }else if(adpEdge<0){
+      score+=Math.max(-24,adpEdge*0.35);
+    }
+
+    if(p.intel_label==='SLEEPER'){score+=14;reasons.push('sleeper');}
+    if(p.intel_label==='BUST'){score-=18;reasons.push('bust risk');}
+    if(p.risk==='low')score+=3;
+    if(p.risk==='high')score-=5;
+    if(p.draft_risk==='low')score+=2;
+    if(p.draft_risk==='medium')score-=3;
+    if(p.draft_risk==='high'){
+      score-=8;
+      reasons.push('draft risk');
+    }
+
+    if(kd){
+      const lateKDefWindow=round>=Math.max(1,totalRounds-2);
+      if(!lateKDefWindow)score-=80;
+      if(directNeed>0&&lateKDefWindow){score+=110;reasons.push('late K/DEF');}
+    }else if(round>=Math.max(1,totalRounds-2)&&missingKDef>=benchOpen){
+      score-=60;
+    }
+
+    if(round>=8&&directNeed>0&&!kd){score+=18;reasons.push('late starter hole');}
+    if(round>=10&&flexNeed){score+=10;reasons.push('late flex hole');}
+    if(!reasons.length)reasons.push('best value');
+    return {...p,score,rl_score:rlScore,guarded_score:guarded.score,target_position:rlTarget,pick_reason:reasons.slice(0,4).join(' · ')};
   });
   scored.sort((a,b)=>b.score-a.score);
   const top5=scored.slice(0,5);
@@ -1514,10 +2064,10 @@ function renderPlayerPool(){
   let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Sort: K/DEF by ADP, skill players by VBD then proj
+  // Sort: skill players by VBD then proj; K/DEF by projected points
   const isKD=p=>p.position==='K'||p.position==='DEF';
   const skillPlayers=[...f].filter(p=>!isKD(p)).sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
-  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(a.ktc_rank||99)-(b.ktc_rank||99));
+  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
   if(currentFilter==='ALL'){
     // Interleave: skill players first, then K/DEF at the bottom
     f=[...skillPlayers,...kdPlayers];
@@ -1529,31 +2079,43 @@ function renderPlayerPool(){
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
   const vbdHead=vbdMode?'<th>VBD</th>':'';
-  let h=`<table class="pool-table"><thead><tr><th></th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  let h=`<table class="pool-table"><thead><tr><th>BOARD</th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EDGE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>UNC</th><th>DRAFT RISK</th><th>ACTION</th></tr></thead><tbody>`;
   // K/DEF notice banner
   if(currentFilter==='K'||currentFilter==='DEF'){
-    h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:6px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:11px;color:#ffaa00;text-align:center;">⚠ K & DEF are statistically unpredictable — rankings are consensus-based (KTC + FFC). Projections use regression to the mean. Draft last, stream weekly.</td></tr>`;
+    h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:6px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">Projections sourced from FantasyPros consensus. K & DEF have low year-over-year correlation — consider streaming.</td></tr>`;
   }
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
     const kd=isKD(p);
-    const adp=p.adp&&p.adp<200?Math.round(p.adp):'—';
-    const adpGap=adp!=='—'?(i+1-adp):0;
-    const adpStyle=adpGap>5?'color:#44ff44;font-weight:700;':adpGap<-5?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
+    const adp=p.adp_rank || '—';
+    const adpGap=Number.isFinite(p.adp_edge)?p.adp_edge:0;
+    const adpStyle=adpGap>12?'color:#44ff44;font-weight:700;':adpGap<-12?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
+    const edgeLabel=Number.isFinite(p.adp_edge)?(p.adp_edge>0?`+${p.adp_edge}`:`${p.adp_edge}`):'—';
+    const edgeStyle=p.intel_label==='SLEEPER'||p.adp_edge>24?'color:#44ff44;':p.intel_label==='BUST'||p.adp_edge<-24?'color:#ff4444;':'color:var(--smoke);';
+    const badge=p.intel_label==='SLEEPER'
+      ? '<span class="intel-badge sleeper">SLEEPER</span>'
+      : p.intel_label==='BUST'
+        ? '<span class="intel-badge bust">BUST</span>'
+        : '';
+    const rankLabel=`#${i+1}`;
+    const modelRank=p.model_rank?`M#${p.model_rank}`:'M—';
+    const posRank=p.model_pos_rank?`${p.position}${p.model_pos_rank}`:p.position;
     const vbdCell=vbdMode&&!kd?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell" style="color:var(--smoke);">—</td>':'';
-    // K/DEF: show regression-based projection
     let projCell;
     if(kd){
       const proj=p.projected_points>0?p.projected_points.toFixed(0):'—';
-      projCell=`<td class="pts-cell" style="color:var(--smoke);font-size:10px;" title="Regression-based projection">${proj}</td>`;
+      projCell=`<td class="pts-cell" style="font-size:10px;" title="FantasyPros consensus projection">${proj}</td>`;
     }else{
       projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
     }
     const ciLow=kd&&p.ci_low!=null?p.ci_low.toFixed(0):(paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—');
     const ciHigh=kd&&p.ci_high!=null?p.ci_high.toFixed(0):(paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—');
     const risk=kd?(p.risk||'—'):(paid?(p.risk||'low'):'—');
-    const riskColor=kd?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):(paid?({'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[risk]||'#888'):'#555');
+    const riskColor=kd?riskTierColor(risk):paid?riskTierColor(risk):'#555';
+    const draftRisk=kd?'—':paid?(p.draft_risk||'low'):'—';
+    const draftRiskColor=paid&&!kd?riskTierColor(draftRisk):'#555';
+    const draftRiskTitle=paid&&!kd&&p.draft_risk_reasons?.length?` title="${p.draft_risk_reasons.join(' · ')}"`:'';
     const bye=byeWeeks[p.team]||[];
     const byeStr=bye.length?bye.join(','):('—');
     const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
@@ -1563,23 +2125,27 @@ function renderPlayerPool(){
       `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
       `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
-      <td class="rank-cell">${i+1}</td>
-      <td class="name-cell">${p.player_name||p.player_id}</td>
+      <td class="rank-cell"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
+      <td class="name-cell">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div></td>
       <td>${posTag(p.position)}</td>
       <td class="team-cell">${p.team||'—'}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}">${adp}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}"><div>${adp}</div><div class="player-sub">${p.adp_cost}</div></td>
+      <td class="edge-cell" style="${edgeStyle}">${edgeLabel}</td>
       ${projCell}
       ${vbdCell}
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
+      <td${draftRiskTitle} style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${draftRiskColor};">${draftRisk.toUpperCase()}</td>
       <td class="actions-cell">
-        ${draftBtn}
-        <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
+        <div class="actions-wrap">
+          ${draftBtn}
+          <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
+        </div>
       </td></tr>`;
     // Insert upgrade CTA after rank 5 (first visible gap)
     if(!paid&&i===4){
-      h+=`<tr><td colspan="${vbdMode?11:10}" style="padding:0;">
+      h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:0;">
         <div class="paywall-cta" onclick="showUpgrade()">
           <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
           <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
@@ -1596,8 +2162,9 @@ function assignRosterSlots(players){
   const remaining=[...players].sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
   const slotAssignments=[]; // [{slot, player, slotLabel}]
 
-  // Process all slots in ROSTER_SLOTS order so display order matches definition
-  ROSTER_SLOTS.forEach(slot=>{
+  // Process all slots in roster order so display order matches definition
+  const SLOTS=getRosterSlots();
+  SLOTS.forEach(slot=>{
     if(slot.key==='bench') return; // handle bench last
     for(let i=0;i<slot.count;i++){
       const posMatch=slot.pos.split('/'); // e.g. ['RB'] or ['RB','WR','TE'] for flex
@@ -1615,7 +2182,7 @@ function assignRosterSlots(players){
   });
 
   // Fill bench with remaining players
-  ROSTER_SLOTS.filter(s=>s.key==='bench').forEach(slot=>{
+  SLOTS.filter(s=>s.key==='bench').forEach(slot=>{
     for(let i=0;i<slot.count;i++){
       if(remaining.length){
         const p=remaining.shift();
@@ -1665,11 +2232,24 @@ function renderOpponentPicks(){
 function renderRecommendations(recs){
   const c=document.getElementById('recommendations');
   if(!recs||!recs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No intel yet.</div>';return;}
-  c.innerHTML=recs.map((r,i)=>
+  const plan=getRosterPlan();
+  const counts=getPositionCounts(myTeamIds);
+  const needs=rosterNeeds(counts,plan);
+  const boardPickNum=myTeamIds.length+opponentIds.length+1;
+  const pickNum=nextOwnPickAtOrAfter(boardPickNum,plan.numTeams||12,plan.draftSlot||Math.ceil((plan.numTeams||12)/2));
+  const target=pickTargetPosition(counts,needs,plan);
+  const confidence=policyConfidence(plan);
+  const targetLabel=confidence>=0.75?'RL TARGET':'FORMAT TARGET';
+  const header=`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 2px 8px;">
+    PICK ${pickNum} · SLOT ${plan.draftSlot||'—'} · ${targetLabel} ${posTag(target)} · CONF ${Math.round(confidence*100)}% · NEEDS QB ${needs.QB} RB ${needs.RB} WR ${needs.WR} TE ${needs.TE} FLEX ${needs.FLEX}
+  </div>`;
+  c.innerHTML=header+recs.map((r,i)=>
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
-      <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}</div>
-      <div class="intel-pts">${isPaid()?(r.projected_points||0).toFixed(1)+' proj pts':'🔒 UNLOCK'}</div>
+      <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
+      <div class="intel-pts">${isPaid()?(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD':'🔒 UNLOCK'}</div>
+      <div class="player-sub">Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${r.adp_rank||'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.adp_edge)?` · edge ${r.adp_edge>0?'+':''}${r.adp_edge}`:''}${r.position!=='K'&&r.position!=='DEF'?` · draft risk ${r.draft_risk||'low'}`:''}</div>
+      <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
@@ -1685,7 +2265,8 @@ function updateStatus(){
   document.getElementById('availCount').textContent=allPlayers.filter(p=>!drafted.has(p.player_id)).length;
   document.getElementById('myCount').textContent=myTeamP.length;
   document.getElementById('oppCount').textContent=oppP.length;
-  document.getElementById('roundNum').textContent=Math.floor((myTeamP.length+oppP.length)/12)+1;
+  const teams=rosterConfig.num_teams||12;
+  document.getElementById('roundNum').textContent=Math.floor((myTeamP.length+oppP.length)/teams)+1;
   // Position counts on my team
   const posCounts={};myTeamP.forEach(p=>{const pos=p.position||'?';posCounts[pos]=(posCounts[pos]||0)+1;});
   document.getElementById('qbCount').textContent=posCounts['QB']||0;
@@ -1698,7 +2279,7 @@ function updateStatus(){
 
 function filterPos(pos,btn){
   currentFilter=pos;
-  document.querySelectorAll('.pos-filter').forEach(b=>{b.className='pos-filter';});
+  document.querySelectorAll('.pos-filter[data-pos]').forEach(b=>{b.className='pos-filter';});
   if(pos==='ALL'){btn.classList.add('on');}
   else{
     const cls={'QB':'on-qb','RB':'on-rb','WR':'on-wr','TE':'on-te','K':'on-k','DEF':'on-def'}[pos]||'on';
@@ -1790,10 +2371,43 @@ function loadByeConflicts(){
 
 function loadSleepers(){
   const c=document.getElementById('sleepersPanel');
-  const drafted=new Set([...myTeamIds,...opponentIds]);
-  const draftedNames=new Set([...myTeamIds,...opponentIds].map(id=>playerMap[id]?.player_name).filter(Boolean));
-  const availSleepers=sleepersData.filter(s=>!draftedNames.has(s.player_name));
-  const availBusts=bustsData.filter(b=>!draftedNames.has(b.player_name));
+  const draftedKeys=new Set([...myTeamIds,...opponentIds]
+    .map(id=>playerMap[id])
+    .filter(Boolean)
+    .map(p=>normalizePlayerKey(p.player_name,p.position)));
+  const playerForIntel = item => allPlayers.find(p=>normalizePlayerKey(p.player_name,p.position)===normalizePlayerKey(item.player_name,item.position));
+  const isActionableIntel = (item, type) => {
+    const p = playerForIntel(item);
+    if(!p) return false;
+    const adp = Number(item.adp);
+    const modelPosRank = Number(item.model_pos_rank || p.model_pos_rank || 999);
+    const proj = Number(p.projected_points || item.projected_points || 0);
+    if(type === 'BUST'){
+      if(!Number.isFinite(adp) || adp >= 180) return false;
+      if(item.position === 'QB' && modelPosRank > 30) return false;
+      return true;
+    }
+    if(item.position === 'QB' && modelPosRank > 24 && adp >= 150 && proj < 220) return false;
+    return proj >= 75 || Number(p.vbd || 0) > 0 || adp < 180;
+  };
+  const intelSortScore = (item, type) => {
+    const p = playerForIntel(item) || {};
+    const adp = Number(item.adp);
+    const gap = Math.abs(Number(item.adp_gap || 0));
+    const proj = Number(p.projected_points || item.projected_points || 0);
+    const vbd = Math.max(0, Number(p.vbd || 0));
+    const modelPosRank = Number(item.model_pos_rank || p.model_pos_rank || 999);
+    const adpValue = Number.isFinite(adp) && adp < 200 ? Math.max(0, 200 - adp) : 0;
+    const qbPenalty = item.position === 'QB' && modelPosRank > 18 ? 25 : 0;
+    if(type === 'SLEEPER') return vbd * 1.4 + proj * 0.08 + gap * 2.2 + adpValue * 0.15 - qbPenalty;
+    return adpValue * 1.4 + gap * 2.5 + Math.max(0, 140 - proj) * 0.1 - qbPenalty;
+  };
+  const availSleepers=sleepersData
+    .filter(s=>!draftedKeys.has(normalizePlayerKey(s.player_name,s.position))&&isActionableIntel(s,'SLEEPER'))
+    .sort((a,b)=>intelSortScore(b,'SLEEPER')-intelSortScore(a,'SLEEPER'));
+  const availBusts=bustsData
+    .filter(b=>!draftedKeys.has(normalizePlayerKey(b.player_name,b.position))&&isActionableIntel(b,'BUST'))
+    .sort((a,b)=>intelSortScore(b,'BUST')-intelSortScore(a,'BUST'));
   if(!availSleepers.length&&!availBusts.length){
     c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No significant model vs ADP gaps.</div>';
     return;
@@ -1802,14 +2416,35 @@ function loadSleepers(){
   const sleeperLimit=paid?8:1;
   const bustLimit=paid?8:1;
   let h='';
+  const renderIntelItem = (item, type) => {
+    const p = playerForIntel(item) || {};
+    const isSleeper = type === 'SLEEPER';
+    const color = isSleeper ? '#44ff44' : '#ff4444';
+    const gap = Math.round(item.adp_gap || 0);
+    const gapTxt = gap > 0 ? `+${gap}` : `${gap}`;
+    const adpCost = p.adp_cost || formatAdpCost(item.adp);
+    const bye = p.team ? (byeWeeks[p.team] || []) : [];
+    const proj = isPaid() && p.projected_points ? `${p.projected_points.toFixed(1)} pts` : isPaid() ? '—' : '🔒';
+    const actions = p.player_id ? `<div style="display:flex;gap:4px;margin-top:4px;">
+      ${isPaid()?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`:`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`}
+      <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
+    </div>` : '';
+    return `<div style="padding:5px 7px;font-size:10px;border-left:2px solid ${color};margin:2px 0;background:rgba(255,255,255,0.02);">
+      <div style="display:flex;justify-content:space-between;gap:6px;">
+        <span style="color:var(--chalk);font-weight:700;">${item.player_name} ${item.position}</span>
+        <span style="color:${color};font-family:'JetBrains Mono',monospace;">${gapTxt}</span>
+      </div>
+      <div style="color:var(--smoke);font-family:'JetBrains Mono',monospace;margin-top:1px;">
+        ${p.team||item.team||'—'}${bye.length?` · BYE ${bye.join(',')}`:''} · Model #${item.model_rank} / ${item.position}${item.model_pos_rank} · ADP ${Math.round(item.adp||0)} (${adpCost}) · ${proj}
+      </div>
+      <div style="color:var(--smoke);margin-top:2px;">${item.reason||''}</div>
+      ${actions}
+    </div>`;
+  };
   if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
     availSleepers.slice(0,sleeperLimit).forEach(s=>{
-      const pos=s.position;
-      const label=s.model_pos_rank?`Model ${pos}${s.model_pos_rank} · ADP ${pos}${s.adp_pos_rank} (+${Math.round(s.adp_gap)} spots)`:`Model #${s.model_rank} vs ADP #${Math.round(s.adp)}`;
-      h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
-        ${s.player_name} ${pos} — ${label}
-      </div>`;
+      h+=renderIntelItem(s, 'SLEEPER');
     });
     if(!paid&&availSleepers.length>1){
       h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
@@ -1820,11 +2455,7 @@ function loadSleepers(){
   if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
     availBusts.slice(0,bustLimit).forEach(b=>{
-      const pos=b.position;
-      const label=b.model_pos_rank?`Model ${pos}${b.model_pos_rank} · ADP ${pos}${b.adp_pos_rank} (${Math.round(b.adp_gap)} spots)`:`Model #${b.model_rank} vs ADP #${Math.round(b.adp)}`;
-      h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
-        ${b.player_name} ${pos} — ${label}
-      </div>`;
+      h+=renderIntelItem(b, 'BUST');
     });
     if(!paid&&availBusts.length>1){
       h+=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:6px;">
@@ -1910,6 +2541,12 @@ function setScoring(fmt, btn){
 function setTeams(n, btn){
   btn.parentElement.querySelectorAll('.scoring-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  const slot=document.getElementById('draftSlot');
+  if(slot){
+    slot.max=String(n);
+    const current=parseInt(slot.value)||Math.ceil(n/2);
+    slot.value=String(Math.max(1,Math.min(n,current)));
+  }
 }
 
 function applySettings(){
@@ -1920,15 +2557,21 @@ function applySettings(){
   const rbv=parseInt(document.getElementById('slotRB').value)||2;
   const wrv=parseInt(document.getElementById('slotWR').value)||2;
   const tev=parseInt(document.getElementById('slotTE').value)||1;
-  const flexv=parseInt(document.getElementById('slotFlex').value)||1;
+  const flexRaw=parseInt(document.getElementById('slotFlex').value);
+  const flexv=Number.isFinite(flexRaw)?flexRaw:1;
+  const kv=parseInt(document.getElementById('slotK').value);
+  const defv=parseInt(document.getElementById('slotDEF').value);
   const benchv=parseInt(document.getElementById('slotBench').value)||6;
   const teamsBtn=document.querySelector('.scoring-btn.active[data-teams]');
   const numTeams=teamsBtn?parseInt(teamsBtn.dataset.teams):12;
-  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:1,defense:1,bench:benchv};
+  const draftSlotRaw=parseInt(document.getElementById('draftSlot')?.value);
+  const draftSlot=Math.max(1,Math.min(numTeams,Number.isFinite(draftSlotRaw)?draftSlotRaw:Math.ceil(numTeams/2)));
+  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:isNaN(kv)?1:kv,defense:isNaN(defv)?1:defv,bench:benchv};
   rosterConfig.num_teams=numTeams;
+  rosterConfig.draft_slot=draftSlot;
   rosterConfig.bench_size=benchv;
   // Save to localStorage
-  lsSet('settings',{scoring:scoringFormat,numTeams,slots:rosterConfig.roster_slots,bench:benchv});
+  lsSet('settings',{scoring:scoringFormat,numTeams,draftSlot,slots:rosterConfig.roster_slots,bench:benchv});
   // Recalculate everything
   refreshAll();
   toggleSettings();
@@ -1939,6 +2582,7 @@ function restoreSettings(){
   if(!s)return;
   scoringFormat=s.scoring||'half_ppr';
   if(s.numTeams)rosterConfig.num_teams=s.numTeams;
+  if(s.draftSlot)rosterConfig.draft_slot=s.draftSlot;
   if(s.slots)rosterConfig.roster_slots=s.slots;
   if(s.bench)rosterConfig.bench_size=s.bench;
   // Update UI buttons
@@ -1947,12 +2591,20 @@ function restoreSettings(){
   });
   const teamsBtn=document.querySelector(`.scoring-btn[data-teams="${s.numTeams||12}"]`);
   if(teamsBtn){document.querySelectorAll('.scoring-btn[data-teams]').forEach(b=>b.classList.remove('active'));teamsBtn.classList.add('active');}
+  const draftSlotInput=document.getElementById('draftSlot');
+  if(draftSlotInput){
+    const teams=s.numTeams||rosterConfig.num_teams||12;
+    draftSlotInput.max=String(teams);
+    draftSlotInput.value=s.draftSlot||Math.ceil(teams/2);
+  }
   if(s.slots){
     document.getElementById('slotQB').value=s.slots.qb||1;
     document.getElementById('slotRB').value=s.slots.rb||2;
     document.getElementById('slotWR').value=s.slots.wr||2;
     document.getElementById('slotTE').value=s.slots.te||1;
-    document.getElementById('slotFlex').value=s.slots.flex||1;
+    document.getElementById('slotFlex').value=s.slots.flex!=null?s.slots.flex:1;
+    if(document.getElementById('slotK'))document.getElementById('slotK').value=s.slots.k!=null?s.slots.k:1;
+    if(document.getElementById('slotDEF'))document.getElementById('slotDEF').value=s.slots.defense!=null?s.slots.defense:1;
     document.getElementById('slotBench').value=s.bench||6;
   }
   adjustScoring();
