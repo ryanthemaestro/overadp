@@ -120,11 +120,18 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .mobile-launch{display:none;}
 .btn{
   display:inline-flex;align-items:center;gap:8px;
-  font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:1px;text-transform:uppercase;
+  font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;
   padding:10px 24px;border-radius:2px;border:none;cursor:pointer;transition:all 0.15s;text-decoration:none;
 }
-.btn-go{background:var(--green);color:var(--bg);}
-.btn-go:hover{background:var(--green2);box-shadow:0 0 30px rgba(0,255,106,0.2);}
+.btn-go{
+  background:linear-gradient(180deg,#22ff80 0%,var(--green) 100%);
+  color:#001208;
+  border:1px solid rgba(155,255,196,0.45);
+  box-shadow:0 0 0 1px rgba(0,0,0,0.35) inset,0 0 22px rgba(0,255,106,0.12);
+  text-shadow:0 1px 0 rgba(255,255,255,0.35);
+}
+.btn-go:hover{background:linear-gradient(180deg,#35ff8c 0%,var(--green2) 100%);box-shadow:0 0 0 1px rgba(0,0,0,0.35) inset,0 0 30px rgba(0,255,106,0.24);}
+.nav-links .btn-go{font-size:12px;letter-spacing:1.6px;padding:11px 26px;color:#001208;}
 .btn-ghost{background:transparent;color:var(--green);border:1px solid rgba(0,255,106,0.3);}
 .btn-ghost:hover{border-color:var(--green);background:var(--green-dim);}
 
