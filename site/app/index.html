@@ -1929,6 +1929,7 @@ function draftBoardScore(p,ownList){
   const needs=rosterNeeds(counts,plan);
   const numTeams=plan.numTeams||12;
   const draftSlot=plan.draftSlot||Math.ceil(numTeams/2);
+  const boardPickNum=myTeamIds.length+opponentIds.length+1;
   const pickNum=nextOwnPickAtOrAfter(boardPickNum,numTeams,draftSlot);
   const nextPick=nextOwnPickAfter(pickNum,numTeams,draftSlot);
   const round=Math.ceil(pickNum/numTeams);
