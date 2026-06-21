@@ -998,7 +998,7 @@
       <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player. Sleepers = model rank better than ADP; busts = worse.</td></tr>
     </table>
     <h3>Draft Board Sort</h3>
-    <p>Offensive players (QB/RB/WR/TE) are sorted by VBD (value over replacement) and interleaved by position within each tier, so you don't see 50 RBs in a row — the order mimics how a real draft flows. Kickers (K) and Defenses (DEF) are sorted by projected points since they have no meaningful VBD signal.</p>
+    <p>Offensive players (QB/RB/WR/TE) are sorted by an opportunity-cost draft score. VBD and projections measure value, ADP measures price, and the board estimates whether a player is likely to make it back to your next pick. Kickers (K) and Defenses (DEF) are sorted by projected points since they have no meaningful VBD signal.</p>
 
     <h3>My Team (Center Panel)</h3>
     <p>Roster slots are driven by your league configuration (Settings). Players are auto-assigned in priority order:</p>
@@ -1921,6 +1921,21 @@ function adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round){
   return {score,urgency,reach,pGone};
 }
 
+function draftBoardScore(p,ownList){
+  if(p.position==='K'||p.position==='DEF')return Number(p.projected_points||0);
+  const plan=getRosterPlan();
+  const counts={};
+  myTeamIds.forEach(id=>{const x=playerMap[id];if(x){counts[x.position]=(counts[x.position]||0)+1;}});
+  const needs=rosterNeeds(counts,plan);
+  const numTeams=plan.numTeams||12;
+  const draftSlot=plan.draftSlot||Math.ceil(numTeams/2);
+  const boardPickNum=myTeamIds.length+opponentIds.length+1;
+  const pickNum=nextOwnPickAtOrAfter(boardPickNum,numTeams,draftSlot);
+  const nextPick=nextOwnPickAfter(pickNum,numTeams,draftSlot);
+  const round=Math.ceil(pickNum/numTeams);
+  return adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round).score;
+}
+
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
@@ -2061,12 +2076,13 @@ function posTag(p){
 function renderPlayerPool(){
   const c=document.getElementById('playerPool');
   const drafted=new Set([...myTeamIds,...opponentIds]);
-  let f=vbdMode&&vbdPlayers.length?vbdPlayers:allPlayers;
+  let f=allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Sort: skill players by VBD then proj; K/DEF by projected points
+  // Sort: skill players by ADP-anchored draft board score; K/DEF by projected points
   const isKD=p=>p.position==='K'||p.position==='DEF';
-  const skillPlayers=[...f].filter(p=>!isKD(p)).sort((a,b)=>(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
+  const skillPool=[...f].filter(p=>!isKD(p));
+  const skillPlayers=skillPool.sort((a,b)=>draftBoardScore(b,skillPool)-draftBoardScore(a,skillPool)||(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
   const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
   if(currentFilter==='ALL'){
     // Interleave: skill players first, then K/DEF at the bottom
@@ -2615,8 +2631,6 @@ function toggleVBD(){
   vbdMode=!vbdMode;
   if(vbdMode){
     btn.classList.add('on');
-    // Sort all players by VBD
-    vbdPlayers=[...allPlayers].sort((a,b)=>(b.vbd||0)-(a.vbd||0));
   }else{
     btn.classList.remove('on');
   }
