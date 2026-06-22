@@ -930,7 +930,7 @@
       <!-- decoy inputs to absorb Chrome autofill -->
       <input type="email" name="email" style="display:none" tabindex="-1" autocomplete="email">
       <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
-      <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="this.removeAttribute('readonly');this.value='';" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
+      <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="focusSearch(this)" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
       <button class="pos-filter settings-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙ SETTINGS</button>
     </div>
@@ -1826,6 +1826,26 @@ function rosterNeeds(counts,plan){
   return needs;
 }
 
+function rosterCoverage(counts,plan){
+  const bench=Number(plan.bench||0);
+  const targets={
+    QB:Math.max(plan.starters.QB,plan.starters.QB+(bench>=4?1:0)),
+    RB:plan.starters.RB+(plan.starters.FLEX?1:0)+Math.ceil(bench*0.35),
+    WR:plan.starters.WR+(plan.starters.FLEX?1:0)+Math.ceil(bench*0.35),
+    TE:Math.max(plan.starters.TE,plan.starters.TE+(bench>=4?1:0))
+  };
+  const needs={};
+  const over={};
+  for(const pos of ['QB','RB','WR','TE']){
+    const have=counts[pos]||0;
+    const max=(plan.maxByPos||{})[pos]||99;
+    const target=Math.min(targets[pos],max);
+    needs[pos]=Math.max(0,target-have);
+    over[pos]=Math.max(0,have-max);
+  }
+  return {targets,needs,over};
+}
+
 function sigmoid(x){
   return 1/(1+Math.exp(-Math.max(-30,Math.min(30,x))));
 }
@@ -1888,7 +1908,14 @@ function draftBoardScore(p,ownList){
   const pickNum=nextOwnPickAtOrAfter(boardPickNum,numTeams,draftSlot);
   const nextPick=nextOwnPickAfter(pickNum,numTeams,draftSlot);
   const round=Math.ceil(pickNum/numTeams);
-  return adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round).score;
+  const guarded=adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round).score;
+  const coverage=rosterCoverage(counts,plan);
+  const posCount=counts[p.position]||0;
+  const max=(plan.maxByPos||{})[p.position]||99;
+  const coverageNeed=coverage.needs[p.position]||0;
+  const capPenalty=posCount>=max?70:0;
+  const coverageBonus=Math.min(34,coverageNeed*(p.position==='QB'||p.position==='TE'?18:12));
+  return guarded+coverageBonus-capPenalty;
 }
 
 function getRecommendations(){
@@ -1898,6 +1925,7 @@ function getRecommendations(){
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
   const plan=getRosterPlan();
   const draftNeeds=rosterNeeds(myPosCount,plan);
+  const coverage=rosterCoverage(myPosCount,plan);
   const rawSlots=rosterConfig.roster_slots||{};
   const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
   const starterSlots={};
@@ -1936,6 +1964,8 @@ function getRecommendations(){
     const kd=p.position==='K'||p.position==='DEF';
     const directNeed=Math.max(0,(starterSlots[p.position]||0)-(myPosCount[p.position]||0));
     const flexNeed=!kd&&flexEligible.includes(p.position)&&directNeed===0&&flexOpen>0;
+    const coverageNeed=!kd?coverage.needs[p.position]||0:0;
+    const atOrOverCap=!kd&&(myPosCount[p.position]||0)>=((plan.maxByPos||{})[p.position]||99);
     const ownList=availableByPos[p.position]||[];
     const nextSame=ownList.find(x=>x.player_id!==p.player_id);
     const liveCliff=Math.max(0,(p.projected_points||0)-(nextSame?.projected_points||0));
@@ -1958,9 +1988,18 @@ function getRecommendations(){
     }else if(flexNeed){
       score+=22;
       reasons.push('flex need');
+    }else if(coverageNeed>0){
+      const backupBonus=Math.min(34,coverageNeed*(p.position==='QB'||p.position==='TE'?18:12));
+      score+=backupBonus;
+      reasons.push('backup coverage');
     }else if(!kd&&benchOpen>0&&(p.position==='RB'||p.position==='WR')){
       score+=6;
       reasons.push('bench depth');
+    }
+
+    if(atOrOverCap){
+      score-=70;
+      reasons.push('position filled');
     }
 
     if(!kd&&(directNeed>0||flexNeed)){
@@ -2249,7 +2288,14 @@ function filterPos(pos,btn){
   }
   renderPlayerPool();
 }
-function searchPlayers(q){searchQuery=q;renderPlayerPool();}
+function focusSearch(el){
+  el.removeAttribute('readonly');
+  el.value=searchQuery||'';
+}
+function searchPlayers(q){
+  searchQuery=String(q||'').trim();
+  renderPlayerPool();
+}
 
 function checkByeConflictForPlayer(player){
   // Returns conflict info if drafting this player creates a bye conflict, else null
