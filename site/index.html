@@ -22,16 +22,16 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverADP — ML Fantasy Football Draft Model + RL Target Intel</title>
-<meta name="description" content="Walk-forward validated fantasy football model with RL-informed draft target intel: 10× more variance explained than ADP, 41% lower projection MAE, calibrated 80% confidence intervals, current roster/depth overlays, sleepers, busts, and live roster-aware pick recommendations.">
-<meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, reinforcement learning draft strategy, VBD draft guide, beat ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
+<title>OverADP — ML Fantasy Football Draft Model + Target Intel</title>
+<meta name="description" content="Walk-forward validated fantasy football model with opportunity-cost Target Intel: 10× more variance explained than ADP, 41% lower projection MAE, calibrated 80% confidence intervals, current roster/depth overlays, sleepers, busts, and live roster-aware pick recommendations.">
+<meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, opportunity cost draft strategy, VBD draft guide, beat ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
 <meta property="og:title" content="OverADP — The ML Fantasy Football Model That Explains 10× More Variance Than ADP">
-<meta property="og:description" content="Walk-forward validated 2022-2025: Model R² 0.63 vs ADP R² 0.06. Live War Room now includes RL-informed Target Intel that adapts to roster settings, current picks, VBD, ADP, and RB scarcity. Free to start.">
+<meta property="og:description" content="Walk-forward validated 2022-2025: Model R² 0.63 vs ADP R² 0.06. Live War Room includes opportunity-cost Target Intel that adapts to roster settings, current picks, VBD, ADP, and next-turn availability. Free to start.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://overadp.com">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OverADP — Beat Your Draft With Machine Learning">
-<meta name="twitter:description" content="ML projections + RL-informed draft target intel. Walk-forward validated 2022-2025, calibrated 80% CIs, live roster-aware recommendations, current roster/depth data. Free to start.">
+<meta name="twitter:description" content="ML projections + opportunity-cost Target Intel. Walk-forward validated 2022-2025, calibrated 80% CIs, live roster-aware recommendations, current roster/depth data. Free to start.">
 <link rel="canonical" href="https://overadp.com">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -361,10 +361,10 @@ footer a:hover{color:var(--green);}
 <main id="main">
 <section class="hero">
   <div class="wrap">
-    <div class="hero-tag anim"><span class="dot"></span> JUNE 2026 REFRESH · RL TARGET INTEL · CURRENT ROSTERS · 825-PLAYER BOARD</div>
+    <div class="hero-tag anim"><span class="dot"></span> JUNE 2026 REFRESH · TARGET INTEL · CURRENT ROSTERS · 825-PLAYER BOARD</div>
     <h1 class="anim anim-d1">YOUR DRAFT IS <span class="green">RIGGED.</span></h1>
     <p class="hero-sub anim anim-d2">
-      ADP is a popularity contest dressed up as a projection. Our model explains <strong>10× more variance</strong> in actual fantasy points, beats ADP by <strong>41% on mean error</strong>, and ships with <strong>calibrated 80% confidence intervals</strong>. The War Room now adds <strong>RL-informed Target Intel</strong> that adapts to roster settings, live picks, VBD, ADP, and RB scarcity. Walk-forward validated 2022-2025. No leakage. No excuses.
+      ADP is a popularity contest dressed up as a projection. Our model explains <strong>10× more variance</strong> in actual fantasy points, beats ADP by <strong>41% on mean error</strong>, and ships with <strong>calibrated 80% confidence intervals</strong>. The War Room adds <strong>Target Intel</strong> that adapts to roster settings, live picks, VBD, ADP, and whether a player is likely to make it back. Walk-forward validated 2022-2025. No leakage. No excuses.
     </p>
     <div class="hero-cta anim anim-d3">
       <a href="/app/" class="btn btn-go">ENTER WAR ROOM →</a>
@@ -599,7 +599,7 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Arsenal</div>
     <div class="section-title">Your Draft Weapons</div>
-    <div class="section-desc">Calibrated intervals. Depth-chart awareness. College pipeline for rookies. RL-informed target intel. Live draft tracking. No guessing. No reaching.</div>
+    <div class="section-desc">Calibrated intervals. Depth-chart awareness. College pipeline for rookies. Opportunity-cost Target Intel. Live draft tracking. No guessing. No reaching.</div>
     <div class="feat-grid">
       <div class="feat-card">
         <div class="feat-icon">▸ COLLEGE</div>
@@ -617,9 +617,9 @@ footer a:hover{color:var(--green);}
         <div class="feat-desc">Players ranked by Value Based Drafting — not raw points. Knows when positions are running thin. Draft the right position at the right time.</div>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">▸ RL</div>
+        <div class="feat-icon">▸ TARGET</div>
         <div class="feat-title">Target Intel Policy</div>
-        <div class="feat-desc">A snake-draft simulation layer learns when to lean into ADP, VBD, roster needs, flex paths, and RB scarcity. In the War Room it updates instantly after every DRAFT, TAKEN, undo, reset, or roster-setting change.</div>
+        <div class="feat-desc">Opportunity-cost math decides when to lean into ADP, VBD, roster needs, flex paths, scarcity, and next-turn availability. In the War Room it updates instantly after every DRAFT, TAKEN, undo, reset, or roster-setting change.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ SLEEPERS</div>
@@ -697,7 +697,7 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Deploy</div>
     <div class="section-title">Don't Draft Blind.<br><span style="color:var(--green)">See Every Projection.</span></div>
-    <p class="section-desc">Free to browse the board — all player names, positions, teams, and bye weeks visible. Unlock every projection, calibrated 80% CI, sleeper, bust, handcuff, and RL-informed Target Intel rationale for <strong>$24.99/season</strong> or <strong>$6.99/single draft</strong>. Money-back guarantee if the model underperforms ADP in your league.</p>
+    <p class="section-desc">Free to browse the board — all player names, positions, teams, and bye weeks visible. Unlock every projection, calibrated 80% CI, sleeper, bust, handcuff, and Target Intel rationale for <strong>$24.99/season</strong> or <strong>$6.99/single draft</strong>. Money-back guarantee if the model underperforms ADP in your league.</p>
     <a href="/app/" class="btn btn-go">ENTER WAR ROOM →</a>
     <p style="color:var(--fg3);font-size:12px;margin-top:16px;font-family:var(--mono);">⚡ Instant access · No subscription rebilling · Works in any league format</p>
   </div>
@@ -726,7 +726,7 @@ footer a:hover{color:var(--green);}
     "name":"OverADP",
     "applicationCategory":"SportsApplication",
     "operatingSystem":"Web",
-    "description":"Fantasy football draft tool with walk-forward validated ML projections and RL-informed Target Intel. The projection model beats ADP by 41% on average across QB/RB/WR/TE, with calibrated 80% confidence intervals. Model R² 0.63 vs ADP R² 0.06.",
+    "description":"Fantasy football draft tool with walk-forward validated ML projections and opportunity-cost Target Intel. The projection model beats ADP by 41% on average across QB/RB/WR/TE, with calibrated 80% confidence intervals. Model R² 0.63 vs ADP R² 0.06.",
     "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
   },
   {
@@ -736,7 +736,7 @@ footer a:hover{color:var(--green);}
       {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP achieves R² 0.63 (variance explained) vs ADP's 0.06 — roughly 10× better. The model beats ADP by about 41% MAE on average, with current position edges of -39.7% QB, -41.5% RB, -40.3% WR, and -43.8% TE. Walk-forward validated on 2022-2025 NFL seasons. Confidence intervals use Conformalized Quantile Regression calibrated around the 80% target."}},
       {"@type":"Question","name":"Is OverADP free?","acceptedAnswer":{"@type":"Answer","text":"OverADP is free to browse — see all player names, positions, teams, and bye weeks. Unlock full projections, calibrated 80% confidence intervals, sleepers, busts, and handcuff alerts for $24.99/season or $6.99/draft."}},
       {"@type":"Question","name":"What positions does OverADP cover?","acceptedAnswer":{"@type":"Answer","text":"OverADP covers QB, RB, WR, and TE with tuned position-specific CatBoost models. K and DEF use consensus/regression-to-mean board support because they are statistically noisy. College, draft-value, roster/depth, and contract data power rookie and current-board projections."}},
-      {"@type":"Question","name":"What is RL Target Intel?","acceptedAnswer":{"@type":"Answer","text":"RL Target Intel is a roster-aware draft policy distilled from snake-draft simulations. It updates after every pick and combines ADP, VBD, roster holes, flex fit, live draft state, and RB scarcity to recommend the next target."}}
+      {"@type":"Question","name":"What is Target Intel?","acceptedAnswer":{"@type":"Answer","text":"Target Intel is roster-aware opportunity-cost draft math. It updates after every pick and combines ADP, VBD, roster holes, flex fit, live draft state, scarcity, and next-turn availability to recommend the next target."}}
     ]
   }
 ]

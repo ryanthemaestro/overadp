@@ -978,7 +978,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>conformalized quantile regression</strong> for calibrated confidence intervals. Target Intel now adds an <strong>RL-informed snake-draft policy</strong> that adapts to roster settings, live picks, VBD, ADP, flex paths, and RB scarcity. Updated June 2026 with current Sleeper roster/depth data and a clean 825-player draft board.</p>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>conformalized quantile regression</strong> for calibrated confidence intervals. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. Updated June 2026 with current Sleeper roster/depth data and a clean 825-player draft board.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -1014,7 +1014,7 @@
     <h3>Right Sidebar Panels</h3>
     <table>
       <tr><th>Panel</th><th>What It Shows</th></tr>
-      <tr><td><strong>Target Intel</strong></td><td>Top 5 recommendations from the RL-informed draft policy, blended with VBD, live roster holes, flex needs, positional scarcity, ADP edge, sleeper/bust flags, draft risk, and late-round K/DEF timing.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Top 5 recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, ADP edge, sleeper/bust flags, draft risk, and late-round K/DEF timing.</td></tr>
       <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
       <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
       <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
@@ -1026,11 +1026,10 @@
     <h3>VBD (Value Based Drafting)</h3>
     <p>VBD = Projected Points − Replacement Level Points. The replacement level is the projected points of the last player typically drafted at each position (including bench). This means even bench-worthy players get positive VBD, helping you compare value across all rounds — not just the early ones.</p>
 
-    <h3>RL Target Intel</h3>
-    <p>Target Intel is separate from the point-projection model. It was tuned in a snake-draft simulator where the controlled team drafted against ADP/model/VBD opponents and was scored by actual held-out starter/flex fantasy points. The live app uses the distilled policy, not browser retraining, so recommendations update instantly after every DRAFT, TAKEN, undo, reset, or roster-setting change.</p>
-    <p>In the latest held-out 2025 simulation, the RL-informed policy averaged 1624.9 starter points versus 1603.2 for the ADP baseline, with a 24.2% win rate versus 16.7% for ADP. Treat that as draft-strategy evidence, not a guarantee: the policy does not model every human opponent, waiver behavior, trades, or in-season lineup management.</p>
-    <p>The newest recommendation layer is ADP-guarded: ADP remains the price anchor, but the app boosts players with enough VBD, roster need, and scarcity to justify taking them now, especially when the next-turn estimate says they probably will not make it back.</p>
-    <p>Roster settings matter. Standard formats get the highest RL confidence. No-flex, multi-flex, 2QB, unusual starter counts, and very shallow or deep benches are still format-aware, but the app automatically blends the policy back toward VBD, ADP value, and direct roster needs until those formats have their own stronger validation.</p>
+    <h3>Target Intel</h3>
+    <p>Target Intel is separate from the point-projection model. It asks a draft-specific question: given your roster, league settings, current pick, next pick, ADP price, and the players still available, who is worth taking now?</p>
+    <p>The recommendation layer is ADP-guarded: ADP remains the price anchor, but the app boosts players with enough VBD, roster need, and scarcity to justify taking them now, especially when the next-turn estimate says they probably will not make it back.</p>
+    <p>Roster settings matter. No-flex, multi-flex, 2QB, unusual starter counts, and very shallow or deep benches all change the opportunity cost and next-pick math directly.</p>
 
     <h3>Positional Scarcity</h3>
     <p>Measures the drop-off from the elite tier to replacement level at each position. If QB has a small dropoff but TE has a huge one, you should prioritize TE — because the quality falls off a cliff after the top TEs are gone.</p>
@@ -1076,7 +1075,7 @@
     <table>
       <tr><th>Model</th><th>Role</th></tr>
       <tr><td><strong>CatBoost</strong> (production)</td><td>Ordered boosting for the QB/RB/WR/TE projection models.</td></tr>
-      <tr><td><strong>RL Target Policy</strong></td><td>Snake-draft simulation layer distilled into live next-pick scoring.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Opportunity-cost next-pick scoring for live draft recommendations.</td></tr>
       <tr><td><strong>ADP Baseline</strong></td><td>Held out as the market comparison, not used as a target leak.</td></tr>
       <tr><td><strong>Conformal Quantiles</strong></td><td>Parallel interval pipeline for the 80% confidence ranges.</td></tr>
       <tr><td><strong>K/DEF</strong></td><td>Consensus/regression-to-mean board support, not overfit ML projections.</td></tr>
@@ -1827,50 +1826,6 @@ function rosterNeeds(counts,plan){
   return needs;
 }
 
-function pickTargetPosition(counts,needs,plan){
-  const entries=['RB','WR','QB','TE'].map(pos=>{
-    let s=0;
-    s+=(needs[pos]||0)*3;
-    if(plan.flexEligible.includes(pos))s+=(needs.FLEX||0);
-    if(pos==='RB')s+=1.2;
-    if((counts[pos]||0)>=((plan.maxByPos||{})[pos]||99))s-=5;
-    return {pos,s};
-  }).sort((a,b)=>b.s-a.s);
-  return entries[0]?.pos||'RB';
-}
-
-function policyConfidence(plan){
-  const s=plan.starters||{};
-  let c=1.0;
-  if((plan.numTeams||12)!==12)c-=0.12;
-  if((s.QB||1)!==1)c-=0.30;
-  c-=Math.min(0.18,Math.abs((s.RB||2)-2)*0.09);
-  c-=Math.min(0.18,Math.abs((s.WR||2)-2)*0.09);
-  if((s.TE||1)!==1)c-=0.10;
-  if((s.FLEX||0)===0)c-=0.28;
-  else if((s.FLEX||0)>1)c-=Math.min(0.24,((s.FLEX||0)-1)*0.12);
-  if((plan.bench||6)<5||(plan.bench||6)>8)c-=0.08;
-  return Math.max(0.35,Math.min(1,c));
-}
-
-function rlDraftScore(p,counts,needs,plan,round){
-  if(p.position==='K'||p.position==='DEF')return 0;
-  const pos=p.position;
-  const adp=Math.min(Number(p.adp||200),250);
-  const proj=Number(p.projected_points||0);
-  const vbd=Number(p.vbd||0);
-  const starterNeed=needs[pos]||0;
-  const flexNeed=plan.flexEligible.includes(pos)?needs.FLEX:0;
-  const posCount=counts[pos]||0;
-  const atCap=posCount>=((plan.maxByPos||{})[pos]||99);
-  const lateNeed=(round>=8&&starterNeed>0)?1:0;
-  let logit=0.35*(proj/300)+0.45*(vbd/150)-2.80*(adp/250)-0.90*(Math.log1p(Math.max(adp,1))/Math.log(251));
-  logit+=0.65*starterNeed+0.25*flexNeed-0.15*(posCount/7)-0.15*Number(p.is_rookie||0)+0.35*lateNeed;
-  if(pos==='RB')logit+=0.18;
-  if(atCap)logit-=2.5;
-  return logit;
-}
-
 function sigmoid(x){
   return 1/(1+Math.exp(-Math.max(-30,Math.min(30,x))));
 }
@@ -1941,10 +1896,8 @@ function getRecommendations(){
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
   const myPosCount={};
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
-  const rlPlan=getRosterPlan();
-  const rlNeeds=rosterNeeds(myPosCount,rlPlan);
-  const rlTarget=pickTargetPosition(myPosCount,rlNeeds,rlPlan);
-  const rlConfidence=policyConfidence(rlPlan);
+  const plan=getRosterPlan();
+  const draftNeeds=rosterNeeds(myPosCount,plan);
   const rawSlots=rosterConfig.roster_slots||{};
   const keyMap={qb:'QB',rb:'RB',wr:'WR',te:'TE',k:'K',defense:'DEF'};
   const starterSlots={};
@@ -1954,8 +1907,8 @@ function getRecommendations(){
   }
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const flexSlots=rawSlots.flex||0;
-  const numTeams=rlPlan.numTeams||12;
-  const draftSlot=rlPlan.draftSlot||Math.ceil(numTeams/2);
+  const numTeams=plan.numTeams||12;
+  const draftSlot=plan.draftSlot||Math.ceil(numTeams/2);
   const totalRosterSlots=Object.values(rawSlots).reduce((sum,n)=>sum+(Number(n)||0),0);
   const round=Math.floor((myTeamIds.length+opponentIds.length)/numTeams)+1;
   const boardPickNum=myTeamIds.length+opponentIds.length+1;
@@ -1989,17 +1942,13 @@ function getRecommendations(){
     const scarcity=scarcityByPos[p.position]||{};
     const scarcityWeight=(Number(scarcity.tier_gap)||0)/maxTierGap;
     const adpEdge=Number.isFinite(p.adp_edge)?p.adp_edge:0;
-    const rlScore=rlDraftScore(p,myPosCount,rlNeeds,rlPlan,round);
-    const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,rlNeeds,rlPlan,round);
+    const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,draftNeeds,plan,round);
 
     let score=(p.vbd||0);
     if(kd) score=(p.projected_points||0)*0.15;
     if(!kd){
-      const rlBlend=24*rlConfidence;
-      score+=Math.max(-35*rlConfidence,Math.min(35*rlConfidence,rlScore*rlBlend));
-      score+=Math.max(-32,Math.min(46,guarded.score*0.45));
+      score+=Math.max(-36,Math.min(54,guarded.score*0.50));
       if(guarded.urgency>=12)reasons.push("won't come back");
-      if(p.position===rlTarget)reasons.push(rlConfidence>=0.75?'RL target':'format target');
       if(p.position==='RB')reasons.push('RB scarcity');
     }
 
@@ -2050,7 +1999,7 @@ function getRecommendations(){
     if(round>=8&&directNeed>0&&!kd){score+=18;reasons.push('late starter hole');}
     if(round>=10&&flexNeed){score+=10;reasons.push('late flex hole');}
     if(!reasons.length)reasons.push('best value');
-    return {...p,score,rl_score:rlScore,guarded_score:guarded.score,target_position:rlTarget,pick_reason:reasons.slice(0,4).join(' · ')};
+    return {...p,score,guarded_score:guarded.score,pick_reason:reasons.slice(0,4).join(' · ')};
   });
   scored.sort((a,b)=>b.score-a.score);
   const top5=scored.slice(0,5);
@@ -2253,11 +2202,8 @@ function renderRecommendations(recs){
   const needs=rosterNeeds(counts,plan);
   const boardPickNum=myTeamIds.length+opponentIds.length+1;
   const pickNum=nextOwnPickAtOrAfter(boardPickNum,plan.numTeams||12,plan.draftSlot||Math.ceil((plan.numTeams||12)/2));
-  const target=pickTargetPosition(counts,needs,plan);
-  const confidence=policyConfidence(plan);
-  const targetLabel=confidence>=0.75?'RL TARGET':'FORMAT TARGET';
   const header=`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 2px 8px;">
-    PICK ${pickNum} · SLOT ${plan.draftSlot||'—'} · ${targetLabel} ${posTag(target)} · CONF ${Math.round(confidence*100)}% · NEEDS QB ${needs.QB} RB ${needs.RB} WR ${needs.WR} TE ${needs.TE} FLEX ${needs.FLEX}
+    PICK ${pickNum} · SLOT ${plan.draftSlot||'—'} · TARGET INTEL · NEEDS QB ${needs.QB} RB ${needs.RB} WR ${needs.WR} TE ${needs.TE} FLEX ${needs.FLEX}
   </div>`;
   c.innerHTML=header+recs.map((r,i)=>
     `<div class="intel-card">
