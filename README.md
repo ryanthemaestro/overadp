@@ -1,6 +1,6 @@
 # OverADP
 
-AI-powered fantasy football draft assistant. 4-model ML ensemble beats ADP by 58%.
+Machine-learning fantasy football draft assistant with walk-forward validation, uncertainty ranges, and opportunity-cost guidance.
 
 **Live site:** [overadp.com](https://overadp.com)
 

@@ -17,7 +17,7 @@ Run: python3 scripts/generate_hub_pages.py
 """
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -168,7 +168,7 @@ def html_foot(related_pairs: list[tuple[str, str]] | None = None) -> str:
     </div>
     """
 
-    today = datetime.utcnow().strftime("%B %d, %Y")
+    today = datetime.now(UTC).strftime("%B %d, %Y")
     return f"""
     {related}
     {cta}
@@ -245,7 +245,14 @@ def risk_badge(p: dict) -> str:
 # =====================================================================
 
 
-def build_position_ranking(players: list, position: str, limit: int, slug: str, title_pos: str) -> str:
+def build_position_ranking(
+    players: list,
+    accuracy: dict,
+    position: str,
+    limit: int,
+    slug: str,
+    title_pos: str,
+) -> str:
     pos_players = [p for p in players if p.get("position") == position]
     pos_players.sort(key=lambda p: p.get("projected_points", 0) or 0, reverse=True)
     top = pos_players[:limit]
@@ -292,16 +299,20 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 </table>
 """
 
+    metric = accuracy.get(position, {})
+    mae = float(metric.get("mae", 0))
+    r2 = float(metric.get("r2", 0))
+    n_players = int(metric.get("n_players", 0))
     intro = {
-        "QB": "Quarterback is where ADP fails hardest — our walk-forward backtest shows ADP R² ≈ 0 for QB (consensus is essentially noise at the position). Our model posts a <strong>38% MAE edge over ADP</strong> for QBs.",
-        "RB": "Running back is the hardest position for projections: committee usage, injury rates, and coaching changes add noise. Our depth-chart-aware model still posts a <strong>37% MAE edge over ADP</strong> for RBs.",
-        "WR": "Wide receiver projections live or die on target share and teammate competition. We explicitly encode prior-season teammate targets so when a star signs elsewhere, our model sees it. <strong>35% MAE edge over ADP</strong>.",
-        "TE": "Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cuts TE MAE by <strong>37% vs ADP</strong> — and the TE R² lift is one of the largest of any position (0.56 vs 0.03, a 20× improvement).",
+        "QB": "Quarterback scoring has a wider absolute error scale than the other positions, so the model is trained and reported separately.",
+        "RB": "Running-back projections account for committee usage, prior workload, current depth context, injury history, and teammate competition.",
+        "WR": "Wide-receiver projections use prior target volume, teammate competition, current depth context, and player-level career signals.",
+        "TE": "Tight-end production is sparse and role-sensitive, so TE uses its own feature set and error profile.",
     }[position]
+    intro += f" Across the 2024-2025 test folds, {position} posted <strong>{mae:.2f} MAE</strong> and <strong>{r2:.2f} R²</strong> over {n_players:,} player-season predictions."
 
     title_full = f"2026 Fantasy Football {title_pos} Rankings — Walk-Forward Validated Projections | OverADP"
-    mae_edge = {'QB':'38%','RB':'37%','WR':'35%','TE':'37%'}[position]
-    desc = f"Top {limit} 2026 fantasy football {position} rankings with calibrated 80% confidence intervals. ML model cut {position} MAE by {mae_edge} vs ADP on 2022-2025 walk-forward validation. Updated {datetime.utcnow().strftime('%B %Y')}."
+    desc = f"Top {limit} 2026 fantasy football {position} rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: {mae:.2f}; R²: {r2:.2f}. Updated {datetime.now(UTC).strftime('%B %Y')}."
 
     schema = f"""<script type="application/ld+json">
 {{
@@ -311,8 +322,8 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
   "description":"{desc}",
   "author":{{"@type":"Organization","name":"OverADP"}},
   "publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},
-  "datePublished":"{datetime.utcnow().strftime('%Y-%m-%d')}",
-  "dateModified":"{datetime.utcnow().strftime('%Y-%m-%d')}",
+  "datePublished":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
+  "dateModified":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
   "mainEntityOfPage":"https://overadp.com/2026/{slug}/"
 }}
 </script>"""
@@ -321,13 +332,13 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 <div class="crumbs"><a href="/">Home</a> / 2026 Rankings / {position}</div>
 <div class="section-tag">2026 {title_pos} Rankings</div>
 <h1>2026 Fantasy <span class="accent">{title_pos} Rankings</span></h1>
-<p class="lead">The top {limit} {position}s for 2026 half-PPR leagues, ranked by our machine-learning model's projected fantasy points. Each projection comes with a calibrated 80% confidence interval — meaning 83% of actual outcomes fell inside our intervals in 2025 walk-forward testing.</p>
+<p class="lead">The top {limit} {position}s for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
 
 <div class="meta-strip">
-  <span>📊 Model: <strong>CatBoost ensemble + CQR</strong></span>
-  <span>🎯 Validation: <strong>walk-forward on 2019-2025</strong></span>
+  <span>📊 Model: <strong>position-specific CatBoost + split CQR</strong></span>
+  <span>🎯 Point-model tests: <strong>2024 and 2025</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🔄 Updated: <strong>{datetime.utcnow().strftime('%B %d, %Y')}</strong></span>
+  <span>🔄 Updated: <strong>{datetime.now(UTC).strftime('%B %d, %Y')}</strong></span>
 </div>
 
 <p>{intro}</p>
@@ -336,11 +347,11 @@ def build_position_ranking(players: list, position: str, limit: int, slug: str, 
 
 <div class="callout">
   <h3>How to read this table</h3>
-  <p><strong>Proj Pts</strong>: half-PPR fantasy points our model expects over the full 2026 season. <strong>80% CI</strong>: the interval 80% of actual outcomes should fall inside, based on 2025 calibration. A wide CI means more uncertainty — injury-prone players and rookies have wider intervals. <strong>ADP</strong>: half-PPR consensus average draft position from Fantasy Football Calculator. <strong>Risk</strong>: relative coefficient of variation (CI width / projection) bucketed into position quartiles.</p>
+  <p><strong>Proj Pts</strong>: half-PPR fantasy points the point model estimates over the full 2026 season. <strong>80% CI</strong>: a split-conformal range with an 80% marginal-coverage target, calibrated on 2025 rows. A wide range means more uncertainty. <strong>ADP</strong>: current half-PPR average draft position. <strong>Risk</strong>: relative interval width bucketed within position.</p>
 </div>
 
-<h2>What the model gets right that ADP misses</h2>
-<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>6% of actual fantasy-point variance</strong>. Our model explained <strong>57%</strong> — roughly <a class="inline" href="/methodology/">9× more variance explained</a>.</p>
+<h2>How the results were measured</h2>
+<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 """
 
@@ -394,17 +405,17 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
 
     if is_sleeper:
         title_full = "2026 Fantasy Football Sleepers — ML Model Calls vs ADP | OverADP"
-        desc = "Top 2026 fantasy football sleepers our ML model ranks dramatically higher than consensus ADP. Walk-forward validated on 2025 data — found Drake Maye (ADP 128 → QB2), Matthew Stafford (ADP 169 → QB3), and more."
-        intro_lead = "The 2026 players our machine-learning model ranks <strong>well above consensus ADP</strong>. These are the largest model-vs-crowd disagreements — the spots where our walk-forward history suggests ADP is wrong."
-        proof_hed = "Why trust these calls?"
-        proof_body = """In our 2025 walk-forward backtest (train through 2024, predict 2025), the model flagged <strong>Drake Maye as a sleeper at ADP #128</strong>. He finished QB#2 with 416 fantasy points — 126 rank spots above where he was being drafted. It also flagged <strong>Matthew Stafford (ADP #169 → actual QB#3)</strong>, <strong>Sam Darnold (ADP #183 → actual QB#21)</strong>, and <strong>Trevor Lawrence (ADP #140 → actual QB#6)</strong>. ADP is the wisdom of the crowd, but the crowd is slow to update on depth-chart changes, coaching hires, and free-agent moves — which is exactly where our model has the biggest edge."""
+        desc = "Top 2026 fantasy football sleeper candidates: players whose current model rank is meaningfully higher than current half-PPR ADP. Updated from the live projection board."
+        intro_lead = "The 2026 players our model ranks <strong>above current ADP</strong>. These are model-vs-market disagreements to investigate, not promises that a player will outperform."
+        proof_hed = "What this signal means"
+        proof_body = """A sleeper label measures a current rank gap: the point model values the player more highly than the draft market does. It can surface changing roles, prior production, depth-chart movement, or a cheap price. It does not estimate a hit probability, and the model can be wrong — use the projection range, roster fit, and current news alongside the label."""
         slug = "top-sleepers"
     else:
         title_full = "2026 Fantasy Football Busts — Overvalued by ADP | OverADP"
-        desc = "Top 2026 fantasy football busts our ML model ranks dramatically lower than consensus ADP. Walk-forward validated — correctly flagged Brian Thomas Jr. (ADP 13 → WR #33 in 15 games) and more in 2025."
-        intro_lead = "The 2026 players our machine-learning model ranks <strong>well below consensus ADP</strong>. These are picks we think you should avoid at their current draft cost — the largest negative model-vs-crowd gaps."
-        proof_hed = "Why trust these calls?"
-        proof_body = """In 2025 walk-forward testing, the model flagged <strong>Brian Thomas Jr. as a bust</strong> — he was going ADP #13 (WR6-ish consensus) and our model had him overall #41. He finished the season at overall rank #102 with 124 points across <strong>15 games played</strong> — a real, non-injury bust. It also correctly flagged <strong>Bucky Irving (ADP #16 → actual RB#40)</strong> and flagged <strong>Isiah Pacheco (ADP #58 → actual RB#41)</strong>. Busts are harder to call than sleepers because injuries dominate the worst outcomes — but model-flagged busts consistently underperformed <em>even when healthy</em>."""
+        desc = "Top 2026 fantasy football bust candidates: players whose current model rank is meaningfully lower than current half-PPR ADP. Updated from the live projection board."
+        intro_lead = "The 2026 players our model ranks <strong>below current ADP</strong>. These are prices to question, not declarations that a player will fail."
+        proof_hed = "What this signal means"
+        proof_body = """A bust label measures a current rank gap: the market price is richer than the model's production rank. That can reflect role competition, prior volume, age, depth context, or simply an aggressive draft price. It is not an injury forecast or a certainty — use the projection range and current team news before making a pick."""
         slug = "top-busts"
 
     schema = f"""<script type="application/ld+json">
@@ -415,8 +426,8 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
   "description":"{desc}",
   "author":{{"@type":"Organization","name":"OverADP"}},
   "publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},
-  "datePublished":"{datetime.utcnow().strftime('%Y-%m-%d')}",
-  "dateModified":"{datetime.utcnow().strftime('%Y-%m-%d')}",
+  "datePublished":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
+  "dateModified":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
   "mainEntityOfPage":"https://overadp.com/2026/{slug}/"
 }}
 </script>"""
@@ -430,8 +441,8 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
 <div class="meta-strip">
   <span>📊 Source: <strong>walk-forward ML projections</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🎯 2025 hit rate: <strong>Drake Maye ADP 128 → QB#2</strong></span>
-  <span>🔄 Updated: <strong>{datetime.utcnow().strftime('%B %d, %Y')}</strong></span>
+  <span>🎯 Signal: <strong>current model rank vs current ADP</strong></span>
+  <span>🔄 Updated: <strong>{datetime.now(UTC).strftime('%B %d, %Y')}</strong></span>
 </div>
 
 <h2>The Top 15</h2>
@@ -439,7 +450,7 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
 
 <h2>{proof_hed}</h2>
 <p>{proof_body}</p>
-<p>Methodology is public — walk-forward validation, conformal quantile regression for calibrated 80% intervals, depth-chart aware, no leakage. Read the full <a class="inline" href="/methodology/">model methodology</a> or open the <a class="inline" href="/app/">free draft board</a>.</p>
+<p>Methodology is public — chronological point-model tests, split-conformal 80%-target ranges, and current depth-chart context. Read the full <a class="inline" href="/methodology/">model methodology</a> or open the <a class="inline" href="/app/">free draft board</a>.</p>
 
 <div class="callout">
   <h3>How "sleeper" and "bust" are defined here</h3>
@@ -459,9 +470,44 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
     return html_head(title_full, desc, f"/2026/{slug}/", schema) + body + html_foot(related)
 
 
-def build_methodology() -> str:
+def build_methodology(accuracy: dict) -> str:
     title_full = "Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP"
-    desc = "How OverADP projects fantasy football: walk-forward validation, CatBoost ensemble, conformal quantile regression for 80% confidence intervals, depth-chart features, and more. Full transparency on the 2025 results."
+    desc = "How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations."
+
+    metric_rows = []
+    total_n = 0
+    weighted_mae = 0.0
+    weighted_rmse_sq = 0.0
+    weighted_r2 = 0.0
+    test_seasons = set()
+    for pos in ("QB", "RB", "WR", "TE"):
+        metric = accuracy.get(pos, {})
+        n = int(metric.get("n_players", 0))
+        mae = float(metric.get("mae", 0))
+        rmse = float(metric.get("rmse", 0))
+        r2 = float(metric.get("r2", 0))
+        total_n += n
+        weighted_mae += mae * n
+        weighted_rmse_sq += rmse * rmse * n
+        weighted_r2 += r2 * n
+        test_seasons.update(metric.get("test_seasons", []))
+        metric_rows.append(
+            f'<tr><td>{pos}</td><td class="positive">{mae:.2f}</td>'
+            f'<td>{rmse:.2f}</td><td class="positive">{r2:.2f}</td><td>{n:,}</td></tr>'
+        )
+    if total_n:
+        weighted_mae /= total_n
+        weighted_rmse = (weighted_rmse_sq / total_n) ** 0.5
+        weighted_r2 /= total_n
+    else:
+        weighted_rmse = 0.0
+    metric_rows.append(
+        f'<tr><td><strong>Player-weighted summary</strong></td>'
+        f'<td class="positive">{weighted_mae:.2f}</td><td>{weighted_rmse:.2f}</td>'
+        f'<td class="positive">{weighted_r2:.2f}</td><td>{total_n:,}</td></tr>'
+    )
+    metric_table_rows = "".join(metric_rows)
+    test_season_label = ", ".join(str(s) for s in sorted(test_seasons))
 
     schema = f"""<script type="application/ld+json">
 {{
@@ -471,8 +517,8 @@ def build_methodology() -> str:
   "description":"{desc}",
   "author":{{"@type":"Organization","name":"OverADP"}},
   "publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},
-  "datePublished":"{datetime.utcnow().strftime('%Y-%m-%d')}",
-  "dateModified":"{datetime.utcnow().strftime('%Y-%m-%d')}",
+  "datePublished":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
+  "dateModified":"{datetime.now(UTC).strftime('%Y-%m-%d')}",
   "mainEntityOfPage":"https://overadp.com/methodology/"
 }}
 </script>"""
@@ -484,27 +530,26 @@ def build_methodology() -> str:
 <p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
 
 <h2>The one-sentence version</h2>
-<p>We train a per-position CatBoost ensemble on 7 years of NFL skill-position data (2019-2025), validated with rolling walk-forward splits so the model is only ever tested on seasons it hasn't seen, and we wrap point predictions with conformal quantile regression to produce 80% confidence intervals with empirically verified coverage.</p>
+<p>We train one CatBoost point model per position on completed NFL seasons, test it chronologically on the next season, and pair the point estimate with a separate split-conformal quantile range targeting 80% marginal coverage.</p>
 
 <h2>1. Walk-forward validation (not random splits)</h2>
 <p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information — the model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
-<p>Walk-forward validation prevents this. We train on seasons 2019-N and test on season N+1, for every N. The 2025 results you see on this site come from a model that was trained on <strong>2019-2024 only</strong> and tested on 2025 out-of-sample. Every year is a truly held-out test.</p>
+<p>Walk-forward validation prevents this. The published point-model results use two folds: train through 2023 and test on 2024, then train through 2024 and test on 2025. The aggregate includes every eligible QB/RB/WR/TE row in those folds.</p>
 
-<h2>2. Four-model ensemble</h2>
-<p>We run four models per position: Ridge regression, Random Forest, XGBoost, and CatBoost. In walk-forward validation, CatBoost wins every position after hyperparameter tuning with per-position temporal weights, so the production model uses CatBoost point predictions. The ensemble spread is also used for ensemble uncertainty (see below).</p>
-<p>Per-position tuning matters. QB rewards deeper trees (depth=6) with more iterations; RB/WR/TE prefer depth=4 with more aggressive L2. Temporal weighting (recent seasons weighted more heavily) cut QB MAE by 2.6% and RB MAE by 3.0% in validation.</p>
+<h2>2. One CatBoost model per position</h2>
+<p>QB, RB, WR, and TE are trained separately because their production scales and useful features differ. The production point model is CatBoost for all four positions, with position-specific feature lists and temporal sample weighting so newer training seasons matter more.</p>
 
 <h2>3. Conformal quantile regression (CQR) for honest 80% intervals</h2>
 <p>Point predictions alone are dangerous in fantasy — every projection is wrong, the question is <em>by how much</em>. We train separate quantile CatBoost models at the 10th and 90th percentiles, then calibrate on the most recent held-out season using split-conformal CQR.</p>
-<p>The result: intervals with <strong>empirically verified 80% coverage</strong>. In 2025 walk-forward testing, raw quantile regression covered 56% of outcomes (badly miscalibrated), while conformal CQR covered <strong>83.5% on the test set</strong> — above the 80% target, with coverage error under 4 percentage points. This is real uncertainty, not a Bayesian band.</p>
+<p>The final adjustment is learned from 2025 calibration rows and targets <strong>80% marginal coverage</strong>. Because that same season is used for final calibration, its post-adjustment coverage is a calibration diagnostic, not an independent test-set guarantee. Coverage for an individual player is never guaranteed.</p>
 
 <h2>4. Depth-chart awareness (Week 1 snapshot)</h2>
 <p>One of our biggest 2026 feature additions. We pull pre-season depth charts from nflverse (Week 1 snapshot for 2019-2024; nearest-to-September-5 snapshot for 2025+) and encode each player's depth rank (1=starter, 2=backup, 3+=depth), plus binary is_starter and is_backup flags.</p>
-<p>Used for QB, WR, and TE projections. Excluded from RB because RBBC (running-back-by-committee) breaks the signal — a RB2 who gets 60% of carries produces more than a RB1 who splits. Walk-forward gain: QB MAE −3.4%, WR MAE −2.6%.</p>
+<p>Used for QB, WR, and TE projections. Excluded from RB because RBBC (running-back-by-committee) makes a nominal depth rank less reliable than actual prior workload and teammate carry competition.</p>
 
 <h2>5. Target-competition features (prevent phantom breakouts)</h2>
 <p>Using prior-season teammate targets, we compute each WR's teammate_targets_prev and teammate_rec_yards_prev on their <em>current</em> team (so if Chase Claypool signs with the Jaguars, his projections reflect BTJ's 200+ targets ahead of him). We also compute teammate_carries_prev for RBs.</p>
-<p>Crucially: no leakage. We use prior-season teammate production on the current roster, never current-season production. This re-runs after free-agent and draft changes are reflected in the projection-season roster.</p>
+<p>The feature uses prior-season teammate production on the current roster, never the target season's outcomes. This re-runs after free-agent and draft changes are reflected in the projection-season roster.</p>
 
 <h2>6. Conservative monotonic constraints</h2>
 <p>Aggregate production lags (prior-season fantasy points, targets, receptions, carries) should never have a <em>negative</em> marginal effect on projections. We encode positive monotonic constraints on exactly these features and leave everything else unconstrained. This adds sanity guardrails without overfitting — MAE stays within noise, but the model can't produce pathological projections where scoring more the prior year makes you project lower.</p>
@@ -512,31 +557,21 @@ def build_methodology() -> str:
 <h2>7. College + draft capital features for rookies</h2>
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
-<h2>The 2022-2025 walk-forward results</h2>
-<p>All numbers below are averages across four held-out test seasons (2022, 2023, 2024, 2025). The model only ever sees past seasons during training, never the season it's being tested on. ADP baseline is a per-position quadratic regression on log(ADP), fit on the same training seasons.</p>
+<h2>The {test_season_label} walk-forward results</h2>
+<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. The exact-cohort market check uses true FFC ADP in 2024 but an explicitly labeled ESPN preseason-rank proxy in 2025, so no ADP improvement percentage is published here.</p>
 <table class="rank">
-  <thead><tr><th>Metric</th><th>OverADP</th><th>ADP</th><th>Edge</th></tr></thead>
-  <tbody>
-    <tr><td>Overall R² (variance explained)</td><td class="positive">0.57</td><td class="negative">0.06</td><td class="positive">+9×</td></tr>
-    <tr><td>Overall MAE</td><td class="positive">41.5</td><td class="negative">65.9</td><td class="positive">−37%</td></tr>
-    <tr><td>QB MAE</td><td class="positive">66.7</td><td class="negative">107.8</td><td class="positive">−38%</td></tr>
-    <tr><td>RB MAE</td><td class="positive">41.0</td><td class="negative">65.0</td><td class="positive">−37%</td></tr>
-    <tr><td>WR MAE</td><td class="positive">33.4</td><td class="negative">51.2</td><td class="positive">−35%</td></tr>
-    <tr><td>TE MAE</td><td class="positive">24.8</td><td class="negative">39.6</td><td class="positive">−37%</td></tr>
-    <tr><td>QB R²</td><td class="positive">0.52</td><td class="negative">0.00</td><td class="positive">huge</td></tr>
-    <tr><td>TE R²</td><td class="positive">0.56</td><td class="negative">0.03</td><td class="positive">+20×</td></tr>
-    <tr><td>80% CI coverage</td><td class="positive">83.5%</td><td>n/a</td><td class="positive">calibrated</td></tr>
-  </tbody>
+  <thead><tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr></thead>
+  <tbody>{metric_table_rows}</tbody>
 </table>
 
 <h2>What the model doesn't do</h2>
 <p>Honest limitations:</p>
 <p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call — it was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
 <p><strong>It's only as good as the data.</strong> UDFAs and late-round rookies with missing college data get wider intervals and lower confidence. Coaching-change features were tested and rejected after walk-forward validation showed them adding noise rather than signal.</p>
-<p><strong>Fantasy football is high-variance.</strong> Even a perfect model won't hit every call. Our 80% CIs cover 83.5% of outcomes — which means 16.5% of players still blow through their interval in either direction.</p>
+<p><strong>Fantasy football is high-variance.</strong> Even a strong aggregate model misses individual players. The interval pipeline targets 80% marginal coverage after calibration, but that target is not a player-level promise and still needs monitoring on future untouched seasons.</p>
 
 <h2>What's next</h2>
-<p>The 2026 NFL draft wrapped April 23–25. All 257 picks are now in the model — draft capital, college production, and combine features for the full 2026 rookie class are live. Jeremiyah Love (#3 overall), Carnell Tate (#4), and Kenyon Sadiq (#16) are already projecting with their correct draft-capital priors. We re-refresh in August once pre-season depth charts are final and ADP markets stabilize.</p>
+<p>Roster, depth-chart, ADP, and rookie inputs continue to change through training camp. We refresh the board as those sources stabilize and will report interval coverage again only after a future season remains untouched through evaluation.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
 """
 
@@ -553,7 +588,7 @@ def build_methodology() -> str:
 
 
 def build_sitemap(pages: list[str]) -> str:
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     urls = []
     urls.append(f"""  <url><loc>https://overadp.com/</loc><lastmod>{today}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>""")
     urls.append(f"""  <url><loc>https://overadp.com/app/</loc><lastmod>{today}</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>""")
@@ -586,18 +621,18 @@ def write_page(relpath: str, html: str):
 
 def main():
     print("Loading data...")
-    players, sleepers_busts, _ = load_data()
+    players, sleepers_busts, accuracy = load_data()
     active = filter_active(players)
     print(f"  {len(active)} active players, {len(sleepers_busts)} sleepers/busts entries")
 
     print("Generating hub pages...")
-    write_page("2026/qb-rankings/index.html", build_position_ranking(active, "QB", 32, "qb-rankings", "QB"))
-    write_page("2026/rb-rankings/index.html", build_position_ranking(active, "RB", 50, "rb-rankings", "RB"))
-    write_page("2026/wr-rankings/index.html", build_position_ranking(active, "WR", 60, "wr-rankings", "WR"))
-    write_page("2026/te-rankings/index.html", build_position_ranking(active, "TE", 24, "te-rankings", "TE"))
+    write_page("2026/qb-rankings/index.html", build_position_ranking(active, accuracy, "QB", 32, "qb-rankings", "QB"))
+    write_page("2026/rb-rankings/index.html", build_position_ranking(active, accuracy, "RB", 50, "rb-rankings", "RB"))
+    write_page("2026/wr-rankings/index.html", build_position_ranking(active, accuracy, "WR", 60, "wr-rankings", "WR"))
+    write_page("2026/te-rankings/index.html", build_position_ranking(active, accuracy, "TE", 24, "te-rankings", "TE"))
     write_page("2026/top-sleepers/index.html", build_sleepers_or_busts(sleepers_busts, "SLEEPER"))
     write_page("2026/top-busts/index.html", build_sleepers_or_busts(sleepers_busts, "BUST"))
-    write_page("methodology/index.html", build_methodology())
+    write_page("methodology/index.html", build_methodology(accuracy))
 
     print("Generating sitemap + robots.txt...")
     pages = [

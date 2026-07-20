@@ -12,17 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 Fantasy Football QB Rankings — Walk-Forward Validated Projections | OverADP</title>
-<meta name="description" content="Top 32 2026 fantasy football QB rankings with calibrated 80% confidence intervals. ML model cut QB MAE by 38% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta name="description" content="Top 32 2026 fantasy football QB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 64.17; R²: 0.49. Updated July 2026.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/2026/qb-rankings/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="2026 Fantasy Football QB Rankings — Walk-Forward Validated Projections | OverADP">
-<meta property="og:description" content="Top 32 2026 fantasy football QB rankings with calibrated 80% confidence intervals. ML model cut QB MAE by 38% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta property="og:description" content="Top 32 2026 fantasy football QB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 64.17; R²: 0.49. Updated July 2026.">
 <meta property="og:url" content="https://overadp.com/2026/qb-rankings/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="2026 Fantasy Football QB Rankings — Walk-Forward Validated Projections | OverADP">
-<meta name="twitter:description" content="Top 32 2026 fantasy football QB rankings with calibrated 80% confidence intervals. ML model cut QB MAE by 38% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta name="twitter:description" content="Top 32 2026 fantasy football QB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 64.17; R²: 0.49. Updated July 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -104,11 +104,11 @@ footer a:hover{color:var(--green);}
   "@context":"https://schema.org",
   "@type":"Article",
   "headline":"2026 Fantasy Football QB Rankings — Walk-Forward Validated Projections | OverADP",
-  "description":"Top 32 2026 fantasy football QB rankings with calibrated 80% confidence intervals. ML model cut QB MAE by 38% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.",
+  "description":"Top 32 2026 fantasy football QB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 64.17; R²: 0.49. Updated July 2026.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
-  "datePublished":"2026-04-30",
-  "dateModified":"2026-04-30",
+  "datePublished":"2026-07-20",
+  "dateModified":"2026-07-20",
   "mainEntityOfPage":"https://overadp.com/2026/qb-rankings/"
 }
 </script>
@@ -132,16 +132,16 @@ footer a:hover{color:var(--green);}
 <div class="crumbs"><a href="/">Home</a> / 2026 Rankings / QB</div>
 <div class="section-tag">2026 QB Rankings</div>
 <h1>2026 Fantasy <span class="accent">QB Rankings</span></h1>
-<p class="lead">The top 32 QBs for 2026 half-PPR leagues, ranked by our machine-learning model's projected fantasy points. Each projection comes with a calibrated 80% confidence interval — meaning 83% of actual outcomes fell inside our intervals in 2025 walk-forward testing.</p>
+<p class="lead">The top 32 QBs for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
 
 <div class="meta-strip">
-  <span>📊 Model: <strong>CatBoost ensemble + CQR</strong></span>
-  <span>🎯 Validation: <strong>walk-forward on 2019-2025</strong></span>
+  <span>📊 Model: <strong>position-specific CatBoost + split CQR</strong></span>
+  <span>🎯 Point-model tests: <strong>2024 and 2025</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🔄 Updated: <strong>April 30, 2026</strong></span>
+  <span>🔄 Updated: <strong>July 20, 2026</strong></span>
 </div>
 
-<p>Quarterback is where ADP fails hardest — our walk-forward backtest shows ADP R² ≈ 0 for QB (consensus is essentially noise at the position). Our model posts a <strong>38% MAE edge over ADP</strong> for QBs.</p>
+<p>Quarterback scoring has a wider absolute error scale than the other positions, so the model is trained and reported separately. Across the 2024-2025 test folds, QB posted <strong>64.17 MAE</strong> and <strong>0.49 R²</strong> over 134 player-season predictions.</p>
 
 
 <table class="rank">
@@ -161,288 +161,288 @@ footer a:hover{color:var(--green);}
   <td class="rank">QB1</td>
   <td class="name">Josh Allen</td>
   <td>BUF</td>
-  <td>206.3</td>
-  <td style="color:var(--fg3);">89–324</td>
-  <td>23</td>
+  <td>295.8</td>
+  <td style="color:var(--fg3);">156–436</td>
+  <td>28</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB2</td>
-  <td class="name">Caleb Williams</td>
-  <td>CHI</td>
-  <td>185.0</td>
-  <td style="color:var(--fg3);">12–358</td>
-  <td>106</td>
+  <td class="name">Lamar Jackson</td>
+  <td>BAL</td>
+  <td>275.2</td>
+  <td style="color:var(--fg3);">161–390</td>
+  <td>56</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB3</td>
-  <td class="name">Jalen Hurts</td>
-  <td>PHI</td>
-  <td>179.4</td>
-  <td style="color:var(--fg3);">40–319</td>
-  <td>40</td>
+  <td class="name">Jared Goff</td>
+  <td>DET</td>
+  <td>269.1</td>
+  <td style="color:var(--fg3);">136–402</td>
+  <td>93</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB4</td>
-  <td class="name">Matthew Stafford</td>
-  <td>LAR</td>
-  <td>174.5</td>
-  <td style="color:var(--fg3);">0–356</td>
-  <td>169</td>
+  <td class="name">Joe Burrow</td>
+  <td>CIN</td>
+  <td>268.0</td>
+  <td style="color:var(--fg3);">132–404</td>
+  <td>44</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB5</td>
-  <td class="name">Bo Nix</td>
-  <td>DEN</td>
-  <td>170.4</td>
-  <td style="color:var(--fg3);">18–323</td>
+  <td class="name">Justin Herbert</td>
+  <td>LAC</td>
+  <td>264.5</td>
+  <td style="color:var(--fg3);">122–406</td>
   <td>78</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB6</td>
-  <td class="name">Drake Maye</td>
-  <td>NE</td>
-  <td>168.5</td>
-  <td style="color:var(--fg3);">0–359</td>
-  <td>128</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB7</td>
-  <td class="name">Joe Burrow</td>
-  <td>CIN</td>
-  <td>157.0</td>
-  <td style="color:var(--fg3);">1–313</td>
-  <td>38</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB8</td>
-  <td class="name">Trevor Lawrence</td>
-  <td>JAX</td>
-  <td>156.4</td>
-  <td style="color:var(--fg3);">44–269</td>
-  <td>140</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB9</td>
-  <td class="name">Jayden Daniels</td>
-  <td>WAS</td>
-  <td>152.1</td>
-  <td style="color:var(--fg3);">4–300</td>
-  <td>30</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB10</td>
-  <td class="name">Dak Prescott</td>
-  <td>DAL</td>
-  <td>148.1</td>
-  <td style="color:var(--fg3);">0–300</td>
-  <td>104</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB11</td>
-  <td class="name">Brock Purdy</td>
-  <td>SF</td>
-  <td>145.9</td>
-  <td style="color:var(--fg3);">17–274</td>
-  <td>110</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">QB12</td>
-  <td class="name">Jordan Love</td>
-  <td>GB</td>
-  <td>145.2</td>
-  <td style="color:var(--fg3);">16–274</td>
+  <td class="name">Baker Mayfield</td>
+  <td>TB</td>
+  <td>259.2</td>
+  <td style="color:var(--fg3);">125–394</td>
   <td>131</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
-  <td class="rank">QB13</td>
+  <td class="rank">QB7</td>
+  <td class="name">Jalen Hurts</td>
+  <td>PHI</td>
+  <td>256.2</td>
+  <td style="color:var(--fg3);">108–404</td>
+  <td>97</td>
+  <td><span class="verdict medium">MED</span></td>
+</tr>
+<tr>
+  <td class="rank">QB8</td>
+  <td class="name">Sam Darnold</td>
+  <td>SEA</td>
+  <td>255.3</td>
+  <td style="color:var(--fg3);">124–387</td>
+  <td>148</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
+  <td class="rank">QB9</td>
+  <td class="name">Caleb Williams</td>
+  <td>CHI</td>
+  <td>251.1</td>
+  <td style="color:var(--fg3);">144–358</td>
+  <td>108</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
+  <td class="rank">QB10</td>
   <td class="name">Patrick Mahomes</td>
   <td>KC</td>
-  <td>142.5</td>
-  <td style="color:var(--fg3);">0–300</td>
-  <td>60</td>
+  <td>246.7</td>
+  <td style="color:var(--fg3);">95–399</td>
+  <td>75</td>
+  <td><span class="verdict medium">MED</span></td>
+</tr>
+<tr>
+  <td class="rank">QB11</td>
+  <td class="name">Bo Nix</td>
+  <td>DEN</td>
+  <td>244.9</td>
+  <td style="color:var(--fg3);">146–344</td>
+  <td>123</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
+  <td class="rank">QB12</td>
+  <td class="name">Matthew Stafford</td>
+  <td>LA</td>
+  <td>244.6</td>
+  <td style="color:var(--fg3);">157–333</td>
+  <td>105</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
+  <td class="rank">QB13</td>
+  <td class="name">Brock Purdy</td>
+  <td>SF</td>
+  <td>241.3</td>
+  <td style="color:var(--fg3);">119–363</td>
+  <td>107</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB14</td>
-  <td class="name">Justin Herbert</td>
-  <td>LAC</td>
-  <td>140.1</td>
-  <td style="color:var(--fg3);">0–325</td>
-  <td>115</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Jordan Love</td>
+  <td>GB</td>
+  <td>236.5</td>
+  <td style="color:var(--fg3);">105–368</td>
+  <td>135</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB15</td>
-  <td class="name">Jared Goff</td>
-  <td>DET</td>
-  <td>129.8</td>
-  <td style="color:var(--fg3);">0–278</td>
-  <td>101</td>
+  <td class="name">Jayden Daniels</td>
+  <td>WAS</td>
+  <td>227.1</td>
+  <td style="color:var(--fg3);">107–347</td>
+  <td>83</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB16</td>
-  <td class="name">Jaxson Dart</td>
-  <td>NYG</td>
-  <td>126.9</td>
-  <td style="color:var(--fg3);">0–350</td>
-  <td>—</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Drake Maye</td>
+  <td>NE</td>
+  <td>224.5</td>
+  <td style="color:var(--fg3);">102–347</td>
+  <td>63</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB17</td>
-  <td class="name">Sam Darnold</td>
-  <td>SEA</td>
-  <td>121.7</td>
-  <td style="color:var(--fg3);">0–301</td>
-  <td>183</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Trevor Lawrence</td>
+  <td>JAX</td>
+  <td>222.9</td>
+  <td style="color:var(--fg3);">118–328</td>
+  <td>87</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">QB18</td>
-  <td class="name">Cam Ward</td>
-  <td>TEN</td>
-  <td>121.6</td>
-  <td style="color:var(--fg3);">0–335</td>
-  <td>—</td>
+  <td class="name">Jaxson Dart</td>
+  <td>NYG</td>
+  <td>220.1</td>
+  <td style="color:var(--fg3);">54–386</td>
+  <td>127</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB19</td>
-  <td class="name">Shedeur Sanders</td>
-  <td>CLE</td>
-  <td>118.5</td>
-  <td style="color:var(--fg3);">0–342</td>
-  <td>—</td>
+  <td class="name">Dak Prescott</td>
+  <td>DAL</td>
+  <td>200.3</td>
+  <td style="color:var(--fg3);">58–343</td>
+  <td>62</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB20</td>
-  <td class="name">Baker Mayfield</td>
-  <td>TB</td>
-  <td>118.2</td>
-  <td style="color:var(--fg3);">0–276</td>
-  <td>70</td>
+  <td class="name">Aaron Rodgers</td>
+  <td>PIT</td>
+  <td>187.6</td>
+  <td style="color:var(--fg3);">76–299</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB21</td>
-  <td class="name">Lamar Jackson</td>
-  <td>BAL</td>
-  <td>117.4</td>
-  <td style="color:var(--fg3);">0–254</td>
-  <td>24</td>
+  <td class="name">Bryce Young</td>
+  <td>CAR</td>
+  <td>186.6</td>
+  <td style="color:var(--fg3);">58–316</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB22</td>
-  <td class="name">Kyler Murray</td>
-  <td>MIN</td>
-  <td>116.5</td>
-  <td style="color:var(--fg3);">0–266</td>
-  <td>96</td>
+  <td class="name">Cam Ward</td>
+  <td>TEN</td>
+  <td>177.7</td>
+  <td style="color:var(--fg3);">9–346</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB23</td>
   <td class="name">C.J. Stroud</td>
   <td>HOU</td>
-  <td>114.9</td>
-  <td style="color:var(--fg3);">3–227</td>
-  <td>132</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td>175.8</td>
+  <td style="color:var(--fg3);">63–289</td>
+  <td>—</td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB24</td>
-  <td class="name">Tua Tagovailoa</td>
-  <td>ATL</td>
-  <td>113.0</td>
-  <td style="color:var(--fg3);">0–281</td>
-  <td>154</td>
+  <td class="name">Geno Smith</td>
+  <td>NYJ</td>
+  <td>154.6</td>
+  <td style="color:var(--fg3);">44–265</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB25</td>
-  <td class="name">Bryce Young</td>
-  <td>CAR</td>
-  <td>101.4</td>
-  <td style="color:var(--fg3);">0–240</td>
-  <td>165</td>
+  <td class="name">Kyler Murray</td>
+  <td>MIN</td>
+  <td>153.0</td>
+  <td style="color:var(--fg3);">45–261</td>
+  <td>150</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB26</td>
-  <td class="name">Kirk Cousins</td>
-  <td>LV</td>
-  <td>93.2</td>
-  <td style="color:var(--fg3);">0–226</td>
+  <td class="name">Tyler Shough</td>
+  <td>NO</td>
+  <td>152.2</td>
+  <td style="color:var(--fg3);">0–343</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB27</td>
-  <td class="name">Aaron Rodgers</td>
-  <td>PIT</td>
-  <td>91.3</td>
-  <td style="color:var(--fg3);">0–219</td>
-  <td>186</td>
+  <td class="name">Fernando Mendoza</td>
+  <td>LV</td>
+  <td>151.5</td>
+  <td style="color:var(--fg3);">0–315</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB28</td>
-  <td class="name">Geno Smith</td>
-  <td>NYJ</td>
-  <td>88.3</td>
-  <td style="color:var(--fg3);">0–240</td>
-  <td>175</td>
+  <td class="name">Tua Tagovailoa</td>
+  <td>ATL</td>
+  <td>148.2</td>
+  <td style="color:var(--fg3);">1–296</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB29</td>
-  <td class="name">Spencer Rattler</td>
-  <td>NO</td>
-  <td>84.1</td>
-  <td style="color:var(--fg3);">0–238</td>
+  <td class="name">Malik Willis</td>
+  <td>MIA</td>
+  <td>146.5</td>
+  <td style="color:var(--fg3);">6–287</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB30</td>
-  <td class="name">J.J. McCarthy</td>
-  <td>MIN</td>
-  <td>80.3</td>
-  <td style="color:var(--fg3);">0–215</td>
-  <td>139</td>
+  <td class="name">Jacoby Brissett</td>
+  <td>ARI</td>
+  <td>131.9</td>
+  <td style="color:var(--fg3);">0–287</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB31</td>
-  <td class="name">Fernando Mendoza</td>
-  <td>LV</td>
-  <td>79.0</td>
-  <td style="color:var(--fg3);">0–298</td>
-  <td>0</td>
+  <td class="name">Sam Howell</td>
+  <td>DAL</td>
+  <td>130.7</td>
+  <td style="color:var(--fg3);">38–224</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">QB32</td>
-  <td class="name">Jacob Clark</td>
-  <td>LV</td>
-  <td>77.3</td>
-  <td style="color:var(--fg3);">0–307</td>
-  <td>0</td>
+  <td class="name">Shedeur Sanders</td>
+  <td>CLE</td>
+  <td>130.2</td>
+  <td style="color:var(--fg3);">0–328</td>
+  <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr></tbody>
 </table>
@@ -450,11 +450,11 @@ footer a:hover{color:var(--green);}
 
 <div class="callout">
   <h3>How to read this table</h3>
-  <p><strong>Proj Pts</strong>: half-PPR fantasy points our model expects over the full 2026 season. <strong>80% CI</strong>: the interval 80% of actual outcomes should fall inside, based on 2025 calibration. A wide CI means more uncertainty — injury-prone players and rookies have wider intervals. <strong>ADP</strong>: half-PPR consensus average draft position from Fantasy Football Calculator. <strong>Risk</strong>: relative coefficient of variation (CI width / projection) bucketed into position quartiles.</p>
+  <p><strong>Proj Pts</strong>: half-PPR fantasy points the point model estimates over the full 2026 season. <strong>80% CI</strong>: a split-conformal range with an 80% marginal-coverage target, calibrated on 2025 rows. A wide range means more uncertainty. <strong>ADP</strong>: current half-PPR average draft position. <strong>Risk</strong>: relative interval width bucketed within position.</p>
 </div>
 
-<h2>What the model gets right that ADP misses</h2>
-<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>6% of actual fantasy-point variance</strong>. Our model explained <strong>57%</strong> — roughly <a class="inline" href="/methodology/">9× more variance explained</a>.</p>
+<h2>How the results were measured</h2>
+<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 
     <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/methodology/">Methodology</a></div>
@@ -468,7 +468,7 @@ footer a:hover{color:var(--green);}
     
   </div></main>
 <footer>
-  <div>Updated April 30, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated July 20, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
 </footer>
 </body>
 </html>

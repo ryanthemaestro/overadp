@@ -12,17 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP</title>
-<meta name="description" content="Top 24 2026 fantasy football TE rankings with calibrated 80% confidence intervals. ML model cut TE MAE by 37% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta name="description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.58; R²: 0.55. Updated July 2026.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/2026/te-rankings/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP">
-<meta property="og:description" content="Top 24 2026 fantasy football TE rankings with calibrated 80% confidence intervals. ML model cut TE MAE by 37% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta property="og:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.58; R²: 0.55. Updated July 2026.">
 <meta property="og:url" content="https://overadp.com/2026/te-rankings/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP">
-<meta name="twitter:description" content="Top 24 2026 fantasy football TE rankings with calibrated 80% confidence intervals. ML model cut TE MAE by 37% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.">
+<meta name="twitter:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.58; R²: 0.55. Updated July 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -104,11 +104,11 @@ footer a:hover{color:var(--green);}
   "@context":"https://schema.org",
   "@type":"Article",
   "headline":"2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP",
-  "description":"Top 24 2026 fantasy football TE rankings with calibrated 80% confidence intervals. ML model cut TE MAE by 37% vs ADP on 2022-2025 walk-forward validation. Updated April 2026.",
+  "description":"Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.58; R²: 0.55. Updated July 2026.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
-  "datePublished":"2026-04-30",
-  "dateModified":"2026-04-30",
+  "datePublished":"2026-07-20",
+  "dateModified":"2026-07-20",
   "mainEntityOfPage":"https://overadp.com/2026/te-rankings/"
 }
 </script>
@@ -132,16 +132,16 @@ footer a:hover{color:var(--green);}
 <div class="crumbs"><a href="/">Home</a> / 2026 Rankings / TE</div>
 <div class="section-tag">2026 TE Rankings</div>
 <h1>2026 Fantasy <span class="accent">TE Rankings</span></h1>
-<p class="lead">The top 24 TEs for 2026 half-PPR leagues, ranked by our machine-learning model's projected fantasy points. Each projection comes with a calibrated 80% confidence interval — meaning 83% of actual outcomes fell inside our intervals in 2025 walk-forward testing.</p>
+<p class="lead">The top 24 TEs for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
 
 <div class="meta-strip">
-  <span>📊 Model: <strong>CatBoost ensemble + CQR</strong></span>
-  <span>🎯 Validation: <strong>walk-forward on 2019-2025</strong></span>
+  <span>📊 Model: <strong>position-specific CatBoost + split CQR</strong></span>
+  <span>🎯 Point-model tests: <strong>2024 and 2025</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🔄 Updated: <strong>April 30, 2026</strong></span>
+  <span>🔄 Updated: <strong>July 20, 2026</strong></span>
 </div>
 
-<p>Tight end is the highest-variance fantasy position. Most years, a handful of TEs produce and the rest are streamers. Our model cuts TE MAE by <strong>37% vs ADP</strong> — and the TE R² lift is one of the largest of any position (0.56 vs 0.03, a 20× improvement).</p>
+<p>Tight-end production is sparse and role-sensitive, so TE uses its own feature set and error profile. Across the 2024-2025 test folds, TE posted <strong>23.58 MAE</strong> and <strong>0.55 R²</strong> over 223 player-season predictions.</p>
 
 
 <table class="rank">
@@ -161,170 +161,170 @@ footer a:hover{color:var(--green);}
   <td class="rank">TE1</td>
   <td class="name">Trey McBride</td>
   <td>ARI</td>
-  <td>130.8</td>
-  <td style="color:var(--fg3);">49–212</td>
-  <td>26</td>
+  <td>165.2</td>
+  <td style="color:var(--fg3);">120–211</td>
+  <td>37</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE2</td>
   <td class="name">Brock Bowers</td>
   <td>LV</td>
-  <td>93.6</td>
-  <td style="color:var(--fg3);">27–160</td>
-  <td>18</td>
+  <td>131.5</td>
+  <td style="color:var(--fg3);">87–176</td>
+  <td>42</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE3</td>
-  <td class="name">Travis Kelce</td>
-  <td>KC</td>
-  <td>89.1</td>
-  <td style="color:var(--fg3);">46–132</td>
-  <td>70</td>
+  <td class="name">Kyle Pitts</td>
+  <td>ATL</td>
+  <td>130.0</td>
+  <td style="color:var(--fg3);">84–176</td>
+  <td>94</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE4</td>
-  <td class="name">George Kittle</td>
-  <td>SF</td>
-  <td>88.5</td>
-  <td style="color:var(--fg3);">40–137</td>
-  <td>39</td>
+  <td class="name">Dallas Goedert</td>
+  <td>PHI</td>
+  <td>127.5</td>
+  <td style="color:var(--fg3);">78–177</td>
+  <td>131</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE5</td>
-  <td class="name">Jonnu Smith</td>
-  <td>PIT</td>
-  <td>79.9</td>
-  <td style="color:var(--fg3);">25–135</td>
-  <td>118</td>
+  <td class="name">Travis Kelce</td>
+  <td>KC</td>
+  <td>125.1</td>
+  <td style="color:var(--fg3);">65–185</td>
+  <td>113</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE6</td>
-  <td class="name">Tucker Kraft</td>
-  <td>GB</td>
-  <td>75.2</td>
-  <td style="color:var(--fg3);">22–128</td>
-  <td>108</td>
+  <td class="name">Hunter Henry</td>
+  <td>NE</td>
+  <td>117.8</td>
+  <td style="color:var(--fg3);">64–172</td>
+  <td>151</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE7</td>
-  <td class="name">Dalton Kincaid</td>
-  <td>BUF</td>
-  <td>73.9</td>
-  <td style="color:var(--fg3);">25–122</td>
-  <td>127</td>
+  <td class="name">Jake Ferguson</td>
+  <td>DAL</td>
+  <td>117.8</td>
+  <td style="color:var(--fg3);">70–166</td>
+  <td>128</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE8</td>
-  <td class="name">Kenyon Sadiq</td>
-  <td>NYJ</td>
-  <td>73.9</td>
-  <td style="color:var(--fg3);">0–183</td>
-  <td>0</td>
+  <td class="name">Tyler Warren</td>
+  <td>IND</td>
+  <td>114.6</td>
+  <td style="color:var(--fg3);">33–196</td>
+  <td>62</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE9</td>
-  <td class="name">Zach Ertz</td>
-  <td>WAS</td>
-  <td>73.2</td>
-  <td style="color:var(--fg3);">29–118</td>
-  <td>164</td>
+  <td class="name">Tucker Kraft</td>
+  <td>GB</td>
+  <td>113.1</td>
+  <td style="color:var(--fg3);">48–178</td>
+  <td>77</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE10</td>
-  <td class="name">Hunter Henry</td>
-  <td>NE</td>
-  <td>72.4</td>
-  <td style="color:var(--fg3);">1–143</td>
-  <td>154</td>
+  <td class="name">Juwan Johnson</td>
+  <td>NO</td>
+  <td>112.3</td>
+  <td style="color:var(--fg3);">58–167</td>
+  <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE11</td>
-  <td class="name">Kyle Pitts</td>
-  <td>ATL</td>
-  <td>71.7</td>
-  <td style="color:var(--fg3);">16–128</td>
-  <td>140</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td class="name">Colston Loveland</td>
+  <td>CHI</td>
+  <td>112.1</td>
+  <td style="color:var(--fg3);">28–196</td>
+  <td>56</td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE12</td>
-  <td class="name">Mark Andrews</td>
-  <td>BAL</td>
-  <td>69.1</td>
-  <td style="color:var(--fg3);">28–110</td>
-  <td>88</td>
+  <td class="name">Sam LaPorta</td>
+  <td>DET</td>
+  <td>111.1</td>
+  <td style="color:var(--fg3);">58–164</td>
+  <td>80</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE13</td>
-  <td class="name">Dallas Goedert</td>
-  <td>PHI</td>
-  <td>66.1</td>
-  <td style="color:var(--fg3);">0–134</td>
-  <td>142</td>
+  <td class="name">Dalton Kincaid</td>
+  <td>BUF</td>
+  <td>107.3</td>
+  <td style="color:var(--fg3);">54–160</td>
+  <td>143</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE14</td>
-  <td class="name">Sam LaPorta</td>
-  <td>DET</td>
-  <td>65.3</td>
-  <td style="color:var(--fg3);">17–113</td>
-  <td>58</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">TE15</td>
-  <td class="name">Colston Loveland</td>
-  <td>CHI</td>
-  <td>63.9</td>
-  <td style="color:var(--fg3);">0–166</td>
-  <td>116</td>
+  <td class="name">Harold Fannin Jr.</td>
+  <td>CLE</td>
+  <td>106.3</td>
+  <td style="color:var(--fg3);">30–182</td>
+  <td>80</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
+  <td class="rank">TE15</td>
+  <td class="name">George Kittle</td>
+  <td>SF</td>
+  <td>103.6</td>
+  <td style="color:var(--fg3);">50–157</td>
+  <td>108</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
   <td class="rank">TE16</td>
-  <td class="name">Jake Ferguson</td>
-  <td>DAL</td>
-  <td>63.8</td>
-  <td style="color:var(--fg3);">40–87</td>
-  <td>124</td>
+  <td class="name">Mark Andrews</td>
+  <td>BAL</td>
+  <td>98.9</td>
+  <td style="color:var(--fg3);">46–152</td>
+  <td>122</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE17</td>
-  <td class="name">Tyler Warren</td>
-  <td>IND</td>
-  <td>62.9</td>
-  <td style="color:var(--fg3);">0–161</td>
-  <td>96</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Isaiah Likely</td>
+  <td>NYG</td>
+  <td>98.3</td>
+  <td style="color:var(--fg3);">36–160</td>
+  <td>151</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE18</td>
-  <td class="name">T.J. Hockenson</td>
-  <td>MIN</td>
-  <td>59.1</td>
-  <td style="color:var(--fg3);">5–113</td>
-  <td>68</td>
+  <td class="name">Dalton Schultz</td>
+  <td>HOU</td>
+  <td>91.9</td>
+  <td style="color:var(--fg3);">41–143</td>
+  <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE19</td>
   <td class="name">Pat Freiermuth</td>
   <td>PIT</td>
-  <td>58.0</td>
-  <td style="color:var(--fg3);">17–99</td>
+  <td>87.8</td>
+  <td style="color:var(--fg3);">44–132</td>
   <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
@@ -332,57 +332,57 @@ footer a:hover{color:var(--green);}
   <td class="rank">TE20</td>
   <td class="name">Chig Okonkwo</td>
   <td>WAS</td>
-  <td>58.0</td>
-  <td style="color:var(--fg3);">7–109</td>
+  <td>87.2</td>
+  <td style="color:var(--fg3);">32–142</td>
   <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE21</td>
-  <td class="name">Quentin Moore</td>
-  <td>WAS</td>
-  <td>57.9</td>
-  <td style="color:var(--fg3);">0–164</td>
-  <td>0</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Cade Otton</td>
+  <td>TB</td>
+  <td>86.9</td>
+  <td style="color:var(--fg3);">36–137</td>
+  <td>—</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE22</td>
-  <td class="name">Dalton Schultz</td>
-  <td>HOU</td>
-  <td>57.4</td>
-  <td style="color:var(--fg3);">4–110</td>
+  <td class="name">Oronde Gadsden II</td>
+  <td>LAC</td>
+  <td>76.7</td>
+  <td style="color:var(--fg3);">10–144</td>
   <td>—</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE23</td>
-  <td class="name">Evan Engram</td>
-  <td>DEN</td>
-  <td>56.7</td>
-  <td style="color:var(--fg3);">5–108</td>
-  <td>91</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td class="name">T.J. Hockenson</td>
+  <td>MIN</td>
+  <td>75.0</td>
+  <td style="color:var(--fg3);">22–128</td>
+  <td>—</td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE24</td>
-  <td class="name">Juwan Johnson</td>
-  <td>NO</td>
-  <td>54.8</td>
-  <td style="color:var(--fg3);">0–115</td>
+  <td class="name">AJ Barner</td>
+  <td>SEA</td>
+  <td>74.4</td>
+  <td style="color:var(--fg3);">30–119</td>
   <td>—</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr></tbody>
 </table>
 
 
 <div class="callout">
   <h3>How to read this table</h3>
-  <p><strong>Proj Pts</strong>: half-PPR fantasy points our model expects over the full 2026 season. <strong>80% CI</strong>: the interval 80% of actual outcomes should fall inside, based on 2025 calibration. A wide CI means more uncertainty — injury-prone players and rookies have wider intervals. <strong>ADP</strong>: half-PPR consensus average draft position from Fantasy Football Calculator. <strong>Risk</strong>: relative coefficient of variation (CI width / projection) bucketed into position quartiles.</p>
+  <p><strong>Proj Pts</strong>: half-PPR fantasy points the point model estimates over the full 2026 season. <strong>80% CI</strong>: a split-conformal range with an 80% marginal-coverage target, calibrated on 2025 rows. A wide range means more uncertainty. <strong>ADP</strong>: current half-PPR average draft position. <strong>Risk</strong>: relative interval width bucketed within position.</p>
 </div>
 
-<h2>What the model gets right that ADP misses</h2>
-<p>ADP is a wisdom-of-the-crowd signal — it reflects what drafters collectively think, not what actually happens. In our 2022-2025 walk-forward validation, consensus ADP explained only <strong>6% of actual fantasy-point variance</strong>. Our model explained <strong>57%</strong> — roughly <a class="inline" href="/methodology/">9× more variance explained</a>.</p>
+<h2>How the results were measured</h2>
+<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 
     <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/methodology/">Methodology</a></div>
@@ -396,7 +396,7 @@ footer a:hover{color:var(--green);}
     
   </div></main>
 <footer>
-  <div>Updated April 30, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated July 20, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
 </footer>
 </body>
 </html>
