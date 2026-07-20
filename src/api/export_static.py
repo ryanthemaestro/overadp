@@ -191,11 +191,9 @@ def apply_current_adp_to_projection_rows(df, adp_data, projection_season):
         return df
 
     def norm_name(s):
-        s = pd.Series(s).astype(str).str.lower().str.strip()
-        s = s.str.replace(r"\s+(jr\.?|sr\.?|ii|iii|iv|v)$", "", regex=True)
-        s = s.str.replace("'", "", regex=False).str.replace("-", "", regex=False)
-        s = s.str.replace(".", "", regex=False)
-        return s
+        from src.data.sleeper_rosters import _normalize_name
+
+        return pd.Series(s).map(_normalize_name)
 
     current["_adp_key"] = norm_name(current["player_name"]) + "|" + current["position"].astype(str).str.upper()
     current = current.dropna(subset=["adp"]).drop_duplicates("_adp_key", keep="first")
@@ -204,7 +202,12 @@ def apply_current_adp_to_projection_rows(df, adp_data, projection_season):
     out["_adp_key"] = norm_name(out["player_name"]) + "|" + out["position"].astype(str).str.upper()
     adp_map = current.set_index("_adp_key")["adp"]
     cur_adp = out["_adp_key"].map(adp_map)
-    matched = cur_adp.notna()
+    projection_mask = (
+        out["season"].eq(projection_season)
+        if "season" in out.columns
+        else pd.Series(True, index=out.index)
+    )
+    matched = projection_mask & cur_adp.notna()
     if matched.any():
         out.loc[matched, "adp"] = cur_adp[matched].clip(upper=200)
     if "adp" in out.columns:
@@ -488,6 +491,10 @@ def main():
         adp_seasons = list(range(min(seasons), projection_season + 1))
         adp_data = fetch_adp_data(seasons=adp_seasons)
         df = compute_adp_features(df, adp_data)
+        # The validated matcher intentionally stays conservative on historical
+        # rows. For the live projection season, apply the exact current-name
+        # override so newly added rookies receive their real draft price.
+        df = apply_current_adp_to_projection_rows(df, adp_data, projection_season)
     except Exception as e:
         print(f"  Warning: ADP fetch/merge failed ({e.__class__.__name__}: {e}). Projections will lack ADP feature.")
         adp_data = None
