@@ -88,8 +88,9 @@ average rank. That is not a production-quality win.
 
 Before changing production rankings:
 
-1. Add real Sleeper draft distributions and at least one more point-in-time
-   season.
+1. Replace the fixed ADP spread with the validated FFC historical distributions,
+   then add exact Sleeper draft sequences or another roster-context source and
+   at least one more point-in-time season.
 2. Evaluate at least 200 drafts per important format family, not sparse random
    one-off formats.
 3. Require the paired starter-point confidence interval versus guarded to have
