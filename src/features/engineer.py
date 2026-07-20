@@ -157,6 +157,22 @@ def compute_ol_rb_features(df: pd.DataFrame) -> pd.DataFrame:
         df["ol_quality_tier"] = pd.cut(
             df["team_rush_ypa"], bins=[0, 3.5, 4.2, 5.0, 99], labels=[1, 2, 3, 4],
         ).astype(float).fillna(2)
+        team_ol = (
+            df[["team", "season", "team_rush_ypa"]]
+            .drop_duplicates(["team", "season"])
+            .sort_values(["team", "season"])
+        )
+        team_ol["team_rush_ypa_lag1"] = team_ol.groupby("team")["team_rush_ypa"].shift(1)
+        team_ol["ol_quality_tier_lag1"] = pd.cut(
+            team_ol["team_rush_ypa_lag1"], bins=[0, 3.5, 4.2, 5.0, 99], labels=[1, 2, 3, 4],
+        ).astype(float)
+        df = df.merge(
+            team_ol[["team", "season", "team_rush_ypa_lag1", "ol_quality_tier_lag1"]],
+            on=["team", "season"],
+            how="left",
+        )
+        df["team_rush_ypa_lag1"] = df["team_rush_ypa_lag1"].fillna(df["team_rush_ypa_lag1"].median()).fillna(0)
+        df["ol_quality_tier_lag1"] = df["ol_quality_tier_lag1"].fillna(2)
 
     if "team_rush_td_rate" in df.columns and "rushing_tds" in df.columns:
         team_rush_tds = df.groupby(["team", "season"])["rushing_tds"].transform("sum")
@@ -409,6 +425,44 @@ def compute_regression_to_mean_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _merge_team_season_lag(
+    df: pd.DataFrame,
+    value_col: str,
+    lag_col: Optional[str] = None,
+    default: float = 0.0,
+) -> pd.DataFrame:
+    """Lag a team-level value once per season, then merge it to player rows.
+
+    Calling ``groupby('team').shift(1)`` on a player-grain frame shifts by one
+    player, not one season. This helper establishes a unique team-season grain
+    before shifting so every player on a team receives the same prior value.
+    """
+    if value_col not in df.columns or not {"team", "season"}.issubset(df.columns):
+        return df
+    lag_col = lag_col or f"{value_col}_lag1"
+    lookup = df[["team", "season", value_col]].copy()
+    lookup[value_col] = pd.to_numeric(lookup[value_col], errors="coerce")
+    lookup = (
+        lookup.groupby(["team", "season"], as_index=False, dropna=False)[value_col]
+        .median()
+        .sort_values(["team", "season"])
+    )
+    lookup[lag_col] = lookup.groupby("team", dropna=False)[value_col].shift(1)
+    fallback = lookup[lag_col].median()
+    if pd.isna(fallback):
+        fallback = lookup[value_col].median()
+    if pd.isna(fallback):
+        fallback = default
+    lookup[lag_col] = lookup[lag_col].fillna(float(fallback))
+    out = df.drop(columns=[lag_col], errors="ignore")
+    return out.merge(
+        lookup[["team", "season", lag_col]],
+        on=["team", "season"],
+        how="left",
+        validate="many_to_one",
+    )
+
+
 def compute_sos_features(df: pd.DataFrame, team_df: Optional[pd.DataFrame] = None,
                          full_seasonal_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """Strength of Schedule features — who you face matters.
@@ -528,10 +582,195 @@ def compute_sos_features(df: pd.DataFrame, team_df: Optional[pd.DataFrame] = Non
     # in the current season, which correlates with current-season player performance.
     for c in ['def_rank', 'pass_def_rank', 'def_pts_allowed']:
         if c in df.columns:
-            lag_col = f'{c}_lag1'
-            df[lag_col] = df.groupby('team')[c].shift(1)
-            df[lag_col] = df[lag_col].fillna(df[c].median() if c in df.columns else 16)
+            df = _merge_team_season_lag(
+                df,
+                value_col=c,
+                lag_col=f'{c}_lag1',
+                default=16.0 if "rank" in c else 0.0,
+            )
 
+    return df
+
+
+def _prior_defense_rank_lookup(full_seasonal_df: Optional[pd.DataFrame]) -> pd.DataFrame:
+    """Build prior-season defensive rank lookup for schedule-based SOS.
+
+    A row for team-season 2025 becomes a lookup row for schedule season 2026,
+    so projection rows only see defensive strength that was already known when
+    the 2026 schedule was released.
+    """
+    if full_seasonal_df is None or full_seasonal_df.empty:
+        return pd.DataFrame(columns=["team", "season", "opp_def_rank", "opp_pass_def_rank"])
+
+    seasonal = full_seasonal_df.copy()
+    if "team" not in seasonal.columns or "season" not in seasonal.columns:
+        return pd.DataFrame(columns=["team", "season", "opp_def_rank", "opp_pass_def_rank"])
+
+    from src.data.clean import normalize_teams
+    seasonal = normalize_teams(seasonal, "team")
+
+    agg_cols = {}
+    for c in [
+        "def_sacks", "def_interceptions", "def_pass_defended", "def_tds",
+        "def_tackles_for_loss", "def_qb_hits", "def_fumbles_forced",
+    ]:
+        if c in seasonal.columns:
+            agg_cols[c] = "sum"
+
+    if not agg_cols:
+        return pd.DataFrame(columns=["team", "season", "opp_def_rank", "opp_pass_def_rank"])
+
+    team_def = seasonal.groupby(["team", "season"]).agg(agg_cols).reset_index()
+
+    score_parts = []
+    if "def_sacks" in team_def.columns:
+        score_parts.append(team_def["def_sacks"] * 1.0)
+    if "def_interceptions" in team_def.columns:
+        score_parts.append(team_def["def_interceptions"] * 2.0)
+    if "def_tackles_for_loss" in team_def.columns:
+        score_parts.append(team_def["def_tackles_for_loss"] * 0.5)
+    if "def_qb_hits" in team_def.columns:
+        score_parts.append(team_def["def_qb_hits"] * 0.3)
+    if "def_fumbles_forced" in team_def.columns:
+        score_parts.append(team_def["def_fumbles_forced"] * 1.5)
+
+    if score_parts:
+        team_def["def_score"] = sum(score_parts)
+        team_def["opp_def_rank"] = team_def.groupby("season")["def_score"].rank(ascending=False)
+    else:
+        team_def["opp_def_rank"] = 16.5
+
+    pass_parts = []
+    if "def_interceptions" in team_def.columns:
+        pass_parts.append(team_def["def_interceptions"] * 1.0)
+    if "def_pass_defended" in team_def.columns:
+        pass_parts.append(team_def["def_pass_defended"] * 0.5)
+
+    if pass_parts:
+        team_def["pass_def_score"] = sum(pass_parts)
+        team_def["opp_pass_def_rank"] = team_def.groupby("season")["pass_def_score"].rank(ascending=False)
+    else:
+        team_def["opp_pass_def_rank"] = team_def["opp_def_rank"]
+
+    lookup = team_def[["team", "season", "opp_def_rank", "opp_pass_def_rank"]].copy()
+    lookup["season"] = lookup["season"] + 1
+    return lookup
+
+
+def compute_schedule_sos_features(
+    df: pd.DataFrame,
+    schedule_df: Optional[pd.DataFrame] = None,
+    full_seasonal_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """Add schedule-derived strength-of-schedule features.
+
+    Uses the released schedule plus each opponent's prior-season defensive
+    rank. This is safe for walk-forward validation and projection because it
+    avoids current-season results.
+    """
+    df = df.copy()
+    if schedule_df is None or schedule_df.empty:
+        return df
+    if "team" not in df.columns or "season" not in df.columns:
+        return df
+    required = {"season", "home_team", "away_team"}
+    if not required.issubset(schedule_df.columns):
+        return df
+
+    from src.data.clean import normalize_teams
+    df["_schedule_sos_order"] = np.arange(len(df))
+
+    sch = schedule_df.copy()
+    if "game_type" in sch.columns:
+        sch = sch[sch["game_type"] == "REG"].copy()
+    if sch.empty:
+        return df
+
+    sch = normalize_teams(sch, "home_team")
+    sch = normalize_teams(sch, "away_team")
+
+    common_cols = ["season", "week"]
+    for c in ["div_game", "roof", "home_rest", "away_rest"]:
+        if c in sch.columns and c not in common_cols:
+            common_cols.append(c)
+
+    home = sch[common_cols + ["home_team", "away_team"]].rename(
+        columns={"home_team": "team", "away_team": "opponent", "home_rest": "rest", "away_rest": "opp_rest"}
+    )
+    home["is_home"] = 1
+    away = sch[common_cols + ["away_team", "home_team"]].rename(
+        columns={"away_team": "team", "home_team": "opponent", "away_rest": "rest", "home_rest": "opp_rest"}
+    )
+    away["is_home"] = 0
+    long = pd.concat([home, away], ignore_index=True)
+
+    lookup = _prior_defense_rank_lookup(full_seasonal_df)
+    if not lookup.empty:
+        long = long.merge(
+            lookup.rename(columns={"team": "opponent"}),
+            on=["opponent", "season"],
+            how="left",
+        )
+    else:
+        long["opp_def_rank"] = 16.5
+        long["opp_pass_def_rank"] = 16.5
+
+    long["opp_def_rank"] = long["opp_def_rank"].fillna(16.5)
+    long["opp_pass_def_rank"] = long["opp_pass_def_rank"].fillna(16.5)
+    long["top8_def"] = (long["opp_def_rank"] <= 8).astype(int)
+    long["bottom8_def"] = (long["opp_def_rank"] >= 25).astype(int)
+    long["top8_pass_def"] = (long["opp_pass_def_rank"] <= 8).astype(int)
+    long["bottom8_pass_def"] = (long["opp_pass_def_rank"] >= 25).astype(int)
+
+    if "div_game" not in long.columns:
+        long["div_game"] = 0
+    long["div_game"] = pd.to_numeric(long["div_game"], errors="coerce").fillna(0)
+
+    if "rest" in long.columns and "opp_rest" in long.columns:
+        long["rest_advantage"] = (
+            pd.to_numeric(long["rest"], errors="coerce").fillna(0)
+            - pd.to_numeric(long["opp_rest"], errors="coerce").fillna(0)
+        )
+    else:
+        long["rest_advantage"] = 0
+
+    if "roof" in long.columns:
+        roof = long["roof"].fillna("").astype(str).str.lower()
+        long["is_dome_game"] = roof.isin(["dome", "closed"]).astype(int)
+    else:
+        long["is_dome_game"] = 0
+
+    sched = long.groupby(["team", "season"]).agg(
+        schedule_games=("opponent", "count"),
+        schedule_opp_def_rank=("opp_def_rank", "mean"),
+        schedule_opp_pass_def_rank=("opp_pass_def_rank", "mean"),
+        schedule_top8_def_games=("top8_def", "sum"),
+        schedule_bottom8_def_games=("bottom8_def", "sum"),
+        schedule_top8_pass_def_games=("top8_pass_def", "sum"),
+        schedule_bottom8_pass_def_games=("bottom8_pass_def", "sum"),
+        schedule_home_games=("is_home", "sum"),
+        schedule_division_games=("div_game", "sum"),
+        schedule_rest_advantage=("rest_advantage", "mean"),
+        schedule_dome_games=("is_dome_game", "sum"),
+    ).reset_index()
+
+    df = normalize_teams(df, "team")
+    feature_cols = [c for c in sched.columns if c not in {"team", "season"}]
+    df = df.drop(columns=[c for c in feature_cols if c in df.columns], errors="ignore")
+    df = df.merge(sched, on=["team", "season"], how="left")
+
+    rank_cols = ["schedule_opp_def_rank", "schedule_opp_pass_def_rank"]
+    count_cols = [c for c in feature_cols if c not in rank_cols + ["schedule_rest_advantage"]]
+    for c in rank_cols:
+        if c in df.columns:
+            df[c] = df[c].fillna(16.5)
+    for c in count_cols:
+        if c in df.columns:
+            df[c] = df[c].fillna(0)
+    if "schedule_rest_advantage" in df.columns:
+        df["schedule_rest_advantage"] = df["schedule_rest_advantage"].fillna(0)
+
+    df = df.sort_values("_schedule_sos_order").drop(columns=["_schedule_sos_order"])
     return df
 
 
@@ -602,17 +841,27 @@ def compute_stacking_features(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     # Compute QB fantasy points per team per season
-    qb_pts = df[df['position'] == 'QB'].groupby(['team', 'season'])['fantasy_points'].mean().reset_index()
-    qb_pts = qb_pts.rename(columns={'fantasy_points': 'team_qb_avg_pts_raw'})
+    qb_pts = (
+        df[df['position'] == 'QB']
+        .groupby(['team', 'season'], as_index=False)['fantasy_points']
+        .mean()
+        .sort_values(['team', 'season'])
+    )
+    qb_pts['team_qb_avg_pts'] = qb_pts.groupby('team')['fantasy_points'].shift(1)
+    fallback = qb_pts['team_qb_avg_pts'].median()
+    if pd.isna(fallback):
+        fallback = qb_pts['fantasy_points'].median()
+    if pd.isna(fallback):
+        fallback = 0.0
+    qb_pts['team_qb_avg_pts'] = qb_pts['team_qb_avg_pts'].fillna(float(fallback))
 
-    df = df.merge(qb_pts, on=['team', 'season'], how='left')
-
-    # Lag by team: use PREVIOUS season's QB points (prevents leakage)
-    if 'team_qb_avg_pts_raw' in df.columns:
-        df['team_qb_avg_pts'] = df.groupby('team')['team_qb_avg_pts_raw'].shift(1)
-        df['team_qb_avg_pts'] = df['team_qb_avg_pts'].fillna(df['team_qb_avg_pts_raw'].median())
-        # Drop the raw (current-season) version
-        df.drop(columns=['team_qb_avg_pts_raw'], inplace=True)
+    df = df.drop(columns=['team_qb_avg_pts'], errors='ignore').merge(
+        qb_pts[['team', 'season', 'team_qb_avg_pts']],
+        on=['team', 'season'],
+        how='left',
+        validate='many_to_one',
+    )
+    df['team_qb_avg_pts'] = df['team_qb_avg_pts'].fillna(float(fallback))
 
     # Flag: is this player on the same team as a high-scoring QB?
     if 'team_qb_avg_pts' in df.columns:
@@ -1004,6 +1253,348 @@ def compute_playmaker_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def compute_advanced_stat_lag_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Lag nflverse advanced efficiency/usage stats.
+
+    These source columns describe the current season, so the model should only
+    receive prior-season values. Missing values are expected for rookies and
+    players without prior qualifying usage.
+    """
+    df = df.copy()
+    df["_advanced_lag_order"] = np.arange(len(df))
+    df = df.sort_values(["player_id", "season"])
+
+    advanced_cols = [
+        "passing_epa", "passing_cpoe", "pacr", "passing_air_yards",
+        "passing_yards_after_catch", "passing_first_downs",
+        "rushing_epa", "rushing_first_downs",
+        "receiving_epa", "receiving_air_yards", "receiving_yards_after_catch",
+        "receiving_first_downs", "air_yards_share",
+    ]
+
+    for c in advanced_cols:
+        if c in df.columns:
+            lag_col = f"{c}_lag1"
+            df[lag_col] = df.groupby("player_id")[c].shift(1)
+            df[lag_col] = df[lag_col].fillna(0)
+
+    df = df.sort_values("_advanced_lag_order").drop(columns=["_advanced_lag_order"])
+    return df
+
+
+def _weighted_average(group: pd.DataFrame, value_col: str, weight_col: str) -> float:
+    values = pd.to_numeric(group[value_col], errors="coerce")
+    weights = pd.to_numeric(group[weight_col], errors="coerce").fillna(0)
+    valid = values.notna() & (weights > 0)
+    if valid.any():
+        return float(np.average(values[valid], weights=weights[valid]))
+    if values.notna().any():
+        return float(values.mean())
+    return 0.0
+
+
+def _aggregate_ngs_stat(stat_df: pd.DataFrame, stat_type: str) -> pd.DataFrame:
+    """Aggregate weekly NGS rows to one player-season row."""
+    if stat_df is None or stat_df.empty or "season" not in stat_df.columns:
+        return pd.DataFrame()
+
+    df = stat_df.copy()
+    if "season_type" in df.columns:
+        df = df[df["season_type"] == "REG"].copy()
+    if df.empty:
+        return pd.DataFrame()
+
+    id_col = "player_gsis_id" if "player_gsis_id" in df.columns else None
+    if id_col is None:
+        return pd.DataFrame()
+
+    group_cols = [id_col, "season"]
+    if stat_type == "passing":
+        weight_col = "attempts"
+        features = [
+            "avg_time_to_throw",
+            "avg_completed_air_yards",
+            "avg_intended_air_yards",
+            "avg_air_yards_differential",
+            "aggressiveness",
+            "avg_air_yards_to_sticks",
+            "completion_percentage_above_expectation",
+        ]
+    elif stat_type == "rushing":
+        weight_col = "rush_attempts"
+        features = [
+            "efficiency",
+            "percent_attempts_gte_eight_defenders",
+            "avg_time_to_los",
+            "expected_rush_yards",
+            "rush_yards_over_expected",
+            "rush_yards_over_expected_per_att",
+            "rush_pct_over_expected",
+        ]
+    elif stat_type == "receiving":
+        weight_col = "targets"
+        features = [
+            "avg_cushion",
+            "avg_separation",
+            "avg_intended_air_yards",
+            "percent_share_of_intended_air_yards",
+            "catch_percentage",
+            "avg_yac",
+            "avg_expected_yac",
+            "avg_yac_above_expectation",
+        ]
+    else:
+        return pd.DataFrame()
+
+    features = [c for c in features if c in df.columns]
+    if not features:
+        return pd.DataFrame()
+    if weight_col not in df.columns:
+        df[weight_col] = 1
+
+    rows = []
+    for keys, group in df.groupby(group_cols, dropna=False):
+        player_id, season = keys
+        row = {"player_id": player_id, "season": season}
+        for col in features:
+            row[f"ngs_{stat_type}_{col}"] = _weighted_average(group, col, weight_col)
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def compute_ngs_lag_features(
+    df: pd.DataFrame,
+    ngs_data: Optional[dict[str, pd.DataFrame]] = None,
+) -> pd.DataFrame:
+    """Merge prior-season Next Gen Stats aggregates.
+
+    NGS rows are current-season weekly observations, so this function first
+    aggregates each player-season, shifts the season by +1, and then merges.
+    A 2025 NGS value can therefore feed 2026 projections, but 2025 validation
+    never sees 2025 NGS.
+    """
+    if not ngs_data:
+        return df
+    out = df.copy()
+    if "player_id" not in out.columns or "season" not in out.columns:
+        return out
+
+    merged = []
+    for stat_type in ["passing", "rushing", "receiving"]:
+        stat_df = ngs_data.get(stat_type)
+        agg = _aggregate_ngs_stat(stat_df, stat_type)
+        if agg.empty:
+            continue
+        feature_cols = [c for c in agg.columns if c not in {"player_id", "season"}]
+        agg["season"] = agg["season"] + 1
+        agg = agg.rename(columns={c: f"{c}_lag1" for c in feature_cols})
+        merged.append(agg)
+
+    for agg in merged:
+        out = out.merge(agg, on=["player_id", "season"], how="left")
+
+    ngs_cols = [c for c in out.columns if c.startswith("ngs_") and c.endswith("_lag1")]
+    for col in ngs_cols:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0)
+
+    return out
+
+
+def compute_snap_lag_features(
+    df: pd.DataFrame,
+    snap_df: Optional[pd.DataFrame] = None,
+    roster_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """Merge prior-season offensive snap usage.
+
+    Snap counts are current-season role data, so raw season snaps cannot be
+    used to predict that same season. We aggregate regular-season snaps by
+    player-season, shift the season by +1, and merge those lagged values.
+    """
+    if snap_df is None or snap_df.empty:
+        return df
+    out = df.copy()
+    if "player_id" not in out.columns or "season" not in out.columns:
+        return out
+
+    snaps = snap_df.copy()
+    if "game_type" in snaps.columns:
+        snaps = snaps[snaps["game_type"] == "REG"].copy()
+    if snaps.empty or "season" not in snaps.columns:
+        return out
+
+    if "player_id" not in snaps.columns:
+        if "pfr_player_id" not in snaps.columns or roster_df is None or roster_df.empty:
+            return out
+        if "pfr_id" not in roster_df.columns or "player_id" not in roster_df.columns:
+            return out
+        roster_map_cols = ["pfr_id", "player_id"]
+        if "season" in roster_df.columns:
+            roster_map_cols.append("season")
+        roster_map = (
+            roster_df[roster_map_cols]
+            .dropna(subset=["pfr_id", "player_id"])
+            .drop_duplicates(roster_map_cols)
+        )
+        if "season" in roster_map.columns:
+            snaps = snaps.merge(
+                roster_map.rename(columns={"pfr_id": "pfr_player_id"}),
+                on=["pfr_player_id", "season"],
+                how="left",
+            )
+        else:
+            snaps = snaps.merge(
+                roster_map.rename(columns={"pfr_id": "pfr_player_id"}),
+                on="pfr_player_id",
+                how="left",
+            )
+
+    if "player_id" not in snaps.columns:
+        return out
+
+    for col in ["offense_snaps", "offense_pct"]:
+        if col not in snaps.columns:
+            snaps[col] = 0
+        snaps[col] = pd.to_numeric(snaps[col], errors="coerce").fillna(0)
+
+    snap_agg = (
+        snaps.dropna(subset=["player_id"])
+        .groupby(["player_id", "season"])
+        .agg(
+            snap_offense_snaps=("offense_snaps", "sum"),
+            snap_offense_pct=("offense_pct", "mean"),
+            snap_games=("week", "nunique") if "week" in snaps.columns else ("offense_snaps", "size"),
+        )
+        .reset_index()
+    )
+    if snap_agg.empty:
+        return out
+
+    snap_agg["snap_offense_snaps_per_game"] = (
+        snap_agg["snap_offense_snaps"] / snap_agg["snap_games"].replace(0, np.nan)
+    ).fillna(0)
+    snap_feature_cols = [c for c in snap_agg.columns if c not in {"player_id", "season"}]
+    snap_agg["season"] = snap_agg["season"] + 1
+    snap_agg = snap_agg.rename(columns={c: f"{c}_lag1" for c in snap_feature_cols})
+
+    out = out.merge(snap_agg, on=["player_id", "season"], how="left")
+    for col in [c for c in out.columns if c.startswith("snap_") and c.endswith("_lag1")]:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0)
+    return out
+
+
+def compute_availability_lag_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Prior-season games-played trend features.
+
+    These use only completed prior seasons for each player. They help separate
+    durable full-season roles from players whose one-year per-game production
+    came on limited availability.
+    """
+    if "player_id" not in df.columns or "season" not in df.columns or "games" not in df.columns:
+        return df
+
+    out = df.copy()
+    out["_availability_order"] = np.arange(len(out))
+    out = out.sort_values(["player_id", "season"])
+    games = pd.to_numeric(out["games"], errors="coerce").fillna(0)
+    out["_games_numeric"] = games
+
+    out["games_lag1"] = out.groupby("player_id")["_games_numeric"].shift(1).fillna(0)
+    out["games_lag2"] = out.groupby("player_id")["_games_numeric"].shift(2).fillna(0)
+    out["games_roll2"] = out.groupby("player_id")["_games_numeric"].transform(
+        lambda x: x.shift(1).rolling(2, min_periods=1).mean()
+    ).fillna(0)
+    out["games_roll3"] = out.groupby("player_id")["_games_numeric"].transform(
+        lambda x: x.shift(1).rolling(3, min_periods=1).mean()
+    ).fillna(0)
+    out["missed_games_lag1"] = (17 - out["games_lag1"]).clip(lower=0)
+    out["missed_games_roll2"] = (17 - out["games_roll2"]).clip(lower=0)
+    out["played_15plus_lag1"] = (out["games_lag1"] >= 15).astype(int)
+
+    out = out.sort_values("_availability_order").drop(columns=["_availability_order", "_games_numeric"])
+    return out
+
+
+def compute_pfr_lag_features(
+    df: pd.DataFrame,
+    pfr_df: Optional[pd.DataFrame] = None,
+    roster_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
+    """Merge prior-season Pro Football Reference advanced stats.
+
+    PFR advanced rows are current-season player stats, so every feature is
+    shifted to the following season before merging. The source is keyed by
+    PFR id; roster data provides the PFR id to player_id bridge.
+    """
+    if pfr_df is None or pfr_df.empty:
+        return df
+    out = df.copy()
+    if "player_id" not in out.columns or "season" not in out.columns:
+        return out
+    if "pfr_id" not in pfr_df.columns or "season" not in pfr_df.columns:
+        return out
+    if roster_df is None or roster_df.empty or "pfr_id" not in roster_df.columns or "player_id" not in roster_df.columns:
+        return out
+
+    roster_cols = ["pfr_id", "player_id"]
+    if "season" in roster_df.columns:
+        roster_cols.append("season")
+    roster_map = (
+        roster_df[roster_cols]
+        .dropna(subset=["pfr_id", "player_id"])
+        .drop_duplicates(roster_cols)
+    )
+
+    pfr = pfr_df.copy()
+    if "pfr_stat_type" not in pfr.columns:
+        pfr["pfr_stat_type"] = ""
+    if "season" in roster_map.columns:
+        pfr = pfr.merge(roster_map, on=["pfr_id", "season"], how="left")
+    else:
+        pfr = pfr.merge(roster_map, on="pfr_id", how="left")
+    pfr = pfr.dropna(subset=["player_id"]).copy()
+    if pfr.empty:
+        return out
+
+    stat_features = {
+        "pass": [
+            "pocket_time",
+            "drop_pct",
+            "bad_throw_pct",
+            "pressure_pct",
+            "on_tgt_pct",
+            "intended_air_yards_per_pass_attempt",
+            "completed_air_yards_per_pass_attempt",
+            "pass_yards_after_catch_per_completion",
+            "scramble_yards_per_attempt",
+        ],
+        "rush": ["gs", "x1d", "ybc_att", "yac_att", "brk_tkl", "att_br"],
+        "rec": ["gs", "x1d", "ybc_r", "yac_r", "adot", "brk_tkl", "rec_br", "drop_percent", "rat"],
+    }
+
+    merged = []
+    for stat_type, cols in stat_features.items():
+        sub = pfr[pfr["pfr_stat_type"] == stat_type].copy()
+        cols = [c for c in cols if c in sub.columns]
+        if sub.empty or not cols:
+            continue
+        for col in cols:
+            sub[col] = pd.to_numeric(sub[col], errors="coerce")
+        agg = sub.groupby(["player_id", "season"])[cols].mean().reset_index()
+        agg["season"] = agg["season"] + 1
+        agg = agg.rename(columns={c: f"pfr_{stat_type}_{c}_lag1" for c in cols})
+        merged.append(agg)
+
+    for agg in merged:
+        out = out.merge(agg, on=["player_id", "season"], how="left")
+
+    pfr_cols = [c for c in out.columns if c.startswith("pfr_") and c.endswith("_lag1")]
+    for col in pfr_cols:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0)
+    return out
+
+
 def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """Add ADP (Average Draft Position) as a feature.
 
@@ -1159,6 +1750,23 @@ def compute_adp_features(df: pd.DataFrame, adp_df: Optional[pd.DataFrame] = None
         labels=[1, 2, 3, 4, 5],
     ).astype(float).fillna(5)
 
+    # Market-shape features. These use only current draft price plus already
+    # lagged production/age fields, so they are safe for preseason projection.
+    df["adp_log"] = np.log1p(df["adp"])
+    df["adp_inverse"] = 1 / df["adp"].clip(lower=1)
+    df["is_top12_adp"] = (df["adp"] <= 12).astype(int)
+    df["is_top24_adp"] = (df["adp"] <= 24).astype(int)
+    df["is_top48_adp"] = (df["adp"] <= 48).astype(int)
+    df["is_late_or_undrafted_adp"] = (df["adp"] >= 150).astype(int)
+
+    pts_lag = pd.to_numeric(df["pts_lag1"], errors="coerce").fillna(0) if "pts_lag1" in df.columns else 0
+    fp_pg_lag = pd.to_numeric(df["fp_per_game_lag1"], errors="coerce").fillna(0) if "fp_per_game_lag1" in df.columns else 0
+    age = pd.to_numeric(df["age"], errors="coerce").fillna(0) if "age" in df.columns else 0
+    df["adp_minus_pts_lag1"] = df["adp"] - pts_lag
+    df["pts_lag1_per_adp"] = pts_lag / df["adp"].clip(lower=1)
+    df["fp_per_game_lag1_per_adp"] = fp_pg_lag / df["adp"].clip(lower=1)
+    df["age_x_adp"] = age * df["adp"]
+
     return df
 
 
@@ -1281,10 +1889,13 @@ def build_feature_matrix(
     team_df: pd.DataFrame,
     ol_df: pd.DataFrame,
     snap_df: Optional[pd.DataFrame] = None,
+    schedule_df: Optional[pd.DataFrame] = None,
+    ngs_data: Optional[dict[str, pd.DataFrame]] = None,
+    pfr_df: Optional[pd.DataFrame] = None,
     lag_stats: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     """Build complete feature matrix from all data sources."""
-    df = merge_player_context(seasonal_df, roster_df, team_df, ol_df, snap_df)
+    df = merge_player_context(seasonal_df, roster_df, team_df, ol_df)
 
     df = compute_ol_rb_features(df)
     df = compute_qb_wr_features(df)
@@ -1293,7 +1904,13 @@ def build_feature_matrix(
     df = compute_career_arc_features(df)
     df = compute_rookie_features(df)
     df = compute_sos_features(df, team_df, full_seasonal_df=seasonal_df)
+    df = compute_schedule_sos_features(df, schedule_df, full_seasonal_df=seasonal_df)
     df = compute_playmaker_features(df)
+    df = compute_advanced_stat_lag_features(df)
+    df = compute_ngs_lag_features(df, ngs_data)
+    df = compute_snap_lag_features(df, snap_df, roster_df=roster_df)
+    df = compute_availability_lag_features(df)
+    df = compute_pfr_lag_features(df, pfr_df, roster_df=roster_df)
 
     if lag_stats is None:
         lag_stats = [
@@ -1303,7 +1920,7 @@ def build_feature_matrix(
             "interceptions", "attempts", "completions",
         ]
     df = compute_lag_features(df, lag_stats)
-    df = compute_rolling_features(df, lag_stats[:5])
+    df = compute_rolling_features(df, lag_stats)
 
     # Regression features (computed after scoring if fantasy_points exists)
     # Otherwise called separately after scoring

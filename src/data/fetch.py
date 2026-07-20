@@ -9,10 +9,16 @@ Actual nfl_data_py API (v0.3.x):
 - import_players(): Player biographical info
 - import_depth_charts(seasons): Depth chart positions
 - import_injuries(seasons): Injury reports
+- import_schedules(seasons): NFL schedule, rest, venue, and pregame market lines
+- import_ngs_data(stat_type, seasons): Next Gen Stats player data
 
 NOT available: import_team_seasonal_data, import_adp, import_rosters
 Team stats are derived by aggregating player seasonal data.
 """
+from datetime import datetime, timezone
+from io import StringIO
+import re
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -386,6 +392,47 @@ def fetch_coaches(seasons: list[int], cache: bool = True, extra_rows: Optional[p
     return df
 
 
+def fetch_schedules(seasons: list[int], cache: bool = True) -> pd.DataFrame:
+    """Fetch NFL schedules.
+
+    The schedule is safe to use for pre-season projection features when combined
+    only with information known before that season, such as each opponent's
+    prior-season defensive quality. Do not use game results from this table as
+    model features.
+    """
+    _ensure_data_dir()
+    if nfl is None:
+        raise ImportError("nfl_data_py required: pip install nfl_data_py")
+    cache_path = DATA_DIR / "schedules.parquet"
+    return _load_or_fetch(cache_path, lambda: nfl.import_schedules(seasons), cache=cache, required_seasons=seasons)
+
+
+def fetch_ngs_data(stat_type: str, seasons: list[int], cache: bool = True) -> pd.DataFrame:
+    """Fetch Next Gen Stats data for passing, rushing, or receiving.
+
+    nfl_data_py reads these parquet files through pyarrow, which can fail on
+    some environments with a repetition-level metadata error. The fallback uses
+    fastparquet against the same official nflverse release file.
+    """
+    _ensure_data_dir()
+    if stat_type not in {"passing", "rushing", "receiving"}:
+        raise ValueError("stat_type must be one of passing, rushing, receiving")
+    if nfl is None:
+        raise ImportError("nfl_data_py required: pip install nfl_data_py")
+
+    cache_path = DATA_DIR / f"ngs_{stat_type}.parquet"
+
+    def _fetch() -> pd.DataFrame:
+        try:
+            return nfl.import_ngs_data(stat_type, seasons)
+        except Exception:
+            url = f"https://github.com/nflverse/nflverse-data/releases/download/nextgen_stats/ngs_{stat_type}.parquet"
+            df = pd.read_parquet(url, engine="fastparquet")
+            return df[df["season"].isin(seasons)] if "season" in df.columns else df
+
+    return _load_or_fetch(cache_path, _fetch, cache=cache, required_seasons=seasons)
+
+
 def fetch_depth_charts(seasons: list[int], cache: bool = True, force_refresh: bool = False) -> pd.DataFrame:
     """Fetch NFL depth chart data — critical for role identification (WR1 vs WR3).
 
@@ -433,18 +480,27 @@ def fetch_depth_charts(seasons: list[int], cache: bool = True, force_refresh: bo
             })
             keep = ["season", "team", "gsis_id", "player_name", "position", "depth_rank"]
             sub = sub[[c for c in keep if c in sub.columns]]
-        elif "pos_slot" in raw.columns and "dt" in raw.columns:
+        elif "pos_abb" in raw.columns and "dt" in raw.columns:
             # New schema: pick snapshot closest to Sep 5 of that season
-            raw["dt"] = pd.to_datetime(raw["dt"])
+            raw["dt"] = pd.to_datetime(raw["dt"], utc=True)
             target = pd.Timestamp(f"{season}-09-05", tz="UTC")
             raw["_delta"] = (raw["dt"] - target).abs()
             closest_dt = raw.loc[raw["_delta"].idxmin(), "dt"]
             sub = raw[raw["dt"] == closest_dt].copy()
             sub["season"] = season
-            sub = sub.rename(columns={
-                "pos_abb": "position",
-                "pos_slot": "depth_rank",
-            })
+            sub = sub.rename(columns={"pos_abb": "position"})
+            if "pos_rank" in sub.columns:
+                sub = sub.rename(columns={"pos_rank": "depth_rank"})
+            elif "pos_slot" in sub.columns:
+                # pos_slot is a roster-wide slot, not a position depth rank.
+                # If an older new-schema file lacks pos_rank, derive the order
+                # within each team/position instead of using the raw slot.
+                slot = pd.to_numeric(sub["pos_slot"], errors="coerce")
+                sub["depth_rank"] = slot.groupby([sub["team"], sub["position"]]).rank(
+                    method="dense", ascending=True
+                )
+            else:
+                sub["depth_rank"] = pd.NA
             keep = ["season", "team", "gsis_id", "player_name", "position", "depth_rank"]
             sub = sub[[c for c in keep if c in sub.columns]]
         else:
@@ -472,7 +528,120 @@ def fetch_depth_charts(seasons: list[int], cache: bool = True, force_refresh: bo
     return combined
 
 
-def fetch_adp_data(seasons: list[int] | None = None, cache: bool = True) -> pd.DataFrame:
+ADP_COLUMNS = [
+    "player_name", "position", "team", "adp", "bye", "season", "scoring",
+    "source", "source_url", "source_period_end", "requested_season", "fetched_at",
+]
+
+
+def _adp_cache_rows_reusable(
+    rows: pd.DataFrame,
+    season: int,
+    now: datetime,
+    max_cache_age_hours: float,
+) -> bool:
+    """Return whether cached ADP rows have trustworthy provenance and freshness."""
+    if rows.empty:
+        return False
+    required = {
+        "requested_season", "source_url", "fetched_at",
+        "player_name", "position", "adp",
+    }
+    if not required.issubset(rows.columns):
+        return False
+    valid_rows = rows["player_name"].notna() & rows["position"].notna()
+    valid_rows &= pd.to_numeric(rows["adp"], errors="coerce").notna()
+    if int(valid_rows.sum()) < 50:
+        return False
+    requested = pd.to_numeric(rows["requested_season"], errors="coerce")
+    if requested.isna().any() or not requested.eq(season).all():
+        return False
+
+    # Historical preseason snapshots are immutable once captured. The current
+    # draft market is live data and must expire quickly.
+    if season < now.year:
+        return True
+    fetched = pd.to_datetime(rows["fetched_at"], utc=True, errors="coerce").max()
+    if pd.isna(fetched):
+        return False
+    age_hours = (pd.Timestamp(now) - fetched).total_seconds() / 3600
+    return 0 <= age_hours <= max_cache_age_hours
+
+
+def _fantasypros_page_matches_season(html: str, season: int) -> bool:
+    """Guard against FantasyPros silently serving the current page for a bad URL."""
+    match = re.search(r"<title[^>]*>(.*?)</title>", html, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return False
+    title = re.sub(r"\s+", " ", match.group(1))
+    return re.search(rf"\b{int(season)}\b", title) is not None
+
+
+def _fetch_espn_preseason_rank_proxy(season: int, requests_module, now: datetime) -> pd.DataFrame:
+    """Fetch a complete season-pinned market-rank proxy from ESPN.
+
+    ESPN retains PPR and standard preseason draft ranks after its live ADP
+    field resets. Their midpoint is an explicit half-PPR proxy, used only when
+    neither FFC nor a complete FantasyPros historical table is available.
+    """
+    import json as _json
+
+    url = (
+        "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
+        f"seasons/{season}/segments/0/leaguedefaults/1?view=kona_player_info"
+    )
+    player_filter = {
+        "players": {
+            "limit": 2000,
+            "sortDraftRanks": {"sortPriority": 1, "sortAsc": True, "value": "PPR"},
+        }
+    }
+    resp = requests_module.get(
+        url,
+        timeout=20,
+        headers={"User-Agent": "nflmodel/1.0", "x-fantasy-filter": _json.dumps(player_filter)},
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    position_map = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "DEF"}
+    rows = []
+    for wrapper in payload.get("players", []):
+        player = wrapper.get("player", {}) or {}
+        position = position_map.get(player.get("defaultPositionId"))
+        if position is None:
+            continue
+        ranks = player.get("draftRanksByRankType", {}) or {}
+        std = (ranks.get("STANDARD") or {}).get("rank")
+        ppr = (ranks.get("PPR") or {}).get("rank")
+        rank_values = [float(v) for v in (std, ppr) if v is not None and float(v) > 0]
+        if not rank_values:
+            continue
+        rows.append({
+            "player_name": player.get("fullName", ""),
+            "position": position,
+            "team": "",
+            "adp": float(np.mean(rank_values)),
+            "bye": 0,
+            "season": season,
+            "scoring": "half-ppr-rank-proxy",
+            "source": "espn_preseason_rank_proxy",
+            "source_url": url,
+            "source_period_end": f"{season}-preseason-rank",
+            "requested_season": season,
+            "fetched_at": now.isoformat(),
+        })
+    result = pd.DataFrame(rows, columns=ADP_COLUMNS)
+    if len(result) < 50:
+        return pd.DataFrame(columns=ADP_COLUMNS)
+    return result.sort_values("adp").drop_duplicates(["player_name", "position"]).reset_index(drop=True)
+
+
+def fetch_adp_data(
+    seasons: list[int] | None = None,
+    cache: bool = True,
+    force_refresh: bool = False,
+    max_cache_age_hours: float = 12.0,
+) -> pd.DataFrame:
     """Fetch Average Draft Position data.
 
     Primary source: Fantasy Football Calculator API (free, JSON, full names,
@@ -482,19 +651,28 @@ def fetch_adp_data(seasons: list[int] | None = None, cache: bool = True) -> pd.D
     """
     _ensure_data_dir()
     cache_path = DATA_DIR / "adp_data.parquet"
-
+    now = datetime.now(timezone.utc)
+    requested_seasons = sorted(set(seasons or [now.year]))
+    cached = pd.DataFrame(columns=ADP_COLUMNS)
     if cache and cache_path.exists():
-        df = pd.read_parquet(cache_path)
-        if seasons and "season" in df.columns:
-            if set(seasons).issubset(set(df["season"].unique())):
-                return df[df["season"].isin(seasons)]
+        try:
+            cached = pd.read_parquet(cache_path)
+        except Exception as exc:
+            print(f"  ADP cache ignored: {exc}")
+
+    reusable = []
+    seasons_to_fetch = []
+    for season in requested_seasons:
+        rows = cached[cached["season"].eq(season)].copy() if "season" in cached.columns else pd.DataFrame()
+        if not force_refresh and _adp_cache_rows_reusable(rows, season, now, max_cache_age_hours):
+            reusable.append(rows)
         else:
-            return df
+            seasons_to_fetch.append(season)
 
     adp_dfs = []
     import requests as _requests
 
-    for season in (seasons or [2025]):
+    for season in seasons_to_fetch:
         # --- Primary: Fantasy Football Calculator API ---
         # Free, JSON response, uses full player names (Ja'Marr Chase),
         # has team/position/bye, updates daily.
@@ -507,7 +685,13 @@ def fetch_adp_data(seasons: list[int] | None = None, cache: bool = True) -> pd.D
                 if resp.status_code == 200:
                     data = resp.json()
                     players = data.get("players", [])
-                    if players:
+                    meta = data.get("meta", {}) or {}
+                    period_end = pd.to_datetime(meta.get("end_date"), errors="coerce")
+                    # FFC can answer an unavailable historical-year request with
+                    # a different draft period. Reject rather than relabel it.
+                    period_matches = pd.isna(period_end) or int(period_end.year) == season
+                    if players and period_matches:
+                        fetched_at = now.isoformat()
                         rows = []
                         for p in players:
                             rows.append({
@@ -519,6 +703,10 @@ def fetch_adp_data(seasons: list[int] | None = None, cache: bool = True) -> pd.D
                                 "season": season,
                                 "scoring": scoring,
                                 "source": "ffc",
+                                "source_url": url,
+                                "source_period_end": meta.get("end_date", ""),
+                                "requested_season": season,
+                                "fetched_at": fetched_at,
                             })
                         adp_dfs.append(pd.DataFrame(rows))
                         ffc_success = True
@@ -530,38 +718,81 @@ def fetch_adp_data(seasons: list[int] | None = None, cache: bool = True) -> pd.D
             continue
 
         # --- Fallback: FantasyPros HTML scraping ---
+        fantasypros_success = False
         for scoring in ["half-ppr"]:
-            url = f"https://www.fantasypros.com/nfl/adp/{scoring}-overall.php?year={season}"
+            # FantasyPros uses "half-point-ppr", not "half-ppr". The latter
+            # silently resolves to the current season and caused mislabeled data.
+            url = f"https://www.fantasypros.com/nfl/adp/half-point-ppr-overall.php?year={season}"
             try:
-                tables = pd.read_html(url)
+                resp = _requests.get(url, timeout=15, headers={"User-Agent": "nflmodel/1.0"})
+                resp.raise_for_status()
+                if not _fantasypros_page_matches_season(resp.text, season):
+                    print(f"  FantasyPros ADP rejected for {season}: page title did not match requested year")
+                    continue
+                tables = pd.read_html(StringIO(resp.text))
                 if tables:
                     df = tables[0]
                     df["season"] = season
                     df["scoring"] = scoring
                     df["source"] = "fantasypros"
+                    df["source_url"] = url
+                    df["source_period_end"] = f"{season}-preseason"
+                    df["requested_season"] = season
+                    df["fetched_at"] = now.isoformat()
                     if "AVG" in df.columns:
                         df = df.rename(columns={"AVG": "adp"})
                     elif "Avg" in df.columns:
                         df = df.rename(columns={"Avg": "adp"})
-                    if "Player Team (Bye)" in df.columns:
-                        raw = df["Player Team (Bye)"].astype(str)
+                    player_col = next((c for c in ["Player Team (Bye)", "Player (Bye)"] if c in df.columns), None)
+                    if player_col:
+                        raw = df[player_col].astype(str)
                         df["team"] = raw.str.extract(r'\s([A-Z]{2,3})\s*\(')
                         df["player_name"] = raw.str.replace(r'\s[A-Z]{2,3}\s*\(\d+\).*', '', regex=True).str.strip()
                     if "POS" in df.columns:
                         df["position"] = df["POS"].astype(str).str.extract(r'^([A-Z]+)')[0]
-                    keep_cols = [c for c in ["player_name", "position", "team", "adp", "season", "scoring", "source"] if c in df.columns]
-                    if keep_cols:
+                    keep_cols = [c for c in ADP_COLUMNS if c in df.columns]
+                    valid = {"player_name", "position", "adp"}.issubset(keep_cols)
+                    valid_count = int(df["adp"].notna().sum()) if valid else 0
+                    if valid and valid_count >= 50:
                         adp_dfs.append(df[keep_cols])
+                        fantasypros_success = True
+                        break
             except Exception:
                 pass
 
-    if not adp_dfs:
-        return pd.DataFrame(columns=["player_name", "position", "team", "adp", "season", "scoring", "source"])
+        if fantasypros_success:
+            continue
 
-    df = pd.concat(adp_dfs, ignore_index=True)
-    if cache:
-        df.to_parquet(cache_path, index=False)
-    return df
+        # Final historical fallback: a season-pinned ESPN preseason rank proxy.
+        # This is labeled distinctly so evaluation can segment or exclude it.
+        try:
+            espn = _fetch_espn_preseason_rank_proxy(season, _requests, now)
+            if not espn.empty:
+                adp_dfs.append(espn)
+        except Exception as exc:
+            print(f"  ESPN preseason rank proxy failed for {season}: {exc}")
+
+    fresh = pd.concat(adp_dfs, ignore_index=True) if adp_dfs else pd.DataFrame(columns=ADP_COLUMNS)
+    available_parts = [part for part in reusable if not part.empty]
+    if not fresh.empty:
+        available_parts.append(fresh)
+    available = (
+        pd.concat(available_parts, ignore_index=True)
+        if available_parts else pd.DataFrame(columns=ADP_COLUMNS)
+    )
+    available = available[available["season"].isin(requested_seasons)] if not available.empty else available
+
+    missing = sorted(set(requested_seasons) - set(available["season"].unique())) if not available.empty else requested_seasons
+    if missing:
+        print(f"  Warning: no trustworthy ADP snapshot available for seasons {missing}")
+
+    if cache and not fresh.empty:
+        refreshed_seasons = set(fresh["season"].unique())
+        preserved = cached[~cached["season"].isin(refreshed_seasons)] if "season" in cached.columns else cached
+        cache_out = pd.concat([preserved, fresh], ignore_index=True)
+        cache_out.to_parquet(cache_path, index=False)
+
+    return available.reset_index(drop=True)
 
 
 def fetch_pfr_advanced(seasons: list[int], cache: bool = True) -> pd.DataFrame:
@@ -581,8 +812,18 @@ def fetch_pfr_advanced(seasons: list[int], cache: bool = True) -> pd.DataFrame:
     dfs = []
     for s_type in ["pass", "rec", "rush"]:
         try:
-            df = nfl.import_seasonal_pfr(seasons, s_type=s_type)
+            df = nfl.import_seasonal_pfr(s_type, seasons)
+        except Exception:
+            try:
+                url = f"https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_season_{s_type}.parquet"
+                df = pd.read_parquet(url, engine="fastparquet")
+                df = df[df["season"].isin(seasons)] if "season" in df.columns else df
+            except Exception:
+                df = pd.DataFrame()
+        try:
             if not df.empty:
+                df = df.copy()
+                df["pfr_stat_type"] = s_type
                 dfs.append(df)
         except Exception:
             pass
@@ -694,6 +935,71 @@ def fetch_draft_picks(years: list[int] | None = None, cache: bool = True) -> pd.
     return df
 
 
+def fetch_draft_values(cache: bool = True) -> pd.DataFrame:
+    """Fetch draft pick value curves from nflverse.
+
+    This is a tiny static table keyed by overall pick.  It is safe for rookie
+    and prospect features because pick value is known as soon as the draft
+    selection is made.
+    """
+    _ensure_data_dir()
+    cache_path = DATA_DIR / "draft_values.parquet"
+    if cache and cache_path.exists():
+        return pd.read_parquet(cache_path)
+
+    if nfl is not None:
+        try:
+            df = nfl.import_draft_values()
+        except Exception:
+            df = pd.DataFrame()
+    else:
+        df = pd.DataFrame()
+
+    if df.empty:
+        url = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/draft_values.csv"
+        try:
+            df = pd.read_csv(url)
+        except Exception as exc:
+            print(f"  Warning: draft_values fetch failed ({exc.__class__.__name__}). Skipping.")
+            return pd.DataFrame(columns=["pick", "stuart", "johnson", "hill", "otc", "pff"])
+
+    if cache and not df.empty:
+        df.to_parquet(cache_path, index=False)
+    return df
+
+
+def fetch_contracts(cache: bool = True) -> pd.DataFrame:
+    """Fetch historical contract data from nflverse.
+
+    The contract table is not automatically loaded into production data paths.
+    Experiments should apply an as-of-season filter before using these rows.
+    """
+    _ensure_data_dir()
+    cache_path = DATA_DIR / "contracts.parquet"
+    if cache and cache_path.exists():
+        return pd.read_parquet(cache_path)
+
+    if nfl is not None:
+        try:
+            df = nfl.import_contracts()
+        except Exception:
+            df = pd.DataFrame()
+    else:
+        df = pd.DataFrame()
+
+    if df.empty:
+        url = "https://github.com/nflverse/nflverse-data/releases/download/contracts/historical_contracts.parquet"
+        try:
+            df = pd.read_parquet(url, engine="fastparquet")
+        except Exception as exc:
+            print(f"  Warning: contracts fetch failed ({exc.__class__.__name__}). Skipping.")
+            return pd.DataFrame()
+
+    if cache and not df.empty:
+        df.to_parquet(cache_path, index=False)
+    return df
+
+
 def fetch_combine_data(years: list[int] | None = None, cache: bool = True) -> pd.DataFrame:
     """Fetch NFL combine data: 40yd, bench, vertical, broad jump, cone, shuttle, ht, wt.
 
@@ -755,6 +1061,14 @@ def load_all_data(seasons: list[int], cache: bool = True) -> dict[str, pd.DataFr
     # Roster/combine data available for current year too
     roster_seasons = seasons  # roster available for current year
 
+    ngs_data = {}
+    if stats_seasons:
+        for stat_type in ["passing", "rushing", "receiving"]:
+            try:
+                ngs_data[stat_type] = fetch_ngs_data(stat_type, stats_seasons, cache=cache)
+            except Exception as exc:
+                print(f"  Warning: NGS {stat_type} fetch failed ({exc.__class__.__name__}). Skipping.")
+
     return {
         "seasonal": fetch_seasonal_stats(stats_seasons, cache=cache) if stats_seasons else pd.DataFrame(),
         "weekly": fetch_weekly_stats(stats_seasons, cache=cache) if stats_seasons else pd.DataFrame(),
@@ -763,7 +1077,11 @@ def load_all_data(seasons: list[int], cache: bool = True) -> dict[str, pd.DataFr
         "ol": fetch_ol_metrics(stats_seasons, cache=cache) if stats_seasons else pd.DataFrame(),
         "snap_counts": fetch_snap_counts(stats_seasons, cache=cache) if stats_seasons else pd.DataFrame(),
         "pfr": fetch_pfr_advanced(stats_seasons, cache=cache) if stats_seasons else pd.DataFrame(),
+        "schedules": fetch_schedules(seasons, cache=cache),
         "draft": fetch_draft_picks(years=seasons, cache=cache),
+        "draft_values": fetch_draft_values(cache=cache),
+        "contracts": fetch_contracts(cache=cache),
         "combine": fetch_combine_data(years=seasons, cache=cache),
         "player_info": fetch_player_info(cache=cache),
+        "ngs": ngs_data,
     }

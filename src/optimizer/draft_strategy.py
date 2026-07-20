@@ -547,8 +547,9 @@ def detect_sleepers_and_busts(
 
     # --- Hard filters ---
     # Must have a real ADP: market has ranked this player and they're draftable.
-    # adp=0 means unranked; adp>=250 means undraftable in standard leagues.
-    df = df[df["adp"].notna() & (df["adp"] > 0) & (df["adp"] < 250)].copy()
+    # The export uses 200 as the no-market-data sentinel, so only values below
+    # 200 represent a real current ADP observation.
+    df = df[df["adp"].notna() & (df["adp"] > 0) & (df["adp"] < 200)].copy()
 
     # Skill positions only (K/DEF use historical averages, not the ML model)
     if "position" in df.columns:

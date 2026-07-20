@@ -31,11 +31,9 @@ class ConformalQuantileModel:
         lo, hi = m.predict_interval(X_new)                 # calibrated 80% intervals
 
     The calibration split: `seasons == cal_season` → calibration set, the rest
-    → training set. Default `cal_season = seasons.max()`. After computing Q,
-    the quantile models are REFIT on train+cal to use more data for the final
-    quantile estimates. This is the "retrained CQR" variant — empirically it
-    preserves coverage while tightening intervals (verified on historical
-    walk-forward below).
+    → training set. Default `cal_season = seasons.max()`. The fitted quantile
+    models are deliberately retained after calibration; refitting them on the
+    calibration rows would invalidate the split-conformal coverage argument.
     """
 
     def __init__(
@@ -51,6 +49,7 @@ class ConformalQuantileModel:
         self.hi_model = None
         self.Q = 0.0
         self.n_cal = 0
+        self.cal_season: Optional[int] = None
         self.empirical_coverage = None  # populated after fit for diagnostics
 
     def _make_catboost(self, quantile_alpha: float):
@@ -88,6 +87,7 @@ class ConformalQuantileModel:
 
         if cal_season is None:
             cal_season = int(seasons.max())
+        self.cal_season = int(cal_season)
 
         train_mask = (seasons < cal_season).values
         cal_mask = (seasons == cal_season).values
@@ -96,7 +96,9 @@ class ConformalQuantileModel:
         if cal_mask.sum() < self.min_cal_size:
             rng = np.random.default_rng(42)
             all_idx = np.arange(len(y))
-            cal_idx = rng.choice(all_idx, size=max(self.min_cal_size, len(y) // 5), replace=False)
+            requested_size = max(self.min_cal_size, len(y) // 5)
+            cal_size = min(max(1, len(y) - 1), requested_size)
+            cal_idx = rng.choice(all_idx, size=cal_size, replace=False)
             cal_mask = np.zeros(len(y), dtype=bool)
             cal_mask[cal_idx] = True
             train_mask = ~cal_mask
@@ -138,12 +140,6 @@ class ConformalQuantileModel:
             "target": 1 - self.alpha,
             "n_cal": n,
         }
-
-        # Refit quantile models on ALL data for production (tighter intervals;
-        # conformal offset Q remains valid as an upper bound since adding data
-        # generally doesn't degrade quantile estimates).
-        self.lo_model.fit(X, y, sample_weight=sample_weight)
-        self.hi_model.fit(X, y, sample_weight=sample_weight)
 
         return self
 

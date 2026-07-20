@@ -35,38 +35,20 @@ def normalize_teams(df: pd.DataFrame, col: str = "team") -> pd.DataFrame:
 def clean_seasonal_stats(df: pd.DataFrame, min_games: int = 3) -> pd.DataFrame:
     """Clean seasonal player stats.
 
-    Combines REG and POST season types into a single row per player per season.
-
-    KNOWN BIAS: summing REG + POST inflates fantasy_points for playoff-team
-    players by 1-4 extra games. Most leagues score regular season only, so
-    projections may be slightly too high for players whose teams reach the
-    postseason. The bias is consistent between our model and the ADP baseline,
-    so relative accuracy comparisons remain valid; only absolute projection
-    magnitudes are affected. Future fix: filter to season_type == "REG" before
-    aggregation and retrain. (Tracked as a follow-up — not changed here to
-    avoid silently shifting deployed projections.)
+    When a source contains separate regular- and postseason rows, retain only
+    ``REG``. Draft projections target regular-season fantasy scoring; adding
+    playoff games would inflate both historical targets and lagged features for
+    players on successful NFL teams.
     """
     df = df.copy()
     df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
-    # Combine REG + POST into one row per player per season
+    # nflverse seasonal releases can contain separate REG and POST rows. Never
+    # sum them for a season-long fantasy target.
     if "season_type" in df.columns and "player_id" in df.columns and "season" in df.columns:
-        # Separate REG and POST
-        reg = df[df["season_type"] == "REG"].copy()
-        post = df[df["season_type"] == "POST"].copy()
-
-        # Sum numeric columns across season types per player per season
-        group_cols = ["player_id", "season"]
-        # Keep non-numeric from REG row (name, position, team, etc.)
-        non_numeric = reg[group_cols + [c for c in reg.columns if reg[c].dtype == object and c not in group_cols]]
-        non_numeric = non_numeric.drop_duplicates(subset=group_cols)
-
-        numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) and c not in group_cols]
-        combined = df.groupby(group_cols)[numeric_cols].sum().reset_index()
-
-        # Merge back non-numeric info
-        combined = combined.merge(non_numeric, on=group_cols, how="left")
-        df = combined
+        regular = df[df["season_type"].astype(str).str.upper().eq("REG")].copy()
+        if not regular.empty:
+            df = regular
 
     # Standardize column names from new nflverse format to match nfl_data_py format
     col_map = {

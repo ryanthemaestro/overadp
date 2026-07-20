@@ -1,0 +1,97 @@
+{
+  "cohort": {
+    "test_seasons": [
+      2024,
+      2025
+    ],
+    "n_players": 1052,
+    "aggregation": "player_weighted_walk_forward_folds",
+    "adp_sources": {
+      "2024": [
+        "ffc"
+      ],
+      "2025": [
+        "espn_preseason_rank_proxy"
+      ]
+    }
+  },
+  "overall": {
+    "catboost": {
+      "mae": 35.41,
+      "rmse": 50.46,
+      "r2": 0.5831,
+      "n_players": 1052
+    },
+    "adp_ridge": {
+      "mae": 42.24,
+      "rmse": 55.55,
+      "r2": 0.4817,
+      "n_players": 1052
+    },
+    "mae_improvement": 0.1617
+  },
+  "by_position": {
+    "QB": {
+      "catboost": {
+        "mae": 64.17,
+        "rmse": 82.37,
+        "r2": 0.4911,
+        "n_players": 134
+      },
+      "adp_ridge": {
+        "mae": 74.89,
+        "rmse": 92.23,
+        "r2": 0.3685,
+        "n_players": 134
+      },
+      "mae_improvement": 0.1431
+    },
+    "RB": {
+      "catboost": {
+        "mae": 38.82,
+        "rmse": 53.9,
+        "r2": 0.6095,
+        "n_players": 269
+      },
+      "adp_ridge": {
+        "mae": 42.46,
+        "rmse": 54.93,
+        "r2": 0.5943,
+        "n_players": 269
+      },
+      "mae_improvement": 0.0857
+    },
+    "WR": {
+      "catboost": {
+        "mae": 30.41,
+        "rmse": 41.56,
+        "r2": 0.6131,
+        "n_players": 426
+      },
+      "adp_ridge": {
+        "mae": 37.78,
+        "rmse": 47.03,
+        "r2": 0.5051,
+        "n_players": 426
+      },
+      "mae_improvement": 0.1951
+    },
+    "TE": {
+      "catboost": {
+        "mae": 23.58,
+        "rmse": 33.59,
+        "r2": 0.5491,
+        "n_players": 223
+      },
+      "adp_ridge": {
+        "mae": 30.85,
+        "rmse": 39.75,
+        "r2": 0.369,
+        "n_players": 223
+      },
+      "mae_improvement": 0.2357
+    }
+  },
+  "public_comparison_eligible": false,
+  "public_comparison_note": "At least one test fold uses an explicitly labeled preseason rank proxy; keep public market-beating claims disabled."
+}

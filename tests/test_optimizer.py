@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 
 from src.optimizer.roster_optimizer import optimize_roster, greedy_roster
+from src.optimizer.draft_strategy import detect_sleepers_and_busts
 
 
 def _make_projections():
@@ -67,3 +68,17 @@ class TestGreedyRoster:
         drafted = ["QB_0"]
         result = greedy_roster(projections, drafted_players=drafted, remaining_picks=14)
         assert "QB_0" not in result["player_id"].values
+
+
+def test_sleepers_and_busts_exclude_no_adp_sentinel():
+    projections = pd.DataFrame([
+        {"player_name": "Priced WR", "position": "WR", "team": "A", "projected_points": 100, "adp": 80},
+        {"player_name": "Unpriced WR", "position": "WR", "team": "B", "projected_points": 300, "adp": 200},
+        {"player_name": "Priced WR 2", "position": "WR", "team": "C", "projected_points": 90, "adp": 10},
+    ])
+    results = detect_sleepers_and_busts(
+        projections,
+        adp_data=pd.DataFrame({"player_name": ["unused"], "adp": [1]}),
+        pos_rank_threshold=1,
+    )
+    assert {row["player_name"] for row in results} == {"Priced WR", "Priced WR 2"}
