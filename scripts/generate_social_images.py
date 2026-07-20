@@ -168,7 +168,7 @@ def make_banner():
     bb2 = d.textbbox((0, 0), badge2, font=stat_label)
     d.text((right_x - (bb2[2] - bb2[0]) // 2, col_y), badge2, font=stat_label, fill=FG3)
 
-    num2 = "35.41"
+    num2 = "35.42"
     nb2 = d.textbbox((0, 0), num2, font=stat_big)
     d.text((right_x - (nb2[2] - nb2[0]) // 2, col_y + 30), num2, font=stat_big, fill=RED)
 
@@ -178,7 +178,7 @@ def make_banner():
 
     # Bottom tagline
     tag2_font = ImageFont.truetype(MONO, 20)
-    tag2 = "MAE:   QB 64.17   ·   RB 38.82   ·   WR 30.41   ·   TE 23.58"
+    tag2 = "MAE:   QB 64.17   ·   RB 38.77   ·   WR 30.43   ·   TE 23.64"
     tb2 = d.textbbox((0, 0), tag2, font=tag2_font)
     d.text(((w - (tb2[2] - tb2[0])) // 2, h - 80), tag2, font=tag2_font, fill=GREEN)
 

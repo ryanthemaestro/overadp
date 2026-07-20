@@ -978,7 +978,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. Updated July 2026 with 831 skill-player projections plus 62 K/DEF board entries.</p>
+    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. Updated July 2026 with 844 skill-player projections plus 62 K/DEF board entries.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -1052,9 +1052,9 @@
     <table>
       <tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr>
       <tr><td><strong>QB</strong></td><td>64.17</td><td>82.37</td><td>0.49</td><td>134</td></tr>
-      <tr><td><strong>RB</strong></td><td>38.82</td><td>53.90</td><td>0.61</td><td>269</td></tr>
-      <tr><td><strong>WR</strong></td><td>30.41</td><td>41.56</td><td>0.61</td><td>426</td></tr>
-      <tr><td><strong>TE</strong></td><td>23.58</td><td>33.59</td><td>0.55</td><td>223</td></tr>
+      <tr><td><strong>RB</strong></td><td>38.77</td><td>53.82</td><td>0.61</td><td>269</td></tr>
+      <tr><td><strong>WR</strong></td><td>30.43</td><td>41.44</td><td>0.61</td><td>426</td></tr>
+      <tr><td><strong>TE</strong></td><td>23.64</td><td>33.64</td><td>0.55</td><td>223</td></tr>
     </table>
     <p>When the model and ADP disagree strongly, it flags sleepers (model rank better than ADP) and busts (ADP rank better than model).</p>
 
@@ -1105,10 +1105,10 @@
     <table>
       <tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr>
       <tr><td><strong>QB</strong></td><td>64.17</td><td>82.37</td><td>0.49</td><td>134</td></tr>
-      <tr><td><strong>RB</strong></td><td>38.82</td><td>53.90</td><td>0.61</td><td>269</td></tr>
-      <tr><td><strong>WR</strong></td><td>30.41</td><td>41.56</td><td>0.61</td><td>426</td></tr>
-      <tr><td><strong>TE</strong></td><td>23.58</td><td>33.59</td><td>0.55</td><td>223</td></tr>
-      <tr><td><strong>Player-Weighted Summary</strong></td><td>35.41</td><td>50.45</td><td><strong>0.58</strong></td><td>1,052</td></tr>
+      <tr><td><strong>RB</strong></td><td>38.77</td><td>53.82</td><td>0.61</td><td>269</td></tr>
+      <tr><td><strong>WR</strong></td><td>30.43</td><td>41.44</td><td>0.61</td><td>426</td></tr>
+      <tr><td><strong>TE</strong></td><td>23.64</td><td>33.64</td><td>0.55</td><td>223</td></tr>
+      <tr><td><strong>Player-Weighted Summary</strong></td><td>35.42</td><td>50.40</td><td><strong>0.58</strong></td><td>1,052</td></tr>
     </table>
     <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The summary MAE and R² are weighted by held-out player count; summary RMSE is pooled from squared position RMSE values. ADP improvement claims are intentionally omitted because the 2025 market feature is a preseason-rank proxy.</p>
   </div>
@@ -1137,7 +1137,7 @@
     <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
     <h2>Your Opponents May Already Have This Data</h2>
     <div style="margin:16px 0;">
-      <div class="upgrade-feature">✓ 893-player board: 831 skill projections + 62 K/DEF entries</div>
+      <div class="upgrade-feature">✓ 906-player board: 844 skill projections + 62 K/DEF entries</div>
       <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
       <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
       <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
@@ -1492,6 +1492,7 @@ function logOut(){
 }
 
 const LS_KEY = 'warroom_';
+const DATA_VERSION = '20260720playercoverage';
 function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function lsSet(k,v){localStorage.setItem(LS_KEY+k,JSON.stringify(v));}
 
@@ -1661,7 +1662,7 @@ async function loadData(){
     hydrateCachedAuth();
     checkPaymentReturn();
 
-    const _v='?v=20260718modelaudit'; // cache buster — timing, roster, ADP, and validation audit
+    const _v='?v='+DATA_VERSION; // cache buster and saved-draft compatibility boundary
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1693,8 +1694,18 @@ async function loadData(){
     }catch(e){}
     buildDraftIntel();
     // Restore draft state from localStorage
-    myTeamIds=lsGet('myTeam',[]);
-    opponentIds=lsGet('opponentPicks',[]);
+    if(lsGet('draftDataVersion',null)!==DATA_VERSION){
+      // A saved draft from an older board can silently hide newly ranked stars.
+      // Preserve league settings, but start a clean player-availability state.
+      myTeamIds=[];
+      opponentIds=[];
+      lsSet('myTeam',myTeamIds);
+      lsSet('opponentPicks',opponentIds);
+      lsSet('draftDataVersion',DATA_VERSION);
+    }else{
+      myTeamIds=lsGet('myTeam',[]);
+      opponentIds=lsGet('opponentPicks',[]);
+    }
     restoreSettings(); // apply saved scoring format & roster config
     computeClientVBD();
     getRecommendations();
