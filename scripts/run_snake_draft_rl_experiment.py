@@ -29,6 +29,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from scripts.run_catboost_feature_experiments import build_frame
+from src.data.ffc_adp import enrich_board_with_adp_distribution, read_table
 from src.models.catboost_model import CatBoostModel, POSITION_CATBOOST_PARAMS, POSITION_TEMPORAL_WEIGHTS
 from src.models.pipeline import OFFENSIVE_POSITIONS, _numeric_feature_cols, get_position_features
 from src.optimizer.draft_strategy import (
@@ -150,6 +151,12 @@ class SimBoard:
     projected_points: np.ndarray
     vbd: np.ndarray
     adp: np.ndarray
+    market_adp_sd_1qb: np.ndarray
+    market_earliest_pick_1qb: np.ndarray
+    market_latest_pick_1qb: np.ndarray
+    market_adp_sd_2qb: np.ndarray
+    market_earliest_pick_2qb: np.ndarray
+    market_latest_pick_2qb: np.ndarray
     pts_lag1: np.ndarray
     fp_per_game_lag1: np.ndarray
     is_rookie: np.ndarray
@@ -173,6 +180,11 @@ def get_sim_board(board: pd.DataFrame) -> SimBoard:
             arr = np.full(len(df), default, dtype=np.float32)
         return np.nan_to_num(arr, nan=default, posinf=default, neginf=default)
 
+    def optional_col(name: str) -> np.ndarray:
+        if name not in df.columns:
+            return np.full(len(df), np.nan, dtype=np.float32)
+        return pd.to_numeric(df[name], errors="coerce").to_numpy(dtype=np.float32)
+
     projected = col("projected_points")
     vbd = col("vbd")
     adp = np.clip(col("adp", 200.0), 1.0, 250.0)
@@ -187,6 +199,12 @@ def get_sim_board(board: pd.DataFrame) -> SimBoard:
         projected_points=np.clip(projected, 0.0, None),
         vbd=np.clip(vbd, 0.0, None),
         adp=adp,
+        market_adp_sd_1qb=optional_col("market_adp_sd_1qb"),
+        market_earliest_pick_1qb=optional_col("market_earliest_pick_1qb"),
+        market_latest_pick_1qb=optional_col("market_latest_pick_1qb"),
+        market_adp_sd_2qb=optional_col("market_adp_sd_2qb"),
+        market_earliest_pick_2qb=optional_col("market_earliest_pick_2qb"),
+        market_latest_pick_2qb=optional_col("market_latest_pick_2qb"),
         pts_lag1=col("pts_lag1"),
         fp_per_game_lag1=col("fp_per_game_lag1"),
         is_rookie=col("is_rookie"),
@@ -374,6 +392,46 @@ def load_or_build_boards(df: pd.DataFrame, seasons: list[int], cache_path: Optio
         out.to_parquet(cache_path, index=False)
         print(f"Wrote cached draft boards: {cache_path}")
     return boards
+
+
+def enrich_boards_with_market_distributions(
+    boards: dict[int, pd.DataFrame],
+    distribution_path: Path | None,
+    one_qb_market: str = "half-ppr",
+) -> tuple[dict[int, pd.DataFrame], pd.DataFrame]:
+    """Attach observed/prior-only ADP dispersion for one-QB and two-QB drafts."""
+    if distribution_path is None or not distribution_path.exists():
+        print("ADP distribution cache unavailable; using generic availability spread")
+        return boards, pd.DataFrame()
+
+    distributions = read_table(distribution_path)
+    enriched: dict[int, pd.DataFrame] = {}
+    coverage_rows = []
+    for season, original in sorted(boards.items()):
+        board, one_qb_coverage = enrich_board_with_adp_distribution(
+            original,
+            distributions,
+            scoring=one_qb_market,
+            source_teams=12,
+            suffix="1qb",
+        )
+        board, two_qb_coverage = enrich_board_with_adp_distribution(
+            board,
+            distributions,
+            scoring="2qb",
+            source_teams=12,
+            suffix="2qb",
+        )
+        one_qb_coverage["market"] = "1qb"
+        two_qb_coverage["market"] = "2qb"
+        coverage_rows.extend([one_qb_coverage, two_qb_coverage])
+        enriched[season] = board
+
+    coverage = pd.DataFrame(coverage_rows)
+    if not coverage.empty:
+        print("\n=== ADP Distribution Coverage ===")
+        print(coverage.to_string(index=False))
+    return enriched, coverage
 
 
 def snake_pick_order(num_teams: int, rounds: int) -> list[int]:
@@ -749,8 +807,21 @@ def pick_by_scarcity_v2(
         for p in pos_arr
     ], dtype=np.float32)
 
+    if roster_format.starter_slots.get("QB", 0) >= 2:
+        adp_sd = sim.market_adp_sd_2qb[candidates]
+        earliest_pick = sim.market_earliest_pick_2qb[candidates]
+        latest_pick = sim.market_latest_pick_2qb[candidates]
+    else:
+        adp_sd = sim.market_adp_sd_1qb[candidates]
+        earliest_pick = sim.market_earliest_pick_1qb[candidates]
+        latest_pick = sim.market_latest_pick_1qb[candidates]
     p_gone = conditional_probability_gone(
-        adp, pick_number, next_pick_number
+        adp,
+        pick_number,
+        next_pick_number,
+        adp_sd=adp_sd,
+        earliest_pick=earliest_pick,
+        latest_pick=latest_pick,
     )
     p_available = 1.0 - p_gone
 
@@ -992,21 +1063,33 @@ def opponent_pick(
     return int(idxs[int(np.argmax(score))])
 
 
-def default_roster_format(num_teams: int, rounds: int) -> RosterFormat:
+def default_roster_format(
+    num_teams: int,
+    rounds: int,
+    qb_slots: int = 1,
+) -> RosterFormat:
     starter_slots = dict(STARTER_SLOTS)
+    starter_slots["QB"] = max(1, int(qb_slots))
     skill_starters = sum(starter_slots[p] for p in SKILL_POSITIONS) + starter_slots.get("FLEX", 0)
     bench = max(0, int(rounds) - skill_starters)
+    format_prefix = "standard" if starter_slots["QB"] == 1 else "two_qb"
     return RosterFormat(
-        name=f"standard_{num_teams}tm_{rounds}rnd",
+        name=f"{format_prefix}_{num_teams}tm_{rounds}rnd",
         num_teams=int(num_teams),
         starter_slots=starter_slots,
         bench=bench,
     )
 
 
-def sample_roster_format(rng: np.random.Generator, mode: str, num_teams: int, rounds: int) -> RosterFormat:
+def sample_roster_format(
+    rng: np.random.Generator,
+    mode: str,
+    num_teams: int,
+    rounds: int,
+    fixed_qb_slots: int = 1,
+) -> RosterFormat:
     if mode == "fixed":
-        return default_roster_format(num_teams, rounds)
+        return default_roster_format(num_teams, rounds, fixed_qb_slots)
 
     teams = int(rng.choice([10, 12, 14], p=[0.25, 0.55, 0.20]))
     qb = int(rng.choice([1, 2], p=[0.88, 0.12]))
@@ -1033,10 +1116,11 @@ def train_policy(
     temperature: float,
     anchor_reg: float,
     seed: int,
+    fixed_qb_slots: int = 1,
 ) -> LinearDraftPolicy:
     sample_board = next(iter(boards.values()))
     sample_idxs = np.arange(min(shortlist_size, len(sample_board)))
-    sample_format = default_roster_format(num_teams, rounds)
+    sample_format = default_roster_format(num_teams, rounds, fixed_qb_slots)
     n_features = action_features(
         sample_board,
         sample_idxs,
@@ -1057,7 +1141,9 @@ def train_policy(
 
     for ep in range(1, episodes + 1):
         season = int(rng.choice(train_seasons))
-        roster_format = sample_roster_format(rng, roster_mode, num_teams, rounds)
+        roster_format = sample_roster_format(
+            rng, roster_mode, num_teams, rounds, fixed_qb_slots
+        )
         draft_slot = int(rng.integers(1, roster_format.num_teams + 1))
         result, grads, _ = simulate_draft(
             boards[season],
@@ -1093,6 +1179,7 @@ def evaluate_strategy(
     seed: int,
     policy: Optional[LinearDraftPolicy] = None,
     scarcity_weights: ScarcityV2Weights = DEFAULT_SCARCITY_V2_WEIGHTS,
+    fixed_qb_slots: int = 1,
 ) -> pd.DataFrame:
     rows = []
     ep = 0
@@ -1101,7 +1188,9 @@ def evaluate_strategy(
         reps = max(int(episodes_per_season), 1)
         for rep in range(reps):
             ep += 1
-            roster_format = sample_roster_format(rng, roster_mode, num_teams, rounds)
+            roster_format = sample_roster_format(
+                rng, roster_mode, num_teams, rounds, fixed_qb_slots
+            )
             if roster_mode == "fixed":
                 draft_slot = 1 + (rep % roster_format.num_teams)
             else:
@@ -1186,7 +1275,21 @@ def main() -> None:
     parser.add_argument("--shortlist-size", type=int, default=24)
     parser.add_argument("--rounds", type=int, default=14)
     parser.add_argument("--num-teams", type=int, default=12)
+    parser.add_argument("--fixed-qb-slots", type=int, choices=[1, 2], default=1)
     parser.add_argument("--roster-mode", choices=["fixed", "mixed"], default="fixed")
+    parser.add_argument(
+        "--adp-distribution-cache",
+        default="data/ffc_adp_distributions.parquet",
+    )
+    parser.add_argument(
+        "--one-qb-market",
+        choices=["standard", "half-ppr", "ppr"],
+        default="half-ppr",
+    )
+    parser.add_argument(
+        "--adp-coverage-out",
+        default="data/scarcity_v2_adp_distribution_coverage.csv",
+    )
     parser.add_argument("--opponent-noise", type=float, default=18.0)
     parser.add_argument("--learning-rate", type=float, default=0.01)
     parser.add_argument("--temperature", type=float, default=0.55)
@@ -1214,11 +1317,22 @@ def main() -> None:
     seasons = sorted(set(args.train_seasons + args.eval_seasons))
     frame_cache = REPO / args.frame_cache if args.frame_cache else None
     board_cache = REPO / args.board_cache if args.board_cache else None
+    distribution_path = (
+        REPO / args.adp_distribution_cache if args.adp_distribution_cache else None
+    )
     df = load_or_build_frame(frame_cache, args.refresh_cache)
     boards = load_or_build_boards(df, seasons, board_cache, args.refresh_cache)
     missing = sorted(set(seasons) - set(boards))
     if missing:
         raise SystemExit(f"Missing boards for seasons: {missing}")
+    boards, adp_coverage = enrich_boards_with_market_distributions(
+        boards, distribution_path, args.one_qb_market
+    )
+    if not adp_coverage.empty and args.adp_coverage_out:
+        coverage_path = REPO / args.adp_coverage_out
+        coverage_path.parent.mkdir(parents=True, exist_ok=True)
+        adp_coverage.to_csv(coverage_path, index=False)
+        print(f"Wrote ADP distribution coverage: {coverage_path}")
 
     print(f"Puffer wrapper: {puffer_smoke_check(next(iter(boards.values())), args.shortlist_size)}")
 
@@ -1238,6 +1352,7 @@ def main() -> None:
             temperature=args.temperature,
             anchor_reg=args.anchor_reg,
             seed=args.seed,
+            fixed_qb_slots=args.fixed_qb_slots,
         )
 
     raw_parts = []
@@ -1257,6 +1372,7 @@ def main() -> None:
                 seed=args.seed,
                 policy=policy if strategy == "rl" else None,
                 scarcity_weights=scarcity_weights,
+                fixed_qb_slots=args.fixed_qb_slots,
             )
         )
 
@@ -1297,7 +1413,11 @@ def main() -> None:
                 "eval_seasons": args.eval_seasons,
                 "scoring": "actual held-out QB/RB/WR/TE starter+flex fantasy points",
                 "roster_mode": args.roster_mode,
-                "fixed_roster_format": default_roster_format(args.num_teams, args.rounds).to_json(),
+                "fixed_roster_format": default_roster_format(
+                    args.num_teams, args.rounds, args.fixed_qb_slots
+                ).to_json(),
+                "adp_distribution_cache": str(distribution_path) if distribution_path else None,
+                "one_qb_market": args.one_qb_market,
                 "opponents": "ADP/model/VBD scripted drafters with Gaussian noise and roster-need bonuses",
                 "rl_policy": "linear softmax over top-N legal available player/action features",
                 "scarcity_v2_weights": asdict(scarcity_weights),

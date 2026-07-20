@@ -310,6 +310,163 @@ def replace_snapshots(existing: pd.DataFrame, incoming: pd.DataFrame) -> pd.Data
     )
 
 
+def enrich_board_with_adp_distribution(
+    board: pd.DataFrame,
+    distributions: pd.DataFrame,
+    *,
+    scoring: str,
+    source_teams: int = 12,
+    suffix: str | None = None,
+    nearest_neighbors: int = 25,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Attach point-in-time or prior-season ADP dispersion to a draft board.
+
+    Exact same-season matches use the observed preseason snapshot. Unmatched
+    players use only earlier seasons, matched by position and nearby mean ADP.
+    Pick bounds are stored as offsets and recentered on the board's own ADP so
+    mixing two market sources does not silently replace the board's mean rank.
+    """
+    if board.empty:
+        return board.copy(), {
+            "season": None,
+            "scoring": scoring,
+            "source_teams": source_teams,
+            "rows": 0,
+            "priced_rows": 0,
+            "observed_rows": 0,
+            "observed_priced_rows": 0,
+            "imputed_rows": 0,
+            "missing_rows": 0,
+        }
+    if scoring not in SUPPORTED_SCORING:
+        raise ValueError(f"Unsupported scoring {scoring!r}")
+    required_board = {"season", "player_name", "position", "adp"}
+    missing_board = sorted(required_board - set(board.columns))
+    if missing_board:
+        raise ValueError(f"Board is missing columns: {missing_board}")
+    seasons = pd.to_numeric(board["season"], errors="coerce").dropna().unique()
+    if len(seasons) != 1:
+        raise ValueError("Board enrichment requires exactly one season")
+    target_season = int(seasons[0])
+
+    required_market = {
+        "season",
+        "scoring",
+        "teams",
+        "player_name",
+        "position",
+        "adp",
+        "adp_sd",
+        "earliest_pick",
+        "latest_pick",
+    }
+    missing_market = sorted(required_market - set(distributions.columns))
+    if missing_market:
+        raise ValueError(f"ADP distributions are missing columns: {missing_market}")
+
+    # Reuse the project's accent/suffix/first-name normalization so joins agree
+    # with the live ADP overlay and Sleeper entity resolution.
+    from src.data.sleeper_rosters import _normalize_name
+
+    market = distributions[
+        distributions["scoring"].eq(scoring)
+        & pd.to_numeric(distributions["teams"], errors="coerce").eq(source_teams)
+    ].copy()
+    market["_key"] = (
+        market["player_name"].map(_normalize_name)
+        + "|"
+        + market["position"].astype(str).str.upper()
+    )
+    market["_early_offset"] = (
+        pd.to_numeric(market["earliest_pick"], errors="coerce")
+        - pd.to_numeric(market["adp"], errors="coerce")
+    )
+    market["_late_offset"] = (
+        pd.to_numeric(market["latest_pick"], errors="coerce")
+        - pd.to_numeric(market["adp"], errors="coerce")
+    )
+
+    current = market[market["season"].eq(target_season)].copy()
+    if current["_key"].duplicated().any():
+        duplicates = current.loc[current["_key"].duplicated(False), "_key"].unique()
+        raise ValueError(
+            f"Duplicate market keys for {target_season}/{scoring}: {duplicates[:5]}"
+        )
+    current = current.set_index("_key")
+
+    label = suffix or scoring.replace("-", "_")
+    sd_col = f"market_adp_sd_{label}"
+    early_col = f"market_earliest_pick_{label}"
+    late_col = f"market_latest_pick_{label}"
+    source_col = f"market_distribution_source_{label}"
+
+    result = board.copy()
+    result["_market_key"] = (
+        result["player_name"].map(_normalize_name)
+        + "|"
+        + result["position"].astype(str).str.upper()
+    )
+    board_adp = pd.to_numeric(result["adp"], errors="coerce")
+    result[sd_col] = pd.to_numeric(
+        result["_market_key"].map(current["adp_sd"]), errors="coerce"
+    )
+    early_offset = pd.to_numeric(
+        result["_market_key"].map(current["_early_offset"]), errors="coerce"
+    )
+    late_offset = pd.to_numeric(
+        result["_market_key"].map(current["_late_offset"]), errors="coerce"
+    )
+    observed = result[sd_col].notna()
+    result[source_col] = "missing"
+    result.loc[observed, source_col] = "observed"
+
+    history = market[market["season"].lt(target_season)].copy()
+    history["adp"] = pd.to_numeric(history["adp"], errors="coerce")
+    history["adp_sd"] = pd.to_numeric(history["adp_sd"], errors="coerce")
+    history = history.dropna(
+        subset=["position", "adp", "adp_sd", "_early_offset", "_late_offset"]
+    )
+    missing_indices = result.index[~observed]
+    for row_index in missing_indices:
+        pos = str(result.at[row_index, "position"]).upper()
+        mean_adp = board_adp.at[row_index]
+        pool = history[history["position"].astype(str).str.upper().eq(pos)]
+        if pool.empty or pd.isna(mean_adp):
+            continue
+        nearest = pool.assign(_distance=(pool["adp"] - mean_adp).abs()).nsmallest(
+            max(1, int(nearest_neighbors)), "_distance"
+        )
+        if nearest.empty:
+            continue
+        result.at[row_index, sd_col] = float(nearest["adp_sd"].median())
+        early_offset.at[row_index] = float(nearest["_early_offset"].median())
+        late_offset.at[row_index] = float(nearest["_late_offset"].median())
+        result.at[row_index, source_col] = "imputed_prior"
+
+    result[sd_col] = pd.to_numeric(result[sd_col], errors="coerce").clip(0.5, 40.0)
+    result[early_col] = board_adp + early_offset
+    result[late_col] = board_adp + late_offset
+    result[early_col] = pd.concat([result[early_col], board_adp], axis=1).min(axis=1)
+    result[late_col] = pd.concat([result[late_col], board_adp], axis=1).max(axis=1)
+    result = result.drop(columns="_market_key")
+    result.attrs.clear()
+
+    priced = board_adp.lt(200)
+    source = result[source_col]
+    coverage = {
+        "season": target_season,
+        "scoring": scoring,
+        "source_teams": int(source_teams),
+        "rows": len(result),
+        "priced_rows": int(priced.sum()),
+        "observed_rows": int(source.eq("observed").sum()),
+        "observed_priced_rows": int((source.eq("observed") & priced).sum()),
+        "imputed_rows": int(source.eq("imputed_prior").sum()),
+        "missing_rows": int(source.eq("missing").sum()),
+    }
+    return result, coverage
+
+
 def read_table(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame(columns=SNAPSHOT_COLUMNS)

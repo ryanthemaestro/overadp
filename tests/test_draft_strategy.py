@@ -96,6 +96,61 @@ def test_next_turn_risk_is_conditional_on_player_being_available_now():
     assert risk[0] < 1
 
 
+def test_observed_adp_dispersion_changes_next_turn_risk_by_player():
+    narrow = conditional_probability_gone(
+        np.asarray([30.0]),
+        current_pick=20,
+        next_pick=35,
+        adp_sd=np.asarray([2.0]),
+        earliest_pick=np.asarray([25.0]),
+        latest_pick=np.asarray([35.0]),
+    )
+    wide = conditional_probability_gone(
+        np.asarray([30.0]),
+        current_pick=20,
+        next_pick=35,
+        adp_sd=np.asarray([10.0]),
+        earliest_pick=np.asarray([1.0]),
+        latest_pick=np.asarray([80.0]),
+    )
+
+    assert narrow[0] > wide[0]
+    assert 0 <= wide[0] <= narrow[0] <= 1
+
+
+def test_observed_pick_range_softens_an_unusually_long_tail():
+    short_tail = conditional_probability_gone(
+        np.asarray([30.0]),
+        current_pick=20,
+        next_pick=40,
+        adp_sd=np.asarray([2.0]),
+        latest_pick=np.asarray([32.0]),
+    )
+    long_tail = conditional_probability_gone(
+        np.asarray([30.0]),
+        current_pick=20,
+        next_pick=40,
+        adp_sd=np.asarray([2.0]),
+        latest_pick=np.asarray([60.0]),
+    )
+
+    assert long_tail[0] < short_tail[0]
+
+
+def test_missing_dispersion_uses_the_generic_fallback():
+    fallback = conditional_probability_gone(
+        np.asarray([30.0]), current_pick=20, next_pick=35
+    )
+    missing = conditional_probability_gone(
+        np.asarray([30.0]),
+        current_pick=20,
+        next_pick=35,
+        adp_sd=np.asarray([np.nan]),
+    )
+
+    np.testing.assert_allclose(missing, fallback)
+
+
 def test_vona_compares_player_to_expected_same_position_option_next_turn():
     valued = compute_next_pick_values(
         _players(),

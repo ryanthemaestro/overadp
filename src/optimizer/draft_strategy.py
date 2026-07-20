@@ -467,14 +467,72 @@ def conditional_probability_gone(
     adp: np.ndarray | pd.Series | float,
     current_pick: int,
     next_pick: int,
-    scale: Optional[float] = None,
+    scale: np.ndarray | pd.Series | float | None = None,
+    adp_sd: np.ndarray | pd.Series | float | None = None,
+    earliest_pick: np.ndarray | pd.Series | float | None = None,
+    latest_pick: np.ndarray | pd.Series | float | None = None,
 ) -> np.ndarray:
-    """Estimate next-turn draft risk conditional on being available now."""
+    """Estimate next-turn draft risk conditional on being available now.
+
+    When observed ADP dispersion is present, convert its standard deviation to
+    a player-specific logistic scale. Observed earliest/latest picks provide a
+    soft lower bound on the corresponding tail width; they are not treated as
+    hard support because future human drafts can exceed historical extremes.
+    """
     values = np.asarray(adp, dtype=float)
     turn_gap = max(1, int(next_pick) - int(current_pick))
-    spread = float(scale or max(5.0, min(14.0, turn_gap / 3.0)))
-    current_cdf = 1.0 / (1.0 + np.exp(-np.clip((current_pick - values) / spread, -30, 30)))
-    next_cdf = 1.0 / (1.0 + np.exp(-np.clip((next_pick - values) / spread, -30, 30)))
+    fallback_spread = max(5.0, min(14.0, turn_gap / 3.0))
+
+    def broadcast(data, default=np.nan):
+        if data is None:
+            return np.full(values.shape, default, dtype=float)
+        return np.broadcast_to(np.asarray(data, dtype=float), values.shape).copy()
+
+    if scale is not None:
+        base_spread = np.maximum(broadcast(scale), 0.35)
+        left_spread = right_spread = base_spread
+    elif adp_sd is not None:
+        observed_sd = broadcast(adp_sd)
+        valid_sd = np.isfinite(observed_sd) & (observed_sd > 0)
+        observed_sd = np.where(valid_sd, np.clip(observed_sd, 0.5, 40.0), np.nan)
+        left_sd = observed_sd.copy()
+        right_sd = observed_sd.copy()
+
+        earliest = broadcast(earliest_pick)
+        latest = broadcast(latest_pick)
+        valid_early = np.isfinite(earliest) & (earliest <= values)
+        valid_late = np.isfinite(latest) & (latest >= values)
+        # Roughly 3.5 standard deviations covers an observed finite-sample tail.
+        left_sd = np.where(
+            valid_early,
+            np.fmax(left_sd, np.maximum(values - earliest, 0.0) / 3.5),
+            left_sd,
+        )
+        right_sd = np.where(
+            valid_late,
+            np.fmax(right_sd, np.maximum(latest - values, 0.0) / 3.5),
+            right_sd,
+        )
+        # Logistic standard deviation = scale * pi / sqrt(3).
+        conversion = np.sqrt(3.0) / np.pi
+        left_spread = np.where(
+            np.isfinite(left_sd), np.maximum(left_sd * conversion, 0.35), fallback_spread
+        )
+        right_spread = np.where(
+            np.isfinite(right_sd), np.maximum(right_sd * conversion, 0.35), fallback_spread
+        )
+    else:
+        left_spread = right_spread = np.full(
+            values.shape, fallback_spread, dtype=float
+        )
+
+    def cdf_at(pick: int) -> np.ndarray:
+        delta = float(pick) - values
+        spread = np.where(delta < 0, left_spread, right_spread)
+        return 1.0 / (1.0 + np.exp(-np.clip(delta / spread, -30, 30)))
+
+    current_cdf = cdf_at(current_pick)
+    next_cdf = cdf_at(next_pick)
     survived = np.maximum(1.0 - current_cdf, 1e-8)
     return np.clip((next_cdf - current_cdf) / survived, 0.0, 1.0)
 
@@ -520,7 +578,16 @@ def compute_next_pick_values(
         adp = pd.to_numeric(valued[adp_column], errors="coerce").fillna(200.0)
     else:
         adp = pd.Series(200.0, index=valued.index)
-    p_gone = conditional_probability_gone(adp, current_pick, next_pick)
+    p_gone = conditional_probability_gone(
+        adp,
+        current_pick,
+        next_pick,
+        adp_sd=valued["adp_sd"] if "adp_sd" in valued else None,
+        earliest_pick=(
+            valued["earliest_pick"] if "earliest_pick" in valued else None
+        ),
+        latest_pick=valued["latest_pick"] if "latest_pick" in valued else None,
+    )
     valued["p_gone_next"] = p_gone
     valued["p_available_next"] = 1.0 - p_gone
     valued["expected_next_vbd"] = 0.0

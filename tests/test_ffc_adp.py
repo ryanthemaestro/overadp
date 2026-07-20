@@ -6,6 +6,7 @@ import pytest
 
 from src.data.ffc_adp import (
     SnapshotKey,
+    enrich_board_with_adp_distribution,
     normalize_snapshot,
     profile_snapshots,
     replace_snapshots,
@@ -27,7 +28,10 @@ def _payload(*, teams=12, season=2024, scoring="PPR", players=50):
         "players": [
             {
                 "player_id": index,
-                "name": f"Player {index}",
+                "name": (
+                    f"Player {chr(65 + (index - 1) // 26)}"
+                    f"{chr(65 + (index - 1) % 26)}"
+                ),
                 "position": "PK" if index == players else "WR",
                 "team": "NYJ",
                 "adp": float(index),
@@ -109,3 +113,38 @@ def test_replace_snapshots_removes_stale_rows_from_whole_partition():
 
     assert len(combined[combined["season"].eq(2024)]) == 49
     assert len(combined[combined["season"].eq(2023)]) == 50
+
+
+def test_board_enrichment_uses_current_snapshot_then_prior_only_imputation():
+    current = normalize_snapshot(
+        SnapshotKey(2024, "ppr", 12), _payload(season=2024)
+    )
+    history = normalize_snapshot(
+        SnapshotKey(2023, "ppr", 12), _payload(season=2023)
+    )
+    future = normalize_snapshot(
+        SnapshotKey(2025, "ppr", 12), _payload(season=2025)
+    )
+    future["adp_sd"] = 39.0
+    board = pd.DataFrame(
+        [
+            {"season": 2024, "player_name": "Player AA", "position": "WR", "adp": 10.0},
+            {"season": 2024, "player_name": "New Player", "position": "WR", "adp": 20.0},
+        ]
+    )
+
+    enriched, coverage = enrich_board_with_adp_distribution(
+        board,
+        pd.concat([history, current, future], ignore_index=True),
+        scoring="ppr",
+        suffix="1qb",
+    )
+
+    assert enriched.loc[0, "market_distribution_source_1qb"] == "observed"
+    assert enriched.loc[0, "market_adp_sd_1qb"] == 1.5
+    assert enriched.loc[1, "market_distribution_source_1qb"] == "imputed_prior"
+    assert enriched.loc[1, "market_adp_sd_1qb"] == 1.5
+    assert enriched.loc[1, "market_adp_sd_1qb"] != 39.0
+    assert coverage["observed_rows"] == 1
+    assert coverage["imputed_rows"] == 1
+    assert coverage["missing_rows"] == 0
