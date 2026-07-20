@@ -94,7 +94,7 @@ def make_avatar():
 
 
 def make_banner():
-    """1500x500 banner: Model R² 0.59 vs ADP R² 0.09 kill-stat."""
+    """1500x500 banner with the current held-out point-model results."""
     w, h = 1500, 500
     img = Image.new("RGB", (w, h), BG)
     draw_grid(img, spacing=60, alpha=16)
@@ -114,13 +114,13 @@ def make_banner():
 
     # Top "section tag" style
     tag_font = ImageFont.truetype(MONO, 18)
-    tag = "WALK-FORWARD VALIDATED  ·  2022-2025"
+    tag = "WALK-FORWARD TESTED  ·  2024 + 2025"
     tb = d.textbbox((0, 0), tag, font=tag_font)
     d.text(((w - (tb[2] - tb[0])) // 2, 60), tag, font=tag_font, fill=GREEN)
 
     # Main headline
     head_font = ImageFont.truetype(SANS_BOLD, 68)
-    head = "7× MORE VARIANCE EXPLAINED THAN ADP"
+    head = "1,052 OUT-OF-SAMPLE PLAYER-SEASONS"
     hb = d.textbbox((0, 0), head, font=head_font)
     d.text(((w - (hb[2] - hb[0])) // 2, 100), head, font=head_font, fill=FG)
 
@@ -134,11 +134,11 @@ def make_banner():
     left_x = w // 2 - 320
 
     # Badge above number
-    badge = "OVERADP MODEL"
+    badge = "PLAYER-WEIGHTED R²"
     bb = d.textbbox((0, 0), badge, font=stat_label)
     d.text((left_x - (bb[2] - bb[0]) // 2, col_y), badge, font=stat_label, fill=FG3)
     # Number
-    num = "0.59"
+    num = "0.58"
     nb = d.textbbox((0, 0), num, font=stat_big)
     # green glow
     g = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -148,37 +148,37 @@ def make_banner():
     img.paste(g, (0, 0), g)
     d.text((left_x - (nb[2] - nb[0]) // 2, col_y + 30), num, font=stat_big, fill=GREEN)
     # Sublabel
-    sub = "R² variance explained"
+    sub = "across position test folds"
     sbx = d.textbbox((0, 0), sub, font=stat_sub)
     d.text((left_x - (sbx[2] - sbx[0]) // 2, col_y + 175), sub, font=stat_sub, fill=FG2)
 
     # VS divider
     vs_font = ImageFont.truetype(SANS_BOLD, 60)
-    vs = "VS"
+    vs = "+"
     vb = d.textbbox((0, 0), vs, font=vs_font)
     d.text(((w - (vb[2] - vb[0])) // 2, col_y + 60), vs, font=vs_font, fill=FG3)
     # Divider lines
     d.line([(w // 2 - 130, col_y + 100), (w // 2 - 75, col_y + 100)], fill=(98, 108, 120, 180), width=2)
     d.line([(w // 2 + 75, col_y + 100), (w // 2 + 130, col_y + 100)], fill=(98, 108, 120, 180), width=2)
 
-    # Right column: ADP baseline
+    # Right column: aggregate held-out error
     right_x = w // 2 + 320
 
-    badge2 = "ADP (CONSENSUS)"
+    badge2 = "PLAYER-WEIGHTED MAE"
     bb2 = d.textbbox((0, 0), badge2, font=stat_label)
     d.text((right_x - (bb2[2] - bb2[0]) // 2, col_y), badge2, font=stat_label, fill=FG3)
 
-    num2 = "0.09"
+    num2 = "35.41"
     nb2 = d.textbbox((0, 0), num2, font=stat_big)
     d.text((right_x - (nb2[2] - nb2[0]) // 2, col_y + 30), num2, font=stat_big, fill=RED)
 
-    sub2 = "R² variance explained"
+    sub2 = "fantasy points per player-season"
     sbx2 = d.textbbox((0, 0), sub2, font=stat_sub)
     d.text((right_x - (sbx2[2] - sbx2[0]) // 2, col_y + 175), sub2, font=stat_sub, fill=FG2)
 
     # Bottom tagline
     tag2_font = ImageFont.truetype(MONO, 20)
-    tag2 = "MAE EDGE:   QB −34%   ·   RB −38%   ·   WR −33%   ·   TE −39%"
+    tag2 = "MAE:   QB 64.17   ·   RB 38.82   ·   WR 30.41   ·   TE 23.58"
     tb2 = d.textbbox((0, 0), tag2, font=tag2_font)
     d.text(((w - (tb2[2] - tb2[0])) // 2, h - 80), tag2, font=tag2_font, fill=GREEN)
 
