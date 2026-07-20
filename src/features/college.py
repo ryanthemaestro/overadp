@@ -13,6 +13,7 @@ def compute_college_features(
     draft_df: Optional[pd.DataFrame] = None,
     combine_df: Optional[pd.DataFrame] = None,
     player_info_df: Optional[pd.DataFrame] = None,
+    draft_values_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """Add college/draft features for rookie and young player projections.
 
@@ -29,7 +30,7 @@ def compute_college_features(
     - early_declare: left college before senior season (1/0)
     - p5_conference: played in Power 5 conference (1/0)
     """
-    if draft_df is None and combine_df is None and player_info_df is None:
+    if draft_df is None and combine_df is None and player_info_df is None and draft_values_df is None:
         return df
 
     df = df.copy()
@@ -89,6 +90,22 @@ def compute_college_features(
                     0,
                 )
 
+            if draft_values_df is not None and not draft_values_df.empty and "draft_pick" in dp.columns:
+                dv = draft_values_df.copy()
+                dv.columns = [c.lower() for c in dv.columns]
+                if "pick" in dv.columns:
+                    value_cols = [c for c in ["stuart", "johnson", "hill", "otc", "pff"] if c in dv.columns]
+                    if value_cols:
+                        dv = dv[["pick"] + value_cols].drop_duplicates("pick")
+                        rename_map = {c: f"draft_value_{c}" for c in value_cols}
+                        dv = dv.rename(columns=rename_map)
+                        dp = dp.merge(dv, left_on="draft_pick", right_on="pick", how="left")
+                        dp = dp.drop(columns=["pick"], errors="ignore")
+                        for c in rename_map.values():
+                            dp[c] = dp[c].fillna(0)
+                        if "draft_value_otc" in dp.columns:
+                            dp["draft_value_log_otc"] = np.log1p(dp["draft_value_otc"])
+
             # College production per game (estimate ~13 games/season)
             college_games = 13
             stat_map = {
@@ -111,6 +128,9 @@ def compute_college_features(
 
             # Merge draft features
             draft_feat_cols = ["draft_round", "draft_pick", "draft_capital",
+                               "draft_value_stuart", "draft_value_johnson",
+                               "draft_value_hill", "draft_value_otc",
+                               "draft_value_pff", "draft_value_log_otc",
                                "college_pass_yds_per_game", "college_pass_td_per_game",
                                "college_rush_yds_per_game", "college_rush_td_per_game",
                                "college_rec_yds_per_game", "college_rec_td_per_game",
@@ -377,6 +397,10 @@ def compute_college_features(
     if "is_rookie" in df.columns:
         df["college_x_rookie"] = df["college_dominance"] * df["is_rookie"]
         df["draft_cap_x_rookie"] = df["draft_capital"] * df["is_rookie"]
+        if "draft_value_otc" in df.columns:
+            df["draft_value_otc_x_rookie"] = df["draft_value_otc"] * df["is_rookie"]
+        if "draft_value_pff" in df.columns:
+            df["draft_value_pff_x_rookie"] = df["draft_value_pff"] * df["is_rookie"]
         if "athletic_score" in df.columns:
             df["athletic_x_rookie"] = df["athletic_score"] * df["is_rookie"]
         else:
@@ -397,7 +421,9 @@ def compute_college_features(
     # Veteran combine scores from a decade ago add noise; their NFL stats dominate.
     # Walk-forward testing showed this cutoff gives the best overall improvement.
     if "draft_year" in df.columns and "season" in df.columns:
-        years_exp = df["season"] - df["draft_year"].fillna(df["season"])
+        season_num = pd.to_numeric(df["season"], errors="coerce")
+        draft_year_num = pd.to_numeric(df["draft_year"], errors="coerce")
+        years_exp = season_num - draft_year_num.fillna(season_num)
         veteran_mask = years_exp >= 4
         combine_and_athletic = combine_metric_cols + ["athletic_score", "has_combine_data"]
         for col in combine_and_athletic:
@@ -406,6 +432,8 @@ def compute_college_features(
 
     # Fill NaN for all new columns
     new_cols = ["draft_round", "draft_pick", "draft_capital",
+                "draft_value_stuart", "draft_value_johnson", "draft_value_hill",
+                "draft_value_otc", "draft_value_pff", "draft_value_log_otc",
                 "athletic_score", "college_dominance",
                 "early_declare", "p5_conference", "has_combine_data",
                 "combine_forty", "combine_bench", "combine_vertical",
@@ -414,7 +442,9 @@ def compute_college_features(
                 "college_rush_yds_per_game", "college_rush_td_per_game",
                 "college_rec_yds_per_game", "college_rec_td_per_game",
                 "college_rec_per_game", "college_rush_att_per_game",
-                "college_x_rookie", "draft_cap_x_rookie", "athletic_x_rookie",
+                "college_x_rookie", "draft_cap_x_rookie",
+                "draft_value_otc_x_rookie", "draft_value_pff_x_rookie",
+                "athletic_x_rookie",
                 "college_x_2nd_year", "draft_cap_x_2nd_year"]
     for c in new_cols:
         if c in df.columns:

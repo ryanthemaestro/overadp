@@ -6,6 +6,7 @@ This is the correct validation for time-series/seasonal data.
 import pandas as pd
 import numpy as np
 from typing import Optional
+from pandas.api.types import is_numeric_dtype
 from src.models.base import FantasyModel
 
 
@@ -41,18 +42,19 @@ def walk_forward_validate(
         train_mask = df[season_col].isin(train_seasons)
         test_mask = df[season_col] == test_season
 
-        X_train = df.loc[train_mask, feature_cols]
+        numeric_cols = [c for c in feature_cols if c in df.columns and is_numeric_dtype(df[c])]
+        X_train = df.loc[train_mask, numeric_cols]
         y_train = df.loc[train_mask, target_col]
-        X_test = df.loc[test_mask, feature_cols]
+        X_test = df.loc[test_mask, numeric_cols]
         y_test = df.loc[test_mask, target_col]
 
         # Fill NaN features with 0 (lag features are naturally NaN for new players)
-        # Only train/test on rows with actual fantasy points (> 0)
-        # This excludes projection-season placeholder rows
-        X_train = X_train.fillna(0)
-        X_test = X_test.fillna(0)
-        valid_train = y_train.notna() & (y_train > 0)
-        valid_test = y_test.notna() & (y_test > 0)
+        # and keep true zero-point historical rows; projection placeholder rows are
+        # not present in walk-forward historical folds.
+        X_train = X_train.replace([np.inf, -np.inf], np.nan).fillna(0)
+        X_test = X_test.replace([np.inf, -np.inf], np.nan).fillna(0)
+        valid_train = y_train.notna() & np.isfinite(y_train)
+        valid_test = y_test.notna() & np.isfinite(y_test)
 
         X_tr, y_tr = X_train[valid_train], y_train[valid_train]
         X_te, y_te = X_test[valid_test], y_test[valid_test]
@@ -74,9 +76,12 @@ def walk_forward_validate(
         # Apply temporal weighting if specified
         sw = None
         if temporal_weight > 0 and season_col in df.columns:
-            max_s = df.loc[train_mask & valid_train, season_col].max()
-            years_ago = max_s - df.loc[train_mask & valid_train, season_col]
-            sw = np.exp(-temporal_weight * years_ago.values)
+            train_season_values = pd.to_numeric(
+                df.loc[train_mask & valid_train, season_col], errors="raise"
+            )
+            max_s = train_season_values.max()
+            years_ago = (max_s - train_season_values).to_numpy(dtype=float)
+            sw = np.exp(-temporal_weight * years_ago)
 
         model_clone.fit(X_tr, y_tr, sample_weight=sw)
         preds = model_clone.predict(X_te)

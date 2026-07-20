@@ -8,11 +8,9 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 from pathlib import Path
+from pandas.api.types import is_numeric_dtype
 
 from src.models.base import FantasyModel
-from src.models.ridge_model import RidgeModel
-from src.models.rf_model import RandomForestModel
-from src.models.xgboost_model import XGBoostModel
 from src.models.catboost_model import CatBoostModel, POSITION_CATBOOST_PARAMS, POSITION_TEMPORAL_WEIGHTS
 from src.models.ensemble import StackedEnsembleModel
 from src.models.compare import walk_forward_validate, summarize_comparison
@@ -51,6 +49,15 @@ POSITION_FEATURES = {
         "depth_rank", "is_starter", "is_backup",
         # NOTE: coaching features (new_hc, hc_tenure_years) tested and rejected —
         # added noise for RB/TE. Team context features already capture HC signal.
+        # ADP-derived market shape/value features.
+        "adp_log", "adp_inverse", "is_top12_adp", "is_top24_adp", "is_top48_adp",
+        "is_late_or_undrafted_adp", "adp_minus_pts_lag1", "pts_lag1_per_adp",
+        "fp_per_game_lag1_per_adp", "age_x_adp",
+        # Validated nflverse cached-source additions.
+        "snap_offense_snaps_lag1", "snap_offense_pct_lag1",
+        "snap_games_lag1", "snap_offense_snaps_per_game_lag1",
+        "games_lag2", "games_roll2", "games_roll3",
+        "missed_games_lag1", "missed_games_roll2", "played_15plus_lag1",
     ],
     "RB": [
         "age", "age_squared", "is_prime",
@@ -61,7 +68,7 @@ POSITION_FEATURES = {
         "receiving_yards_lag1", "targets_lag1", "receptions_lag1",
         "targets_per_game_lag1",
         "rb_share_of_team_rush_lag1", "rb_share_of_team_rush_td_lag1",
-        "ol_quality_tier",
+        "ol_quality_tier_lag1",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
         "pts_roll2", "rec_td_rate_lag1", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
@@ -69,6 +76,9 @@ POSITION_FEATURES = {
         "adp", "adp_tier", "injury_count_lag1", "games_missed_lag1", "injury_count_roll3",
         # SOS & rookie features (lagged to prevent leakage)
         "def_rank_lag1", "is_rookie", "is_2nd_year",
+        "schedule_opp_def_rank", "schedule_top8_def_games",
+        "schedule_bottom8_def_games", "schedule_division_games",
+        "schedule_rest_advantage",
         # College/draft features
         "draft_capital", "athletic_score", "college_dominance",
         "college_rush_yds_per_game", "college_rush_td_per_game",
@@ -82,6 +92,12 @@ POSITION_FEATURES = {
         # means depth chart labels are unreliable (e.g., Gibbs as "RB2" had 369 pts).
         # Teammate competition (current roster + prior-season volume)
         "teammate_carries_prev",
+        # ADP-derived market shape/value features.
+        "adp_log", "adp_inverse", "is_top12_adp", "is_top24_adp", "is_top48_adp",
+        "is_late_or_undrafted_adp", "adp_minus_pts_lag1", "pts_lag1_per_adp",
+        "fp_per_game_lag1_per_adp", "age_x_adp",
+        # Validated nflverse draft pick value interactions.
+        "draft_value_otc_x_rookie", "draft_value_pff_x_rookie",
     ],
     "WR": [
         "age", "age_squared", "is_prime",
@@ -112,6 +128,21 @@ POSITION_FEATURES = {
         "depth_rank", "is_starter", "is_backup",
         # Teammate competition (current roster + prior-season volume)
         "teammate_targets_prev", "teammate_rec_yards_prev",
+        # Lagged Next Gen Stats receiving efficiency.
+        "ngs_receiving_catch_percentage_lag1",
+        # Prior-season availability trend.
+        "games_lag2", "games_roll2", "games_roll3",
+        "missed_games_lag1", "missed_games_roll2", "played_15plus_lag1",
+        # ADP-derived market shape/value features.
+        "adp_log", "adp_inverse", "is_top12_adp", "is_top24_adp", "is_top48_adp",
+        "is_late_or_undrafted_adp", "adp_minus_pts_lag1", "pts_lag1_per_adp",
+        "fp_per_game_lag1_per_adp", "age_x_adp",
+        # Validated nflverse draft pick value interactions.
+        "draft_value_otc_x_rookie", "draft_value_pff_x_rookie",
+        # Prior-year contract status; tested as WR-only.
+        "contract_years_prev", "contract_years_elapsed_prev",
+        "contract_years_remaining_prev", "contract_is_active_prev",
+        "contract_year_flag_prev",
     ],
     "TE": [
         "age", "age_squared", "is_prime",
@@ -122,6 +153,9 @@ POSITION_FEATURES = {
         "receptions_lag1",
         "target_share_lag1", "yards_per_target_lag1", "catch_rate_lag1",
         "targets_per_game_lag1", "rec_td_rate_lag1",
+        "receiving_epa_lag1", "receiving_air_yards_lag1",
+        "receiving_yards_after_catch_lag1", "receiving_first_downs_lag1",
+        "air_yards_share_lag1", "wopr_lag1", "racr_lag1", "pts_per_target_lag1",
         # Regression features (lagged to prevent leakage)
         "pts_lag1", "yoy_change_injury_adj_lag1", "yoy_pct_change_injury_adj_lag1", "regression_risk_injury_adj_lag1", "is_breakout_lag1", "is_bust_injury_adj_lag1",
         "pts_roll2", "fp_per_game_lag1", "games_lag1", "fp_adj_17games_lag1", "is_injury_bounce_back_lag1",
@@ -143,6 +177,17 @@ POSITION_FEATURES = {
         # NOTE: teammate competition NOT used for TE — most teams have only 1
         # meaningful TE, so the signal is dominated by WR target share which is
         # already captured by other features. Adding it caused +2% TE MAE.
+        # ADP-derived age/market interaction.
+        "age_x_adp",
+        "adp_log", "adp_inverse", "is_top12_adp", "is_top24_adp", "is_top48_adp",
+        "is_late_or_undrafted_adp", "adp_minus_pts_lag1", "pts_lag1_per_adp",
+        "fp_per_game_lag1_per_adp",
+        # Prior-year contract value/status; tested as TE-only.
+        "contract_apy_cap_pct_prev", "contract_apy_log_prev",
+        "contract_guaranteed_log_prev", "contract_guaranteed_pct_prev",
+        "contract_years_prev", "contract_years_elapsed_prev",
+        "contract_years_remaining_prev", "contract_is_active_prev",
+        "contract_year_flag_prev",
     ],
 }
 
@@ -165,6 +210,16 @@ def get_position_features(position: str, available_cols: list[str]) -> list[str]
     return usable
 
 
+def _numeric_feature_cols(df: pd.DataFrame, feature_cols: list[str]) -> list[str]:
+    """Keep CatBoost feature columns numeric and stable across pandas dtypes."""
+    return [c for c in feature_cols if c in df.columns and is_numeric_dtype(df[c])]
+
+
+def _clean_feature_matrix(X: pd.DataFrame) -> pd.DataFrame:
+    """CatBoost input hygiene: numeric columns only, no inf, deterministic NaNs."""
+    return X.replace([np.inf, -np.inf], np.nan).fillna(0)
+
+
 class PositionPipeline:
     """Orchestrates per-position model training and prediction.
 
@@ -178,7 +233,7 @@ class PositionPipeline:
 
     def __init__(self, models: Optional[list[FantasyModel]] = None, use_ensemble: bool = False,
                  use_tuned_catboost: bool = True, use_conformal: bool = True, conformal_alpha: float = 0.2):
-        self.models = models or [RidgeModel(), RandomForestModel(), XGBoostModel(), CatBoostModel()]
+        self.models = models or [CatBoostModel()]
         self.use_ensemble = use_ensemble
         self.use_tuned_catboost = use_tuned_catboost
         self.use_conformal = use_conformal
@@ -222,7 +277,7 @@ class PositionPipeline:
 
             feat_cols = get_position_features(pos, available_cols)
             # Filter to features that exist and are numeric
-            feat_cols = [c for c in feat_cols if c in pos_df.columns and pos_df[c].dtype in [np.float64, np.int64, float, int]]
+            feat_cols = _numeric_feature_cols(pos_df, feat_cols)
 
             if not feat_cols:
                 print(f"Skipping {pos}: no valid features")
@@ -286,20 +341,20 @@ class PositionPipeline:
 
         for pos in OFFENSIVE_POSITIONS:
             if pos not in self.best_models:
-                # Default to ensemble if enabled, else Ridge
-                self.best_models[pos] = StackedEnsembleModel() if self.use_ensemble else RidgeModel()
+                # Default to ensemble if enabled, else CatBoost.
+                self.best_models[pos] = StackedEnsembleModel() if self.use_ensemble else CatBoostModel()
 
             pos_df = df[df["position"] == pos].copy()
             feat_cols = get_position_features(pos, available_cols)
-            feat_cols = [c for c in feat_cols if c in pos_df.columns and pos_df[c].dtype in [np.float64, np.int64, float, int]]
+            feat_cols = _numeric_feature_cols(pos_df, feat_cols)
 
             if not feat_cols or pos_df.empty:
                 continue
 
             # Fill NaN features with 0, only train on rows with actual fantasy points
             # (exclude projection-season rows which have fantasy_points=0)
-            X = pos_df[feat_cols].fillna(0)
-            valid = pos_df[target_col].notna() & (pos_df[target_col] > 0)
+            X = _clean_feature_matrix(pos_df[feat_cols])
+            valid = pos_df[target_col].notna() & np.isfinite(pos_df[target_col])
             X = X[valid]
             y = pos_df.loc[valid, target_col]
 
@@ -312,9 +367,9 @@ class PositionPipeline:
             tw = POSITION_TEMPORAL_WEIGHTS.get(pos, temporal_weight) if self.use_tuned_catboost else temporal_weight
             sample_weight = None
             if "season" in pos_df.columns and tw > 0:
-                max_season = pos_df.loc[valid, "season"].max()
-                seasons = pos_df.loc[valid, "season"]
-                years_ago = max_season - seasons
+                seasons = pd.to_numeric(pos_df.loc[valid, "season"], errors="raise")
+                max_season = seasons.max()
+                years_ago = (max_season - seasons).to_numpy(dtype=float)
                 # Exponential decay: most recent season = 1.0, each year older decays
                 sample_weight = np.exp(-tw * years_ago)
 
@@ -378,10 +433,10 @@ class PositionPipeline:
                 continue
 
             feat_cols = get_position_features(pos, available_cols)
-            feat_cols = [c for c in feat_cols if c in predict_df.columns and predict_df[c].dtype in [np.float64, np.int64, float, int]]
+            feat_cols = _numeric_feature_cols(predict_df, feat_cols)
 
             # Fill NaN features with 0 for prediction
-            X = predict_pos[feat_cols].fillna(0)
+            X = _clean_feature_matrix(predict_pos[feat_cols])
 
             # Best model prediction
             best_preds = self.best_models[pos].predict(X)
@@ -410,8 +465,10 @@ class PositionPipeline:
                         m_clone.model = None
                     # Quick train on same data as best model
                     pos_df = df[df["position"] == pos]
-                    X_train = pos_df[feat_cols].fillna(0)
-                    valid = pos_df["fantasy_points"].notna()
+                    X_train = _clean_feature_matrix(pos_df[feat_cols])
+                    valid = pos_df["fantasy_points"].notna() & np.isfinite(pos_df["fantasy_points"])
+                    if "season" in pos_df.columns:
+                        valid &= pos_df["season"] < target_season
                     X_train = X_train[valid]
                     y_train = pos_df.loc[valid, "fantasy_points"]
                     if not X_train.empty:

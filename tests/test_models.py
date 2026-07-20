@@ -6,6 +6,7 @@ import numpy as np
 from src.models.ridge_model import RidgeModel
 from src.models.rf_model import RandomForestModel
 from src.models.compare import walk_forward_validate, compare_models, summarize_comparison
+from src.models.conformal import ConformalQuantileModel
 
 
 def _make_model_df():
@@ -103,3 +104,33 @@ class TestWalkForwardValidation:
         summary = summarize_comparison(results)
         assert "mae_mean" in summary.columns
         assert len(summary) > 0
+
+
+class TestConformalQuantileModel:
+    def test_keeps_split_models_after_calibration(self, monkeypatch):
+        class FakeQuantile:
+            def __init__(self):
+                self.fit_calls = 0
+
+            def fit(self, X, y, sample_weight=None):
+                self.fit_calls += 1
+                return self
+
+            def predict(self, X):
+                return np.full(len(X), 100.0)
+
+        model = ConformalQuantileModel(alpha=0.2, min_cal_size=2)
+        made = []
+
+        def make(_alpha):
+            instance = FakeQuantile()
+            made.append(instance)
+            return instance
+
+        monkeypatch.setattr(model, "_make_catboost", make)
+        X = pd.DataFrame({"x": np.arange(8)})
+        y = pd.Series(np.arange(8) + 95.0)
+        seasons = pd.Series([2022] * 3 + [2023] * 3 + [2024] * 2)
+        model.fit(X, y, seasons)
+        assert [m.fit_calls for m in made] == [1, 1]
+        assert model.cal_season == 2024

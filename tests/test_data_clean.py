@@ -26,6 +26,16 @@ class TestCleanSeasonalStats:
         result = clean_seasonal_stats(df, min_games=1)
         assert "player_id" in result.columns or "player_id" in [c.replace(" ", "_") for c in result.columns]
 
+    def test_excludes_postseason_rows(self):
+        df = pd.DataFrame([
+            {"player_id": "1", "season": 2025, "season_type": "REG", "games": 17, "rushing_yards": 1000},
+            {"player_id": "1", "season": 2025, "season_type": "POST", "games": 3, "rushing_yards": 250},
+        ])
+        result = clean_seasonal_stats(df, min_games=1)
+        assert len(result) == 1
+        assert result.iloc[0]["season_type"] == "REG"
+        assert result.iloc[0]["rushing_yards"] == 1000
+
 
 class TestCleanRosterInfo:
     def test_position_normalization(self):

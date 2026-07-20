@@ -102,12 +102,12 @@ def build_override_maps(sleeper: dict) -> tuple[dict[str, str], dict[str, str]]:
     return by_id, by_name
 
 
-def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[str, dict]]:
+def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[tuple[str, str], dict]]:
     """Return (by_gsis_id, by_normalized_name) maps of the full Sleeper record.
     Each value carries at least {team, position, status, full_name}. Used both
     for overriding existing rows and synthesizing missing ones."""
     by_id: dict[str, dict] = {}
-    by_name: dict[str, dict] = {}
+    by_name: dict[tuple[str, str], dict] = {}
     for _pid, p in sleeper.items():
         if not isinstance(p, dict):
             continue
@@ -123,14 +123,20 @@ def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[str, dict]
             "position": pos,
             "status": p.get("status"),
             "full_name": full.strip(),
+            "depth_chart_order": p.get("depth_chart_order"),
         }
+        # Sleeper retains some retired players as Active with an old team
+        # assignment. A current depth-chart slot is the reliable signal that a
+        # veteran belongs in the projection universe. True rookies without a
+        # slot are added separately by fetch_sleeper_rookies.
+        if rec["status"] != "Active" or rec["depth_chart_order"] is None:
+            continue
         gsis = p.get("gsis_id") or p.get("gsis_player_id")
         if gsis:
             by_id[str(gsis)] = rec
         key = _normalize_name(full)
         if key:
-            if key not in by_name or rec.get("status") == "Active":
-                by_name[key] = rec
+            by_name[(key, pos)] = rec
     return by_id, by_name
 
 
@@ -277,19 +283,27 @@ def apply_sleeper_team_overrides(
             nm = row.get(name_col)
             if nm:
                 key = _normalize_name(nm)
-                if key in by_name:
-                    return by_name[key]
+                name_pos = (key, str(row.get("position") or "").upper())
+                if name_pos in by_name:
+                    return by_name[name_pos]
         return None
 
     # ----- Case 1: patch existing rows -----
     trades = 0
     alias_fixes = 0
     if existing_count > 0:
+        fantasy_mask = existing_mask & df["position"].isin({"QB", "RB", "WR", "TE"})
+        if "status" in df.columns:
+            # nflverse's preseason roster file includes stale ACT records. Only
+            # rows resolved to Sleeper's current depth chart are reactivated.
+            df.loc[fantasy_mask, "status"] = "INA"
         for idx in df.index[existing_mask]:
             row = df.loc[idx]
             hit = resolve(row)
             if not hit:
                 continue
+            if "status" in df.columns:
+                df.at[idx, "status"] = "ACT"
             new_team = hit["team"]
             old_team = row.get("team")
             canon_new = _canonical_team(new_team)
@@ -311,19 +325,24 @@ def apply_sleeper_team_overrides(
                        .drop_duplicates("player_id", keep="last")
                        .set_index("player_id", drop=False))
 
-    # Name -> player_id reverse index so we can link Sleeper players without GSIS
+    # Name + position -> player_id reverse index so we can link Sleeper players
+    # without GSIS without confusing same-name players at other positions.
     name_col_used = next(
         (c for c in ("player_name", "full_name", "display_name") if c in latest_by_pid.columns),
         None,
     )
-    name_to_pid: dict[str, str] = {}
+    name_to_pid: dict[tuple[str, str], str] = {}
     if name_col_used:
-        for pid, nm in zip(latest_by_pid.index.astype(str), latest_by_pid[name_col_used]):
+        for pid, nm, pos in zip(
+            latest_by_pid.index.astype(str),
+            latest_by_pid[name_col_used],
+            latest_by_pid["position"],
+        ):
             key = _normalize_name(str(nm))
             if not key:
                 continue
             # Prefer first match (latest row is already deduped per player_id)
-            name_to_pid.setdefault(key, pid)
+            name_to_pid.setdefault((key, str(pos).upper()), pid)
 
     matched_by = {"gsis": 0, "name": 0, "missing": 0}
     linked_pids: set[str] = set()  # avoid double-synthesizing via gsis + name
@@ -336,6 +355,8 @@ def apply_sleeper_team_overrides(
         template["season"] = target_season
         template["team"] = rec["team"]
         template["position"] = rec["position"] or template.get("position")
+        if "status" in template:
+            template["status"] = "ACT"
         synth_rows.append(template)
 
     # Pass 1: gsis_id match (most reliable)
@@ -345,8 +366,8 @@ def apply_sleeper_team_overrides(
             matched_by["gsis"] += 1
 
     # Pass 2: name match for everything else (covers players without GSIS in Sleeper)
-    for key, rec in by_name.items():
-        pid = name_to_pid.get(key)
+    for (key, pos), rec in by_name.items():
+        pid = name_to_pid.get((key, pos))
         if pid and pid not in linked_pids:
             _emit_synth(pid, rec)
             matched_by["name"] += 1

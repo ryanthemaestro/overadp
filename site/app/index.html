@@ -1346,7 +1346,7 @@ async function loadData(){
     updateUserUI();
     checkPaymentReturn();
 
-    const _v='?v=20260414g'; // cache buster
+    const _v='?v=20260430b'; // cache buster
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1430,9 +1430,12 @@ function computeClientVBD(){
     if(k==='flex'||k==='bench')continue;
     const pos=keyMap[k]||k.toUpperCase();
     const nStarters=numTeams*v;
-    // Bench allocation: each position gets roughly bench/4 extra slots per team
-    // but RB/WR get more bench love. Use 1.5x starters as floor.
-    const benchAlloc=Math.max(v, Math.ceil(benchSize/4));
+    // Bench allocation: flex-eligible positions (RB/WR/TE) get deep replacement
+    // because managers roster backups and handcuffs.
+    // QB is streamed — nobody benches a QB. Replacement = last starter (QB12),
+    // so Allen/Hurts/etc. VBD is correctly modest vs elite RBs/WRs.
+    const isFlexPos=flexEligible.includes(pos);
+    const benchAlloc=isFlexPos?Math.max(v,Math.ceil(benchSize/4)):0;
     const nDrafted=numTeams*(v+benchAlloc);
     const posPlayers=available.filter(p=>p.position===pos).sort((a,b)=>b.projected_points-a.projected_points);
     // Use last typically drafted as replacement (gives positive VBD to bench-worthy players)
@@ -1802,8 +1805,10 @@ function loadSleepers(){
   if(availSleepers.length){
     h+='<div style="color:#44ff44;font-size:11px;font-weight:700;padding:2px 0;">💤 SLEEPERS (model > ADP)</div>';
     availSleepers.slice(0,sleeperLimit).forEach(s=>{
+      const pos=s.position;
+      const label=s.model_pos_rank?`Model ${pos}${s.model_pos_rank} · ADP ${pos}${s.adp_pos_rank} (+${Math.round(s.adp_gap)} spots)`:`Model #${s.model_rank} vs ADP #${Math.round(s.adp)}`;
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #44ff44;margin:1px 0;">
-        ${s.player_name} ${s.position} — Model #${s.model_rank} vs ADP #${Math.round(s.adp)} (+${Math.round(s.adp_gap)})
+        ${s.player_name} ${pos} — ${label}
       </div>`;
     });
     if(!paid&&availSleepers.length>1){
@@ -1815,8 +1820,10 @@ function loadSleepers(){
   if(availBusts.length){
     h+='<div style="color:#ff4444;font-size:11px;font-weight:700;padding:2px 0;margin-top:4px;">📉 BUSTS (ADP > model)</div>';
     availBusts.slice(0,bustLimit).forEach(b=>{
+      const pos=b.position;
+      const label=b.model_pos_rank?`Model ${pos}${b.model_pos_rank} · ADP ${pos}${b.adp_pos_rank} (${Math.round(b.adp_gap)} spots)`:`Model #${b.model_rank} vs ADP #${Math.round(b.adp)}`;
       h+=`<div style="padding:2px 6px;font-size:10px;border-left:2px solid #ff4444;margin:1px 0;">
-        ${b.player_name} ${b.position} — Model #${b.model_rank} vs ADP #${Math.round(b.adp)} (${Math.round(b.adp_gap)})
+        ${b.player_name} ${pos} — ${label}
       </div>`;
     });
     if(!paid&&availBusts.length>1){

@@ -31,15 +31,15 @@ def _make_pipeline_df():
                 "targets_lag1": np.random.rand() * 100 if pos in ("WR", "TE") else np.random.rand() * 30,
                 "receptions_lag1": np.random.rand() * 70,
                 "passing_yards_lag1": np.random.rand() * 2000 if pos == "QB" else 0,
-                "passing_td_lag1": np.random.rand() * 20 if pos == "QB" else 0,
-                "passing_int_lag1": np.random.rand() * 8 if pos == "QB" else 0,
-                "target_share": np.random.rand() * 0.3,
-                "rush_att_per_game": np.random.rand() * 15,
-                "targets_per_game": np.random.rand() * 8,
-                "ol_quality_tier": np.random.choice([1, 2, 3, 4]),
-                "team_rush_ypa": 3.5 + np.random.rand() * 2,
-                "qb_completion_rate": 0.6 + np.random.rand() * 0.15,
-                "team_pass_volume": 400 + np.random.rand() * 200,
+                "passing_tds_lag1": np.random.rand() * 20 if pos == "QB" else 0,
+                "interceptions_lag1": np.random.rand() * 8 if pos == "QB" else 0,
+                "target_share_lag1": np.random.rand() * 0.3,
+                "yards_per_target_lag1": 6 + np.random.rand() * 8,
+                "targets_per_game_lag1": np.random.rand() * 8,
+                "ol_quality_tier_lag1": np.random.choice([1, 2, 3, 4]),
+                "ol_pass_block_quality_lag1": 0.6 + np.random.rand() * 0.3,
+                "qb_completion_rate_lag1": 0.6 + np.random.rand() * 0.15,
+                "team_pass_volume_lag1": 400 + np.random.rand() * 200,
                 "fantasy_points": pts,
             })
     return pd.DataFrame(rows)
@@ -49,17 +49,16 @@ class TestPositionFeatures:
     def test_qb_features_include_passing(self):
         feats = POSITION_FEATURES["QB"]
         assert "passing_yards_lag1" in feats
-        assert "passing_td_lag1" in feats
+        assert "passing_tds_lag1" in feats
 
     def test_rb_features_include_ol(self):
         feats = POSITION_FEATURES["RB"]
-        assert "ol_quality_tier" in feats
-        assert "team_rush_ypa" in feats
+        assert "ol_quality_tier_lag1" in feats
 
     def test_wr_features_include_targets(self):
         feats = POSITION_FEATURES["WR"]
-        assert "target_share" in feats
-        assert "yards_per_target" in feats
+        assert "target_share_lag1" in feats
+        assert "yards_per_target_lag1" in feats
 
     def test_get_position_features_filters_to_available(self):
         available = ["age", "age_squared", "is_prime", "rushing_yards_lag1"]

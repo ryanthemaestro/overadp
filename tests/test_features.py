@@ -7,6 +7,7 @@ from src.features.engineer import (
     compute_ol_rb_features, compute_qb_wr_features,
     compute_age_experience_features, compute_volume_features,
     compute_lag_features, compute_rolling_features,
+    compute_sos_features, compute_stacking_features,
     build_feature_matrix, get_feature_columns,
 )
 
@@ -130,6 +131,35 @@ class TestLagFeatures:
         # Only 2 seasons, so lag2 should be NaN
         p1_2023 = result[(result["player_id"] == "P1") & (result["season"] == 2023)]
         assert pd.isna(p1_2023["rushing_yards_lag2"].iloc[0])
+
+
+class TestTeamSeasonLags:
+    def test_stacking_lags_once_per_team_season(self):
+        df = pd.DataFrame([
+            {"player_id": "q1", "team": "KC", "season": 2023, "position": "QB", "fantasy_points": 300},
+            {"player_id": "w1", "team": "KC", "season": 2023, "position": "WR", "fantasy_points": 100},
+            {"player_id": "w2", "team": "KC", "season": 2023, "position": "WR", "fantasy_points": 90},
+            {"player_id": "q1", "team": "KC", "season": 2024, "position": "QB", "fantasy_points": 400},
+            {"player_id": "w1", "team": "KC", "season": 2024, "position": "WR", "fantasy_points": 120},
+            {"player_id": "w2", "team": "KC", "season": 2024, "position": "WR", "fantasy_points": 110},
+        ])
+        result = compute_stacking_features(df)
+        values = result.loc[result["season"].eq(2024), "team_qb_avg_pts"]
+        assert values.nunique() == 1
+        assert values.iloc[0] == 300
+
+    def test_sos_lags_once_per_team_season(self):
+        df = pd.DataFrame([
+            {"player_id": "p1", "team": "KC", "season": 2023, "def_rank": 8, "pass_def_rank": 9},
+            {"player_id": "p2", "team": "KC", "season": 2023, "def_rank": 8, "pass_def_rank": 9},
+            {"player_id": "p1", "team": "KC", "season": 2024, "def_rank": 2, "pass_def_rank": 3},
+            {"player_id": "p2", "team": "KC", "season": 2024, "def_rank": 2, "pass_def_rank": 3},
+        ])
+        result = compute_sos_features(df)
+        current = result[result["season"].eq(2024)]
+        assert current["def_rank_lag1"].nunique() == 1
+        assert current["def_rank_lag1"].iloc[0] == 8
+        assert current["pass_def_rank_lag1"].iloc[0] == 9
 
 
 class TestBuildFeatureMatrix:
