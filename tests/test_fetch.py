@@ -78,3 +78,28 @@ def test_sleeper_overlay_excludes_stale_active_player_without_depth_slot(monkeyp
     result = sleeper_rosters.apply_sleeper_team_overrides(roster, target_season=2026, verbose=False)
     statuses = result.set_index("player_id")["status"].to_dict()
     assert statuses == {"old-qb": "INA", "new-qb": "ACT"}
+
+
+def test_sleeper_overlay_handles_aliases_unicode_and_position_changes(monkeypatch):
+    roster = pd.DataFrame([
+        {"player_id": "gainwell", "season": 2026, "player_name": "Kenneth Gainwell", "position": "RB", "team": "PIT", "status": "ACT"},
+        {"player_id": "estime", "season": 2026, "player_name": "Audric Estimé", "position": "RB", "team": "NO", "status": "ACT"},
+        {"player_id": "hunter", "season": 2025, "player_name": "Travis Hunter", "position": "WR", "team": "JAX", "status": "RES"},
+        {"player_id": "hunter", "season": 2026, "player_name": "Travis Hunter", "position": "DB", "team": "JAX", "status": "ACT"},
+        {"player_id": "beck", "season": 2026, "player_name": "Andrew Beck", "position": "FB", "team": "NYJ", "status": "ACT"},
+    ])
+    sleeper = {
+        "1": {"full_name": "Kenny Gainwell", "position": "RB", "team": "TB", "status": "Active", "depth_chart_order": 2},
+        "2": {"full_name": "Audric Estime", "position": "RB", "team": "NO", "status": "Active", "depth_chart_order": 6},
+        "3": {"full_name": "Travis Hunter", "position": "WR", "team": "JAX", "status": "Active", "depth_chart_order": 4},
+        "4": {"full_name": "Andrew Beck", "position": "RB", "team": "NYJ", "status": "Active", "depth_chart_order": 4, "gsis_id": " beck "},
+    }
+    monkeypatch.setattr(sleeper_rosters, "fetch_sleeper_players", lambda: sleeper)
+    result = sleeper_rosters.apply_sleeper_team_overrides(roster, target_season=2026, verbose=False)
+    current = result[result["season"].eq(2026)].set_index("player_id")
+
+    assert current.loc["gainwell", "team"] == "TB"
+    assert current.loc["gainwell", "status"] == "ACT"
+    assert current.loc["estime", "status"] == "ACT"
+    assert current.loc["hunter", "position"] == "WR"
+    assert current.loc["beck", "position"] == "RB"

@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import unicodedata
 from typing import Optional
 
 import pandas as pd
@@ -33,6 +34,18 @@ except Exception:  # pragma: no cover
 SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
 
 logger = logging.getLogger(__name__)
+
+# Common first-name variants used differently by Sleeper and nflverse. These
+# are only applied as part of an exact full-name match; the last name and
+# position/unique-player safeguards below still have to agree.
+FIRST_NAME_ALIASES = {
+    "bam": "zonovan",
+    "irv": "irvin",
+    "josh": "joshua",
+    "kenny": "kenneth",
+    "mitch": "mitchell",
+    "nate": "nathan",
+}
 
 # Franchise-code aliases. nflverse and Sleeper don't always agree on which
 # 2- or 3-letter code to use for the same team; these pairs should NOT be
@@ -63,11 +76,15 @@ def _canonical_team(team: Optional[str]) -> str:
 def _normalize_name(name: str) -> str:
     if not name:
         return ""
-    s = name.lower().strip()
+    s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode("ascii")
+    s = s.lower().strip()
     s = re.sub(r"\b(jr|sr|ii|iii|iv|v)\.?\b", "", s)
     s = re.sub(r"[^a-z\s]", "", s)
     s = re.sub(r"\s+", " ", s).strip()
-    return s
+    parts = s.split()
+    if parts:
+        parts[0] = FIRST_NAME_ALIASES.get(parts[0], parts[0])
+    return " ".join(parts)
 
 
 def fetch_sleeper_players(timeout: int = 30) -> dict:
@@ -91,7 +108,7 @@ def build_override_maps(sleeper: dict) -> tuple[dict[str, str], dict[str, str]]:
             continue
         gsis = p.get("gsis_id") or p.get("gsis_player_id")
         if gsis:
-            by_id[str(gsis)] = team
+            by_id[str(gsis).strip()] = team
         full = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}"
         pos = (p.get("position") or "").upper()
         key = _normalize_name(full)
@@ -133,7 +150,7 @@ def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[tuple[str,
             continue
         gsis = p.get("gsis_id") or p.get("gsis_player_id")
         if gsis:
-            by_id[str(gsis)] = rec
+            by_id[str(gsis).strip()] = rec
         key = _normalize_name(full)
         if key:
             by_name[(key, pos)] = rec
@@ -205,13 +222,14 @@ def build_sleeper_depth_chart(
         full = full.strip()
 
         gsis = p.get("gsis_id") or p.get("gsis_player_id")
+        gsis = str(gsis).strip() if gsis else ""
         pid = None
-        if gsis and str(gsis) in {str(k) for k in name_to_pid.values()}:
+        if gsis and gsis in {str(k).strip() for k in name_to_pid.values()}:
             # Already a valid nflverse player_id
-            pid = str(gsis)
+            pid = gsis
             matched_gsis += 1
         elif gsis:
-            pid = str(gsis)   # trust Sleeper's gsis even if we haven't seen it
+            pid = gsis   # trust Sleeper's gsis even if we haven't seen it
             matched_gsis += 1
         else:
             key = _normalize_name(full)
@@ -267,6 +285,15 @@ def apply_sleeper_team_overrides(
         return roster_df
 
     by_id, by_name = _build_overlay_maps(sleeper)
+    # Cross-position fallback is needed for legitimate role changes such as
+    # Travis Hunter appearing as DB in nflverse but WR in Sleeper. It is only
+    # allowed when both sources resolve the normalized name to one player.
+    sleeper_name_hits: dict[str, list[dict]] = {}
+    for (key, _pos), rec in by_name.items():
+        sleeper_name_hits.setdefault(key, []).append(rec)
+    unique_sleeper_names = {
+        key: hits[0] for key, hits in sleeper_name_hits.items() if len(hits) == 1
+    }
     if verbose:
         print(f"  Sleeper: {len(by_id):,} players indexed by gsis_id, "
               f"{len(by_name):,} by name (QB/RB/WR/TE only)")
@@ -275,10 +302,25 @@ def apply_sleeper_team_overrides(
     existing_mask = df["season"] == target_season
     existing_count = int(existing_mask.sum())
 
+    roster_name_pids: dict[str, set[str]] = {}
+    roster_name_col = next(
+        (c for c in ("player_name", "full_name", "display_name") if c in df.columns),
+        None,
+    )
+    if roster_name_col:
+        for pid, nm in zip(df["player_id"], df[roster_name_col]):
+            key = _normalize_name(str(nm))
+            if key:
+                roster_name_pids.setdefault(key, set()).add(str(pid).strip())
+    unique_roster_names = {
+        key: next(iter(pids)) for key, pids in roster_name_pids.items() if len(pids) == 1
+    }
+
     def resolve(row) -> Optional[dict]:
         pid = row.get("player_id")
-        if pid and str(pid) in by_id:
-            return by_id[str(pid)]
+        pid_key = str(pid).strip() if pid is not None else ""
+        if pid_key and pid_key in by_id:
+            return by_id[pid_key]
         for name_col in ("player_name", "full_name", "display_name"):
             nm = row.get(name_col)
             if nm:
@@ -286,11 +328,14 @@ def apply_sleeper_team_overrides(
                 name_pos = (key, str(row.get("position") or "").upper())
                 if name_pos in by_name:
                     return by_name[name_pos]
+                if key in unique_roster_names and key in unique_sleeper_names:
+                    return unique_sleeper_names[key]
         return None
 
     # ----- Case 1: patch existing rows -----
     trades = 0
     alias_fixes = 0
+    position_fixes = 0
     if existing_count > 0:
         fantasy_mask = existing_mask & df["position"].isin({"QB", "RB", "WR", "TE"})
         if "status" in df.columns:
@@ -304,6 +349,10 @@ def apply_sleeper_team_overrides(
                 continue
             if "status" in df.columns:
                 df.at[idx, "status"] = "ACT"
+            new_pos = hit.get("position")
+            if new_pos and new_pos != row.get("position"):
+                df.at[idx, "position"] = new_pos
+                position_fixes += 1
             new_team = hit["team"]
             old_team = row.get("team")
             canon_new = _canonical_team(new_team)
@@ -368,6 +417,8 @@ def apply_sleeper_team_overrides(
     # Pass 2: name match for everything else (covers players without GSIS in Sleeper)
     for (key, pos), rec in by_name.items():
         pid = name_to_pid.get((key, pos))
+        if not pid:
+            pid = unique_roster_names.get(key)
         if pid and pid not in linked_pids:
             _emit_synth(pid, rec)
             matched_by["name"] += 1
@@ -388,6 +439,7 @@ def apply_sleeper_team_overrides(
         print(f"    existing rows patched : {existing_count}")
         print(f"      trades/moves        : {trades}")
         print(f"      alias normalized    : {alias_fixes}")
+        print(f"      position corrected  : {position_fixes}")
         print(f"    synthesized new rows  : {len(synth_rows)}")
         print(f"      matched via gsis_id : {matched_by['gsis']}")
         print(f"      matched via name    : {matched_by['name']}")
