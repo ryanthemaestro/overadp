@@ -1,0 +1,7 @@
+format,strategy,episodes,starter_points,total_points,avg_rank,win_rate,top3_rate,field_avg,paired_starter_delta_vs_guarded,paired_delta_ci95_low,paired_delta_ci95_high
+fixed_12tm_1qb_2rb_2wr_1te_1flex,scarcity_v2,240,1613.3172,2461.1686,4.4333,0.1875,0.4750,1533.7931,4.8533,-7.2789,17.1058
+fixed_12tm_1qb_2rb_2wr_1te_1flex,adp_guarded,240,1608.4638,2446.8896,4.5792,0.1708,0.4667,1534.7303,0.0000,0.0000,0.0000
+fixed_12tm_1qb_2rb_2wr_1te_1flex,adp,240,1593.9125,2421.7984,5.0042,0.1125,0.4000,1534.6417,-14.5513,,
+mixed_10_12_14tm_1_2qb_0_3flex,scarcity_v2,240,1709.9788,2529.2087,4.5667,0.1708,0.4333,1633.5437,1.1341,-15.7930,18.1071
+mixed_10_12_14tm_1_2qb_0_3flex,adp_guarded,240,1708.8448,2525.3278,4.7500,0.1792,0.4542,1634.6526,0.0000,0.0000,0.0000
+mixed_10_12_14tm_1_2qb_0_3flex,adp,240,1680.1262,2464.4366,5.3958,0.1208,0.3333,1634.5738,-28.7186,,
