@@ -18,7 +18,7 @@ import argparse
 import json
 import math
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -29,9 +29,14 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from scripts.run_catboost_feature_experiments import build_frame
+from src.data.ffc_adp import enrich_board_with_adp_distribution, read_table
 from src.models.catboost_model import CatBoostModel, POSITION_CATBOOST_PARAMS, POSITION_TEMPORAL_WEIGHTS
 from src.models.pipeline import OFFENSIVE_POSITIONS, _numeric_feature_cols, get_position_features
-from src.optimizer.draft_strategy import compute_vbd
+from src.optimizer.draft_strategy import (
+    compute_vbd,
+    conditional_probability_gone,
+    expected_best_available_value,
+)
 from src.utils.config import get_roster_config
 
 
@@ -116,6 +121,25 @@ class RosterFormat:
         )
 
 
+@dataclass(frozen=True)
+class ScarcityV2Weights:
+    """Auditable coefficients for the ADP-anchored VONA policy."""
+
+    adp: float = 1.0
+    projected: float = 0.10
+    vbd: float = 0.34
+    starter_need: float = 18.0
+    flex_need: float = 9.0
+    late_need: float = 10.0
+    vona: float = 0.75
+    adp_value: float = 0.45
+    reach: float = 1.10
+    depth: float = 3.0
+
+
+DEFAULT_SCARCITY_V2_WEIGHTS = ScarcityV2Weights()
+
+
 @dataclass
 class SimBoard:
     df: pd.DataFrame
@@ -127,6 +151,12 @@ class SimBoard:
     projected_points: np.ndarray
     vbd: np.ndarray
     adp: np.ndarray
+    market_adp_sd_1qb: np.ndarray
+    market_earliest_pick_1qb: np.ndarray
+    market_latest_pick_1qb: np.ndarray
+    market_adp_sd_2qb: np.ndarray
+    market_earliest_pick_2qb: np.ndarray
+    market_latest_pick_2qb: np.ndarray
     pts_lag1: np.ndarray
     fp_per_game_lag1: np.ndarray
     is_rookie: np.ndarray
@@ -150,6 +180,11 @@ def get_sim_board(board: pd.DataFrame) -> SimBoard:
             arr = np.full(len(df), default, dtype=np.float32)
         return np.nan_to_num(arr, nan=default, posinf=default, neginf=default)
 
+    def optional_col(name: str) -> np.ndarray:
+        if name not in df.columns:
+            return np.full(len(df), np.nan, dtype=np.float32)
+        return pd.to_numeric(df[name], errors="coerce").to_numpy(dtype=np.float32)
+
     projected = col("projected_points")
     vbd = col("vbd")
     adp = np.clip(col("adp", 200.0), 1.0, 250.0)
@@ -164,6 +199,12 @@ def get_sim_board(board: pd.DataFrame) -> SimBoard:
         projected_points=np.clip(projected, 0.0, None),
         vbd=np.clip(vbd, 0.0, None),
         adp=adp,
+        market_adp_sd_1qb=optional_col("market_adp_sd_1qb"),
+        market_earliest_pick_1qb=optional_col("market_earliest_pick_1qb"),
+        market_latest_pick_1qb=optional_col("market_latest_pick_1qb"),
+        market_adp_sd_2qb=optional_col("market_adp_sd_2qb"),
+        market_earliest_pick_2qb=optional_col("market_earliest_pick_2qb"),
+        market_latest_pick_2qb=optional_col("market_latest_pick_2qb"),
         pts_lag1=col("pts_lag1"),
         fp_per_game_lag1=col("fp_per_game_lag1"),
         is_rookie=col("is_rookie"),
@@ -351,6 +392,46 @@ def load_or_build_boards(df: pd.DataFrame, seasons: list[int], cache_path: Optio
         out.to_parquet(cache_path, index=False)
         print(f"Wrote cached draft boards: {cache_path}")
     return boards
+
+
+def enrich_boards_with_market_distributions(
+    boards: dict[int, pd.DataFrame],
+    distribution_path: Path | None,
+    one_qb_market: str = "half-ppr",
+) -> tuple[dict[int, pd.DataFrame], pd.DataFrame]:
+    """Attach observed/prior-only ADP dispersion for one-QB and two-QB drafts."""
+    if distribution_path is None or not distribution_path.exists():
+        print("ADP distribution cache unavailable; using generic availability spread")
+        return boards, pd.DataFrame()
+
+    distributions = read_table(distribution_path)
+    enriched: dict[int, pd.DataFrame] = {}
+    coverage_rows = []
+    for season, original in sorted(boards.items()):
+        board, one_qb_coverage = enrich_board_with_adp_distribution(
+            original,
+            distributions,
+            scoring=one_qb_market,
+            source_teams=12,
+            suffix="1qb",
+        )
+        board, two_qb_coverage = enrich_board_with_adp_distribution(
+            board,
+            distributions,
+            scoring="2qb",
+            source_teams=12,
+            suffix="2qb",
+        )
+        one_qb_coverage["market"] = "1qb"
+        two_qb_coverage["market"] = "2qb"
+        coverage_rows.extend([one_qb_coverage, two_qb_coverage])
+        enriched[season] = board
+
+    coverage = pd.DataFrame(coverage_rows)
+    if not coverage.empty:
+        print("\n=== ADP Distribution Coverage ===")
+        print(coverage.to_string(index=False))
+    return enriched, coverage
 
 
 def snake_pick_order(num_teams: int, rounds: int) -> list[int]:
@@ -659,6 +740,127 @@ def pick_by_adp_guarded(
     return int(idxs[int(np.argmax(score))])
 
 
+def roster_config_for_format(roster_format: RosterFormat) -> dict:
+    """Translate a simulator format to the canonical scarcity config."""
+    slots = {
+        pos.lower(): int(roster_format.starter_slots.get(pos, 0))
+        for pos in SKILL_POSITIONS
+    }
+    slots["flex"] = int(roster_format.flex_slots)
+    slots["bench"] = int(roster_format.bench)
+    return {
+        "roster_slots": slots,
+        "flex_eligible": [p.lower() for p in roster_format.flex_eligible],
+    }
+
+
+def format_vbd_values(board: pd.DataFrame, roster_format: RosterFormat) -> np.ndarray:
+    """Return signed, format-specific VBD aligned to a simulation board."""
+    cache = board.attrs.setdefault("_format_vbd", {})
+    key = roster_format.to_json()
+    if key not in cache:
+        valued = compute_vbd(
+            board[["position", "projected_points"]],
+            num_teams=roster_format.num_teams,
+            roster_config=roster_config_for_format(roster_format),
+        )
+        cache[key] = valued["vbd"].to_numpy(dtype=np.float32)
+    return cache[key]
+
+
+def pick_by_scarcity_v2(
+    board: pd.DataFrame,
+    available: np.ndarray,
+    roster: list[int],
+    roster_format: RosterFormat,
+    shortlist_size: int,
+    pick_number: int,
+    next_pick_number: int,
+    weights: ScarcityV2Weights = DEFAULT_SCARCITY_V2_WEIGHTS,
+) -> int:
+    """ADP-anchored VONA using true FLEX VBD and conditional availability."""
+    sim = get_sim_board(board)
+    candidates = candidate_indices(
+        board, available, roster, roster_format, shortlist_size
+    )
+    if not len(candidates):
+        raise RuntimeError("No available players")
+
+    signed_vbd = format_vbd_values(board, roster_format)
+    needs = roster_needs_for_format(roster, board, roster_format)
+    counts = count_positions(roster, board)
+    pos_arr = sim.positions[candidates]
+    adp = sim.adp[candidates].astype(np.float32)
+    projected = sim.projected_points[candidates].astype(np.float32)
+    vbd = signed_vbd[candidates].astype(np.float32)
+    pick_gap = max(1, next_pick_number - pick_number)
+    round_num = ((pick_number - 1) // roster_format.num_teams) + 1
+
+    starter_need = np.asarray([needs.get(p, 0.0) for p in pos_arr], dtype=np.float32)
+    flex_need = np.asarray([
+        needs.get("FLEX", 0.0) if p in roster_format.flex_eligible else 0.0
+        for p in pos_arr
+    ], dtype=np.float32)
+    pos_count = np.asarray([counts.get(p, 0.0) for p in pos_arr], dtype=np.float32)
+    late_need = np.asarray([
+        1.0 if round_num >= 8 and needs.get(p, 0.0) > 0 else 0.0
+        for p in pos_arr
+    ], dtype=np.float32)
+
+    if roster_format.starter_slots.get("QB", 0) >= 2:
+        adp_sd = sim.market_adp_sd_2qb[candidates]
+        earliest_pick = sim.market_earliest_pick_2qb[candidates]
+        latest_pick = sim.market_latest_pick_2qb[candidates]
+    else:
+        adp_sd = sim.market_adp_sd_1qb[candidates]
+        earliest_pick = sim.market_earliest_pick_1qb[candidates]
+        latest_pick = sim.market_latest_pick_1qb[candidates]
+    p_gone = conditional_probability_gone(
+        adp,
+        pick_number,
+        next_pick_number,
+        adp_sd=adp_sd,
+        earliest_pick=earliest_pick,
+        latest_pick=latest_pick,
+    )
+    p_available = 1.0 - p_gone
+
+    expected_next_same = np.zeros(len(candidates), dtype=np.float32)
+    for pos in SKILL_POSITIONS:
+        local = np.flatnonzero(pos_arr == pos)
+        if not len(local):
+            continue
+        local_values = np.maximum(vbd[local], 0.0)
+        local_probs = p_available[local]
+        for local_i, candidate_i in enumerate(local):
+            expected_next_same[candidate_i] = expected_best_available_value(
+                local_values, local_probs, exclude_index=local_i
+            )
+
+    # VONA is already availability-adjusted: likely survivors retain more of
+    # their value in expected_next_same and therefore create less urgency now.
+    vona = np.maximum(0.0, vbd - expected_next_same)
+    adp_value = np.clip(pick_number - adp, 0.0, 45.0)
+    reach = np.clip(adp - pick_number - pick_gap * 0.65, 0.0, 90.0)
+    depth_penalty = np.maximum(
+        0.0, pos_count - starter_need - flex_need - 1.0
+    )
+
+    score = (
+        -weights.adp * adp
+        + weights.projected * projected
+        + weights.vbd * vbd
+        + weights.starter_need * starter_need
+        + weights.flex_need * flex_need
+        + weights.late_need * late_need
+        + weights.vona * vona
+        + weights.adp_value * adp_value
+        - weights.reach * reach
+        - weights.depth * depth_penalty
+    )
+    return int(candidates[int(np.argmax(score))])
+
+
 class LinearDraftPolicy:
     def __init__(
         self,
@@ -715,6 +917,7 @@ def simulate_draft(
     roster_format: RosterFormat,
     opponent_noise: float,
     policy: Optional[LinearDraftPolicy] = None,
+    scarcity_weights: ScarcityV2Weights = DEFAULT_SCARCITY_V2_WEIGHTS,
     train: bool = False,
 ) -> tuple[DraftResult, list[np.ndarray], list[float]]:
     sim = get_sim_board(board)
@@ -740,6 +943,18 @@ def simulate_draft(
                 if train:
                     expected = probs @ feats
                     policy_grads.append((feats[action] - expected) / max(policy.temperature, 1e-6))
+            elif strategy == "scarcity_v2":
+                next_pick = next_pick_for_team(order, pick_no, team_idx)
+                chosen = pick_by_scarcity_v2(
+                    board,
+                    available,
+                    roster,
+                    roster_format,
+                    shortlist_size,
+                    pick_no,
+                    next_pick,
+                    scarcity_weights,
+                )
             elif strategy == "adp_guarded":
                 next_pick = next_pick_for_team(order, pick_no, team_idx)
                 chosen = pick_by_adp_guarded(
@@ -848,21 +1063,33 @@ def opponent_pick(
     return int(idxs[int(np.argmax(score))])
 
 
-def default_roster_format(num_teams: int, rounds: int) -> RosterFormat:
+def default_roster_format(
+    num_teams: int,
+    rounds: int,
+    qb_slots: int = 1,
+) -> RosterFormat:
     starter_slots = dict(STARTER_SLOTS)
+    starter_slots["QB"] = max(1, int(qb_slots))
     skill_starters = sum(starter_slots[p] for p in SKILL_POSITIONS) + starter_slots.get("FLEX", 0)
     bench = max(0, int(rounds) - skill_starters)
+    format_prefix = "standard" if starter_slots["QB"] == 1 else "two_qb"
     return RosterFormat(
-        name=f"standard_{num_teams}tm_{rounds}rnd",
+        name=f"{format_prefix}_{num_teams}tm_{rounds}rnd",
         num_teams=int(num_teams),
         starter_slots=starter_slots,
         bench=bench,
     )
 
 
-def sample_roster_format(rng: np.random.Generator, mode: str, num_teams: int, rounds: int) -> RosterFormat:
+def sample_roster_format(
+    rng: np.random.Generator,
+    mode: str,
+    num_teams: int,
+    rounds: int,
+    fixed_qb_slots: int = 1,
+) -> RosterFormat:
     if mode == "fixed":
-        return default_roster_format(num_teams, rounds)
+        return default_roster_format(num_teams, rounds, fixed_qb_slots)
 
     teams = int(rng.choice([10, 12, 14], p=[0.25, 0.55, 0.20]))
     qb = int(rng.choice([1, 2], p=[0.88, 0.12]))
@@ -889,10 +1116,11 @@ def train_policy(
     temperature: float,
     anchor_reg: float,
     seed: int,
+    fixed_qb_slots: int = 1,
 ) -> LinearDraftPolicy:
     sample_board = next(iter(boards.values()))
     sample_idxs = np.arange(min(shortlist_size, len(sample_board)))
-    sample_format = default_roster_format(num_teams, rounds)
+    sample_format = default_roster_format(num_teams, rounds, fixed_qb_slots)
     n_features = action_features(
         sample_board,
         sample_idxs,
@@ -913,7 +1141,9 @@ def train_policy(
 
     for ep in range(1, episodes + 1):
         season = int(rng.choice(train_seasons))
-        roster_format = sample_roster_format(rng, roster_mode, num_teams, rounds)
+        roster_format = sample_roster_format(
+            rng, roster_mode, num_teams, rounds, fixed_qb_slots
+        )
         draft_slot = int(rng.integers(1, roster_format.num_teams + 1))
         result, grads, _ = simulate_draft(
             boards[season],
@@ -948,6 +1178,8 @@ def evaluate_strategy(
     opponent_noise: float,
     seed: int,
     policy: Optional[LinearDraftPolicy] = None,
+    scarcity_weights: ScarcityV2Weights = DEFAULT_SCARCITY_V2_WEIGHTS,
+    fixed_qb_slots: int = 1,
 ) -> pd.DataFrame:
     rows = []
     ep = 0
@@ -956,7 +1188,9 @@ def evaluate_strategy(
         reps = max(int(episodes_per_season), 1)
         for rep in range(reps):
             ep += 1
-            roster_format = sample_roster_format(rng, roster_mode, num_teams, rounds)
+            roster_format = sample_roster_format(
+                rng, roster_mode, num_teams, rounds, fixed_qb_slots
+            )
             if roster_mode == "fixed":
                 draft_slot = 1 + (rep % roster_format.num_teams)
             else:
@@ -970,6 +1204,7 @@ def evaluate_strategy(
                 roster_format=roster_format,
                 opponent_noise=opponent_noise,
                 policy=policy,
+                scarcity_weights=scarcity_weights,
                 train=False,
             )
             rows.append(result.__dict__)
@@ -1040,32 +1275,64 @@ def main() -> None:
     parser.add_argument("--shortlist-size", type=int, default=24)
     parser.add_argument("--rounds", type=int, default=14)
     parser.add_argument("--num-teams", type=int, default=12)
+    parser.add_argument("--fixed-qb-slots", type=int, choices=[1, 2], default=1)
     parser.add_argument("--roster-mode", choices=["fixed", "mixed"], default="fixed")
+    parser.add_argument(
+        "--adp-distribution-cache",
+        default="data/ffc_adp_distributions.parquet",
+    )
+    parser.add_argument(
+        "--one-qb-market",
+        choices=["standard", "half-ppr", "ppr"],
+        default="half-ppr",
+    )
+    parser.add_argument(
+        "--adp-coverage-out",
+        default="data/scarcity_v2_adp_distribution_coverage.csv",
+    )
     parser.add_argument("--opponent-noise", type=float, default=18.0)
     parser.add_argument("--learning-rate", type=float, default=0.01)
     parser.add_argument("--temperature", type=float, default=0.55)
     parser.add_argument("--anchor-reg", type=float, default=0.02)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
+        "--scarcity-weights",
+        help="JSON object overriding ScarcityV2Weights for reproducible tuning",
+    )
+    parser.add_argument(
         "--strategies",
         nargs="+",
-        default=["adp", "adp_guarded", "catboost", "vbd", "random", "rl"],
-        choices=["adp", "adp_guarded", "catboost", "vbd", "random", "rl"],
+        default=["adp", "adp_guarded", "scarcity_v2", "catboost", "vbd", "random", "rl"],
+        choices=["adp", "adp_guarded", "scarcity_v2", "catboost", "vbd", "random", "rl"],
     )
     parser.add_argument("--out", default="snake_draft_rl_results.csv")
     parser.add_argument("--raw-out", default="snake_draft_rl_raw.csv")
     parser.add_argument("--format-out", default="snake_draft_rl_by_format.csv")
     parser.add_argument("--archetype-out", default="snake_draft_rl_by_archetype.csv")
     args = parser.parse_args()
+    scarcity_weights = DEFAULT_SCARCITY_V2_WEIGHTS
+    if args.scarcity_weights:
+        scarcity_weights = ScarcityV2Weights(**json.loads(args.scarcity_weights))
 
     seasons = sorted(set(args.train_seasons + args.eval_seasons))
     frame_cache = REPO / args.frame_cache if args.frame_cache else None
     board_cache = REPO / args.board_cache if args.board_cache else None
+    distribution_path = (
+        REPO / args.adp_distribution_cache if args.adp_distribution_cache else None
+    )
     df = load_or_build_frame(frame_cache, args.refresh_cache)
     boards = load_or_build_boards(df, seasons, board_cache, args.refresh_cache)
     missing = sorted(set(seasons) - set(boards))
     if missing:
         raise SystemExit(f"Missing boards for seasons: {missing}")
+    boards, adp_coverage = enrich_boards_with_market_distributions(
+        boards, distribution_path, args.one_qb_market
+    )
+    if not adp_coverage.empty and args.adp_coverage_out:
+        coverage_path = REPO / args.adp_coverage_out
+        coverage_path.parent.mkdir(parents=True, exist_ok=True)
+        adp_coverage.to_csv(coverage_path, index=False)
+        print(f"Wrote ADP distribution coverage: {coverage_path}")
 
     print(f"Puffer wrapper: {puffer_smoke_check(next(iter(boards.values())), args.shortlist_size)}")
 
@@ -1085,6 +1352,7 @@ def main() -> None:
             temperature=args.temperature,
             anchor_reg=args.anchor_reg,
             seed=args.seed,
+            fixed_qb_slots=args.fixed_qb_slots,
         )
 
     raw_parts = []
@@ -1103,6 +1371,8 @@ def main() -> None:
                 opponent_noise=args.opponent_noise,
                 seed=args.seed,
                 policy=policy if strategy == "rl" else None,
+                scarcity_weights=scarcity_weights,
+                fixed_qb_slots=args.fixed_qb_slots,
             )
         )
 
@@ -1143,9 +1413,14 @@ def main() -> None:
                 "eval_seasons": args.eval_seasons,
                 "scoring": "actual held-out QB/RB/WR/TE starter+flex fantasy points",
                 "roster_mode": args.roster_mode,
-                "fixed_roster_format": default_roster_format(args.num_teams, args.rounds).to_json(),
+                "fixed_roster_format": default_roster_format(
+                    args.num_teams, args.rounds, args.fixed_qb_slots
+                ).to_json(),
+                "adp_distribution_cache": str(distribution_path) if distribution_path else None,
+                "one_qb_market": args.one_qb_market,
                 "opponents": "ADP/model/VBD scripted drafters with Gaussian noise and roster-need bonuses",
                 "rl_policy": "linear softmax over top-N legal available player/action features",
+                "scarcity_v2_weights": asdict(scarcity_weights),
             },
             indent=2,
         )

@@ -8,24 +8,192 @@ Value-Based Drafting (VBD):
   where N = num_teams * slots_for_position
 
 Positional Scarcity:
-  Scarcity = dropoff from elite to replacement at each position.
-  Positions with high scarcity should be drafted earlier.
+  - Allocate every exclusive starter slot across the league.
+  - Allocate FLEX/Superflex from the best remaining eligible players.
+  - Measure each player against the last allocated starter at that position.
+  - Use conditional next-turn availability for value-over-next-available.
 
 Bye Week Conflict Avoidance:
   Don't draft two starters with the same bye week unless you have bench coverage.
   Penalize picks that create unresolvable bye week conflicts.
 
-Draft Rules of Thumb (backed by VBD math):
-  - RBs early: steepest drop-off, most scarce
-  - WRs in rounds 2-5: deep but elite ones separate
-  - QBs late: flat position, streamable
-  - TE: either get an elite one (rounds 3-4) or wait
-  - K/DEF: last two picks always
+Position labels are descriptive outputs, not hard-coded draft bonuses. The
+experimental policy must beat ADP and the production guarded policy on held-
+out drafts before it is eligible for the live board.
 """
-import pandas as pd
-import numpy as np
 from typing import Optional
+
+import numpy as np
+import pandas as pd
+
 from src.utils.config import get_roster_config
+
+
+POSITION_KEY_ALIASES = {
+    "qb": "QB",
+    "rb": "RB",
+    "wr": "WR",
+    "te": "TE",
+    "k": "K",
+    "def": "DEF",
+    "dst": "DEF",
+    "defense": "DEF",
+}
+
+
+def _position_label(value: str) -> str:
+    """Normalize config/data position names to the exported labels."""
+    key = str(value).strip().lower()
+    return POSITION_KEY_ALIASES.get(key, key.upper())
+
+
+def _slot_demands(
+    roster_config: dict,
+    num_teams: int,
+) -> tuple[dict[str, int], list[dict]]:
+    """Return exclusive-position and flexible-slot league-wide demand.
+
+    Flexible slots are described separately because they must be filled from
+    the best *remaining* eligible players after exclusive starter slots are
+    allocated. Treating FLEX as the minimum of unrelated position baselines
+    can put replacement dozens of points below the actual marginal starter.
+    """
+    slots = roster_config.get("roster_slots", {})
+    configured_eligibility = roster_config.get("slot_eligibility", {})
+    base_demands: dict[str, int] = {}
+    flexible_demands: list[dict] = []
+
+    for raw_key, raw_count in slots.items():
+        key = str(raw_key).strip().lower()
+        count = max(0, int(raw_count or 0))
+        if key == "bench" or count == 0:
+            continue
+
+        if key in POSITION_KEY_ALIASES:
+            pos = _position_label(key)
+            base_demands[pos] = base_demands.get(pos, 0) + num_teams * count
+            continue
+
+        eligible = configured_eligibility.get(key)
+        if eligible is None and key == "flex":
+            eligible = roster_config.get("flex_eligible", ["rb", "wr", "te"])
+        if eligible is None and key in ("superflex", "super_flex", "sf"):
+            eligible = roster_config.get(
+                "superflex_eligible", ["qb", "rb", "wr", "te"]
+            )
+        if not eligible:
+            continue
+
+        flexible_demands.append({
+            "slot": key.upper(),
+            "count": num_teams * count,
+            "eligible": tuple(dict.fromkeys(_position_label(p) for p in eligible)),
+        })
+
+    # Fill narrower slot groups first when formats define multiple flex types.
+    flexible_demands.sort(key=lambda group: (len(group["eligible"]), group["slot"]))
+    return base_demands, flexible_demands
+
+
+def compute_league_slot_allocation(
+    projections: pd.DataFrame,
+    num_teams: int = 12,
+    roster_config: Optional[dict] = None,
+) -> dict:
+    """Allocate league-wide starter slots and return true marginal baselines.
+
+    Exclusive slots (QB/RB/WR/TE/etc.) are filled first. FLEX and Superflex
+    slots are then filled from the highest-projected remaining eligible player,
+    which makes the marginal FLEX value an actual player cutoff rather than the
+    minimum of independently calculated position cutoffs.
+    """
+    config = roster_config or get_roster_config()
+    if projections.empty:
+        return {
+            "num_teams": int(num_teams),
+            "base_slot_counts": {},
+            "flex_slot_counts": {},
+            "flex_eligible": {},
+            "flex_allocations": {},
+            "selected_counts": {},
+            "base_replacement": {},
+            "flex_replacement": {},
+            "effective_replacement": {},
+        }
+    if "position" not in projections or "projected_points" not in projections:
+        raise ValueError("projections must contain position and projected_points")
+
+    base_demands, flexible_demands = _slot_demands(config, int(num_teams))
+    work = projections[["position", "projected_points"]].copy()
+    work["position"] = work["position"].map(_position_label)
+    work["projected_points"] = pd.to_numeric(
+        work["projected_points"], errors="coerce"
+    ).fillna(0.0)
+
+    all_positions = set(base_demands)
+    for group in flexible_demands:
+        all_positions.update(group["eligible"])
+    points_by_pos = {
+        pos: work.loc[work["position"] == pos, "projected_points"]
+        .sort_values(ascending=False)
+        .to_numpy(dtype=float)
+        for pos in sorted(all_positions)
+    }
+
+    selected_counts = {pos: 0 for pos in all_positions}
+    base_replacement: dict[str, float] = {}
+    for pos, demand in base_demands.items():
+        values = points_by_pos.get(pos, np.asarray([], dtype=float))
+        selected = min(int(demand), len(values))
+        selected_counts[pos] = selected
+        base_replacement[pos] = float(values[selected - 1]) if selected else 0.0
+
+    flex_replacement: dict[str, float] = {}
+    flex_allocations: dict[str, dict[str, int]] = {}
+    for group in flexible_demands:
+        slot = group["slot"]
+        allocations = {pos: 0 for pos in group["eligible"]}
+        marginal = 0.0
+        for _ in range(group["count"]):
+            best_pos = None
+            best_points = -np.inf
+            for pos in group["eligible"]:
+                values = points_by_pos.get(pos, np.asarray([], dtype=float))
+                cursor = selected_counts.get(pos, 0)
+                if cursor < len(values) and values[cursor] > best_points:
+                    best_pos = pos
+                    best_points = float(values[cursor])
+            if best_pos is None:
+                break
+            selected_counts[best_pos] = selected_counts.get(best_pos, 0) + 1
+            allocations[best_pos] += 1
+            marginal = best_points
+        flex_allocations[slot] = allocations
+        flex_replacement[slot] = float(marginal)
+
+    # Once flexible slots have been assigned, each position's replacement is
+    # the final allocated starter at that position. A shared FLEX cutoff is a
+    # property of the slot auction, not a baseline that should be granted to
+    # every FLEX-eligible player (which would double-count the same slot).
+    effective_replacement: dict[str, float] = {}
+    for pos in sorted(all_positions):
+        values = points_by_pos.get(pos, np.asarray([], dtype=float))
+        selected = selected_counts.get(pos, 0)
+        effective_replacement[pos] = (
+            float(values[selected - 1]) if selected and selected <= len(values) else 0.0
+        )
+
+    return {
+        "num_teams": int(num_teams),
+        "base_slot_counts": dict(sorted(base_demands.items())),
+        "flex_slot_counts": {g["slot"]: g["count"] for g in flexible_demands},
+        "flex_eligible": {g["slot"]: list(g["eligible"]) for g in flexible_demands},
+        "flex_allocations": flex_allocations,
+        "selected_counts": dict(sorted(selected_counts.items())),
+        "base_replacement": dict(sorted(base_replacement.items())),
+        "flex_replacement": flex_replacement,
+        "effective_replacement": effective_replacement,
+    }
 
 
 def compute_bye_weeks(season: int = 2024) -> dict[str, list[int]]:
@@ -171,49 +339,17 @@ def compute_replacement_levels(
     num_teams: int = 12,
     roster_config: Optional[dict] = None,
 ) -> dict[str, float]:
-    """Compute replacement-level fantasy points for each position.
-
-    Replacement level = projected points of the last starter that would be
-    rostered across all teams. E.g., if 12 teams each need 2 RBs, the
-    replacement RB is the #24 RB.
-    """
-    if roster_config is None:
-        roster_config = get_roster_config()
-
-    slots = roster_config["roster_slots"]
-    flex_eligible = roster_config.get("flex_eligible", ["rb", "wr", "te"])
-
-    replacement = {}
-
-    for pos, count in slots.items():
-        if pos in ("flex", "bench"):
-            continue
-
-        # Match position names: "defense" in config → "DEF" or "DST" in data
-        pos_variants = {pos.upper()}
-        if pos.upper() == "DEFENSE":
-            pos_variants = {"DEF", "DST", "DEFENSE"}
-        pos_players = projections[projections["position"].str.upper().isin(pos_variants)]
-        pos_players = pos_players.sort_values("projected_points", ascending=False)
-
-        # Number of starters needed across all teams
-        n_starters = num_teams * count
-
-        if len(pos_players) >= n_starters:
-            replacement[pos] = pos_players.iloc[n_starters - 1]["projected_points"]
-        elif len(pos_players) > 0:
-            replacement[pos] = pos_players.iloc[-1]["projected_points"]
-        else:
-            replacement[pos] = 0.0
-
-    # Flex replacement = best available among flex-eligible replacements
-    flex_replacements = []
-    for pos in flex_eligible:
-        if pos in replacement:
-            flex_replacements.append(replacement[pos])
-    if flex_replacements:
-        replacement["flex"] = min(flex_replacements)
-
+    """Compute effective replacement points after correct flexible allocation."""
+    config = roster_config or get_roster_config()
+    allocation = compute_league_slot_allocation(projections, num_teams, config)
+    replacement = {
+        pos.lower(): value
+        for pos, value in allocation["effective_replacement"].items()
+    }
+    if "DEF" in allocation["effective_replacement"]:
+        replacement["defense"] = allocation["effective_replacement"]["DEF"]
+    for slot, value in allocation["flex_replacement"].items():
+        replacement[slot.lower()] = value
     return replacement
 
 
@@ -226,15 +362,15 @@ def compute_vbd(
 
     VBD = projected_points - replacement_points(position)
 
-    Higher VBD = more valuable relative to what's available at that position.
-    This is the correct way to rank players across positions.
+    Higher VBD = more projected points than the final allocated starter at the
+    same position after flexible slots have been filled.
     """
     df = projections.copy()
 
     replacement = compute_replacement_levels(df, num_teams, roster_config)
 
     def get_replacement(row):
-        pos = row["position"].lower()
+        pos = _position_label(row["position"]).lower()
         # DEF in data → "defense" in config; DST in data → "defense" in config
         pos_to_config = {"def": "defense", "dst": "defense"}
         config_key = pos_to_config.get(pos, pos)
@@ -242,7 +378,10 @@ def compute_vbd(
 
     df["replacement_pts"] = df.apply(get_replacement, axis=1)
     df["vbd"] = df["projected_points"] - df["replacement_pts"]
-    df["vbd"] = df["vbd"].clip(lower=0)  # Below replacement = 0 VBD
+    # Keep signed VBD so the board can distinguish marginal and genuinely
+    # below-replacement players. Consumers that need the legacy floor can use
+    # vbd_positive explicitly instead of silently collapsing the whole tail.
+    df["vbd_positive"] = df["vbd"].clip(lower=0)
 
     return df
 
@@ -260,67 +399,211 @@ def compute_positional_scarcity(
     if roster_config is None:
         roster_config = get_roster_config()
 
-    slots = roster_config["roster_slots"]
+    allocation = compute_league_slot_allocation(projections, num_teams, roster_config)
+    positions = sorted(allocation["effective_replacement"])
     results = []
 
-    for pos, count in slots.items():
-        if pos in ("flex", "bench"):
-            continue
-
-        # Match position names: "defense" in config → "DEF" or "DST" in data
-        pos_variants = {pos.upper()}
-        if pos.upper() == "DEFENSE":
-            pos_variants = {"DEF", "DST", "DEFENSE"}
-        pos_players = projections[projections["position"].str.upper().isin(pos_variants)]
+    normalized_positions = projections["position"].map(_position_label)
+    for pos in positions:
+        pos_players = projections[normalized_positions == pos]
         pos_players = pos_players.sort_values("projected_points", ascending=False)
 
         if len(pos_players) < 2:
             continue
 
-        n_starters = num_teams * count
+        n_starters = int(allocation["selected_counts"].get(pos, 0))
         top_pts = pos_players.iloc[0]["projected_points"]
-
-        if len(pos_players) >= n_starters:
-            repl_pts = pos_players.iloc[n_starters - 1]["projected_points"]
-        else:
-            repl_pts = pos_players.iloc[-1]["projected_points"]
+        repl_pts = float(allocation["effective_replacement"].get(pos, 0.0))
 
         # Drop-off from top to replacement
         dropoff = top_pts - repl_pts
 
-        # Drop-off per starter slot (normalized)
-        dropoff_per_slot = dropoff / count if count > 0 else dropoff
+        base_slots_per_team = allocation["base_slot_counts"].get(pos, 0) / max(num_teams, 1)
+        dropoff_per_slot = dropoff / max(base_slots_per_team, 1)
 
-        # Tier gaps: how much value drops between tiers
-        tier_size = max(n_starters, 1)
-        if len(pos_players) >= tier_size + 4:
-            tier1_avg = pos_players.iloc[:tier_size]["projected_points"].mean()
-            tier2_avg = pos_players.iloc[tier_size:tier_size * 2]["projected_points"].mean()
-            tier_gap = tier1_avg - tier2_avg
+        selected_points = pos_players.iloc[:n_starters]["projected_points"]
+        starter_advantage = float((selected_points - repl_pts).clip(lower=0).mean()) if n_starters else 0.0
+
+        # Measure the cliff at the actual starter/replacement boundary, not the
+        # average of an entire top tier versus another arbitrary full tier.
+        window = min(max(1, num_teams // 4), n_starters, max(len(pos_players) - n_starters, 0))
+        if window > 0:
+            last_starters = pos_players.iloc[n_starters - window:n_starters]["projected_points"].mean()
+            next_players = pos_players.iloc[n_starters:n_starters + window]["projected_points"].mean()
+            replacement_cliff = max(0.0, float(last_starters - next_players))
         else:
-            tier_gap = 0
+            replacement_cliff = 0.0
+
+        flex_starters = sum(
+            group.get(pos, 0) for group in allocation["flex_allocations"].values()
+        )
+        scarcity_score = starter_advantage + replacement_cliff
 
         results.append({
-            "position": pos.upper(),
+            "position": pos,
             "top_pts": round(top_pts, 1),
             "replacement_pts": round(repl_pts, 1),
             "dropoff": round(dropoff, 1),
             "dropoff_per_slot": round(dropoff_per_slot, 1),
-            "tier_gap": round(tier_gap, 1),
+            "tier_gap": round(replacement_cliff, 1),
+            "replacement_cliff": round(replacement_cliff, 1),
+            "starter_advantage": round(starter_advantage, 1),
+            "scarcity_score": round(scarcity_score, 1),
             "n_players": len(pos_players),
             "starters_needed": n_starters,
+            "flex_starters": flex_starters,
             "scarcity_rank": 0,  # filled below
         })
 
     df = pd.DataFrame(results)
     if not df.empty:
-        # Rank by tier_gap (how steep the cliff is between tiers)
-        # This is the most actionable metric: a big tier_gap means
-        # there's a clear advantage to drafting early at that position
-        df = df.sort_values("tier_gap", ascending=False)
+        df = df.sort_values("scarcity_score", ascending=False)
         df["scarcity_rank"] = range(1, len(df) + 1)
 
     return df
+
+
+def conditional_probability_gone(
+    adp: np.ndarray | pd.Series | float,
+    current_pick: int,
+    next_pick: int,
+    scale: np.ndarray | pd.Series | float | None = None,
+    adp_sd: np.ndarray | pd.Series | float | None = None,
+    earliest_pick: np.ndarray | pd.Series | float | None = None,
+    latest_pick: np.ndarray | pd.Series | float | None = None,
+) -> np.ndarray:
+    """Estimate next-turn draft risk conditional on being available now.
+
+    When observed ADP dispersion is present, convert its standard deviation to
+    a player-specific logistic scale. Observed earliest/latest picks provide a
+    soft lower bound on the corresponding tail width; they are not treated as
+    hard support because future human drafts can exceed historical extremes.
+    """
+    values = np.asarray(adp, dtype=float)
+    turn_gap = max(1, int(next_pick) - int(current_pick))
+    fallback_spread = max(5.0, min(14.0, turn_gap / 3.0))
+
+    def broadcast(data, default=np.nan):
+        if data is None:
+            return np.full(values.shape, default, dtype=float)
+        return np.broadcast_to(np.asarray(data, dtype=float), values.shape).copy()
+
+    if scale is not None:
+        base_spread = np.maximum(broadcast(scale), 0.35)
+        left_spread = right_spread = base_spread
+    elif adp_sd is not None:
+        observed_sd = broadcast(adp_sd)
+        valid_sd = np.isfinite(observed_sd) & (observed_sd > 0)
+        observed_sd = np.where(valid_sd, np.clip(observed_sd, 0.5, 40.0), np.nan)
+        left_sd = observed_sd.copy()
+        right_sd = observed_sd.copy()
+
+        earliest = broadcast(earliest_pick)
+        latest = broadcast(latest_pick)
+        valid_early = np.isfinite(earliest) & (earliest <= values)
+        valid_late = np.isfinite(latest) & (latest >= values)
+        # Roughly 3.5 standard deviations covers an observed finite-sample tail.
+        left_sd = np.where(
+            valid_early,
+            np.fmax(left_sd, np.maximum(values - earliest, 0.0) / 3.5),
+            left_sd,
+        )
+        right_sd = np.where(
+            valid_late,
+            np.fmax(right_sd, np.maximum(latest - values, 0.0) / 3.5),
+            right_sd,
+        )
+        # Logistic standard deviation = scale * pi / sqrt(3).
+        conversion = np.sqrt(3.0) / np.pi
+        left_spread = np.where(
+            np.isfinite(left_sd), np.maximum(left_sd * conversion, 0.35), fallback_spread
+        )
+        right_spread = np.where(
+            np.isfinite(right_sd), np.maximum(right_sd * conversion, 0.35), fallback_spread
+        )
+    else:
+        left_spread = right_spread = np.full(
+            values.shape, fallback_spread, dtype=float
+        )
+
+    def cdf_at(pick: int) -> np.ndarray:
+        delta = float(pick) - values
+        spread = np.where(delta < 0, left_spread, right_spread)
+        return 1.0 / (1.0 + np.exp(-np.clip(delta / spread, -30, 30)))
+
+    current_cdf = cdf_at(current_pick)
+    next_cdf = cdf_at(next_pick)
+    survived = np.maximum(1.0 - current_cdf, 1e-8)
+    return np.clip((next_cdf - current_cdf) / survived, 0.0, 1.0)
+
+
+def expected_best_available_value(
+    values: np.ndarray | pd.Series,
+    availability: np.ndarray | pd.Series,
+    exclude_index: Optional[int] = None,
+) -> float:
+    """Expected best next-turn value under independent availability odds."""
+    vals = np.asarray(values, dtype=float)
+    probs = np.asarray(availability, dtype=float)
+    if exclude_index is not None and 0 <= exclude_index < len(vals):
+        keep = np.ones(len(vals), dtype=bool)
+        keep[exclude_index] = False
+        vals, probs = vals[keep], probs[keep]
+    keep = np.isfinite(vals) & np.isfinite(probs) & (vals > 0) & (probs > 0)
+    vals, probs = vals[keep], np.clip(probs[keep], 0.0, 1.0)
+    if not len(vals):
+        return 0.0
+    order = np.argsort(-vals)
+    expected = 0.0
+    none_better = 1.0
+    for idx in order:
+        expected += none_better * probs[idx] * vals[idx]
+        none_better *= 1.0 - probs[idx]
+        if none_better < 1e-8:
+            break
+    return float(expected)
+
+
+def compute_next_pick_values(
+    projections: pd.DataFrame,
+    current_pick: int,
+    next_pick: int,
+    num_teams: int = 12,
+    roster_config: Optional[dict] = None,
+    adp_column: str = "adp",
+) -> pd.DataFrame:
+    """Add conditional availability and value-over-next-available (VONA)."""
+    valued = compute_vbd(projections, num_teams, roster_config)
+    if adp_column in valued:
+        adp = pd.to_numeric(valued[adp_column], errors="coerce").fillna(200.0)
+    else:
+        adp = pd.Series(200.0, index=valued.index)
+    p_gone = conditional_probability_gone(
+        adp,
+        current_pick,
+        next_pick,
+        adp_sd=valued["adp_sd"] if "adp_sd" in valued else None,
+        earliest_pick=(
+            valued["earliest_pick"] if "earliest_pick" in valued else None
+        ),
+        latest_pick=valued["latest_pick"] if "latest_pick" in valued else None,
+    )
+    valued["p_gone_next"] = p_gone
+    valued["p_available_next"] = 1.0 - p_gone
+    valued["expected_next_vbd"] = 0.0
+
+    normalized_positions = valued["position"].map(_position_label)
+    for pos in normalized_positions.unique():
+        group_indices = np.flatnonzero((normalized_positions == pos).to_numpy())
+        group_values = valued.iloc[group_indices]["vbd"].to_numpy(dtype=float)
+        group_probs = valued.iloc[group_indices]["p_available_next"].to_numpy(dtype=float)
+        for local_idx, frame_idx in enumerate(group_indices):
+            valued.iat[
+                frame_idx, valued.columns.get_loc("expected_next_vbd")
+            ] = expected_best_available_value(group_values, group_probs, local_idx)
+
+    valued["vona"] = valued["vbd"] - valued["expected_next_vbd"]
+    return valued
 
 
 def generate_draft_plan(

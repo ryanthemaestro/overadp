@@ -1,0 +1,17 @@
+case,comparison,episodes,mean_starter_points_delta,median_starter_points_delta,ci95_low,ci95_high,positive_share,tie_share
+2024_fixed_1qb,scarcity_distribution-minus-adp_guarded,240,0.097333,15.890000,-23.106640,22.863042,0.537500,0.004167
+2024_fixed_1qb,scarcity_distribution-minus-scarcity_generic,240,-11.593250,0.000000,-21.385198,-2.520058,0.129167,0.625000
+2024_fixed_2qb,scarcity_distribution-minus-adp_guarded,240,108.112417,114.710000,76.814373,138.943687,0.658333,0.000000
+2024_fixed_2qb,scarcity_distribution-minus-scarcity_generic,240,-30.085417,0.000000,-47.793135,-12.586823,0.158333,0.520833
+2025_seed73_fixed_1qb,scarcity_distribution-minus-adp_guarded,240,14.260000,11.430000,-0.448987,29.013060,0.533333,0.025000
+2025_seed73_fixed_1qb,scarcity_distribution-minus-scarcity_generic,240,-1.110000,0.000000,-10.938750,8.480296,0.170833,0.650000
+2025_seed73_fixed_2qb,scarcity_distribution-minus-adp_guarded,240,68.284833,56.180000,47.291210,89.185196,0.670833,0.012500
+2025_seed73_fixed_2qb,scarcity_distribution-minus-scarcity_generic,240,27.131083,0.000000,11.435215,43.315767,0.362500,0.412500
+2025_seed73_mixed,scarcity_distribution-minus-adp_guarded,240,29.314917,20.550000,13.563673,44.897354,0.591667,0.025000
+2025_seed73_mixed,scarcity_distribution-minus-scarcity_generic,240,15.930417,0.000000,5.710712,26.404512,0.225000,0.645833
+2025_seed141_fixed_1qb,scarcity_distribution-minus-adp_guarded,240,8.340667,2.050000,-5.812469,22.883094,0.504167,0.041667
+2025_seed141_fixed_1qb,scarcity_distribution-minus-scarcity_generic,240,-1.051833,0.000000,-9.358377,7.444031,0.133333,0.712500
+2025_seed141_fixed_2qb,scarcity_distribution-minus-adp_guarded,240,66.225250,62.530000,46.382548,86.106883,0.670833,0.004167
+2025_seed141_fixed_2qb,scarcity_distribution-minus-scarcity_generic,240,7.694333,0.000000,-6.635860,21.562083,0.345833,0.412500
+2025_seed141_mixed,scarcity_distribution-minus-adp_guarded,240,12.859583,12.480000,-1.666731,27.340310,0.575000,0.020833
+2025_seed141_mixed,scarcity_distribution-minus-scarcity_generic,240,2.716750,0.000000,-6.631765,12.166235,0.162500,0.691667
