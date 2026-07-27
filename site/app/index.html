@@ -1518,8 +1518,9 @@ function updateDataStatus(){
   const model=dataMetadata.model||{};
   const counts=dataMetadata.counts||{};
   const fetchedAt=new Date(market.fetched_at||'');
-  const ageHours=Number.isNaN(fetchedAt.getTime())?Infinity:(Date.now()-fetchedAt.getTime())/36e5;
   const periodEnd=market.period_end?new Date(`${market.period_end}T12:00:00Z`):null;
+  const sourceTimestamp=periodEnd&&!Number.isNaN(periodEnd.getTime())?periodEnd:fetchedAt;
+  const ageHours=Number.isNaN(sourceTimestamp.getTime())?Infinity:(Date.now()-sourceTimestamp.getTime())/36e5;
   const dateLabel=periodEnd&&!Number.isNaN(periodEnd.getTime())
     ?periodEnd.toLocaleDateString(undefined,{month:'short',day:'numeric'}).toUpperCase()
     :'UNKNOWN';

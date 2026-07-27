@@ -150,6 +150,16 @@ def validate(max_age_hours: float) -> list[str]:
             errors.append(f"metadata.json: market data age is {age_hours:.1f}h (limit {max_age_hours:.1f}h)")
     except (KeyError, TypeError, ValueError):
         errors.append("metadata.json: market fetched_at is missing or invalid")
+    try:
+        source_end = datetime.fromisoformat(metadata["market"]["period_end"] + "T23:59:59+00:00")
+        source_age_hours = (datetime.now(timezone.utc) - source_end).total_seconds() / 3600
+        if source_age_hours > max_age_hours:
+            errors.append(
+                f"metadata.json: upstream market period is {source_age_hours:.1f}h old "
+                f"(limit {max_age_hours:.1f}h)"
+            )
+    except (KeyError, TypeError, ValueError):
+        errors.append("metadata.json: market period_end is missing or invalid")
 
     quality = metadata.get("quality") or {}
     if float(quality.get("skill_match_rate", 0)) < 0.98:
