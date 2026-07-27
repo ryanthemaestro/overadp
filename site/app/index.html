@@ -113,6 +113,17 @@
     box-shadow: 0 0 12px rgba(0,255,106,0.3);
     animation: pulse-ring 2s ease-in-out infinite;
   }
+  .data-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    color: var(--smoke);
+    border: 1px solid var(--rust);
+    border-radius: 2px;
+    padding: 3px 6px;
+    white-space: nowrap;
+  }
   @keyframes pulse-ring {
     0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
     50% { box-shadow: 0 0 20px var(--rb-glow); }
@@ -877,6 +888,7 @@
     <div class="logo">
       <div class="icon">Δ</div>
       OverADP
+      <span class="data-status" id="dataStatus" title="Checking draft-market freshness">ADP CHECKING</span>
     </div>
     <div class="top-actions">
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
@@ -884,6 +896,7 @@
       <button class="btn" id="logoutBtn" onclick="logOut()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);display:none;">LOG OUT</button>
       <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
+      <button class="btn" onclick="exportDraftBoard()" title="Download a draft-day backup CSV">EXPORT</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
       <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
     </div>
@@ -978,7 +991,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
-    <p>OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. Updated July 2026 with 844 skill-player projections plus 62 K/DEF board entries.</p>
+    <p id="dataCoverageSummary">OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. The projection model and daily draft-market refresh are dated separately so you can verify freshness.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -1137,7 +1150,7 @@
     <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
     <h2>Your Opponents May Already Have This Data</h2>
     <div style="margin:16px 0;">
-      <div class="upgrade-feature">✓ 906-player board: 844 skill projections + 62 K/DEF entries</div>
+      <div class="upgrade-feature">✓ 900+ player board: 844 skill projections + current K/DEF entries</div>
       <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
       <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
       <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
@@ -1228,6 +1241,7 @@ let sleepersData = [];
 let bustsData = [];
 let intelByPlayerKey = {};
 let rosterConfig = {};
+let dataMetadata = {};
 let playerMap = {};  // player_id → player object
 let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
 
@@ -1492,9 +1506,37 @@ function logOut(){
 }
 
 const LS_KEY = 'warroom_';
-const DATA_VERSION = '20260720playercoverage';
+const DRAFT_STATE_VERSION = '2026-player-coverage-v1';
+const LEGACY_DRAFT_STATE_VERSIONS = new Set(['20260720playercoverage']);
+const APP_CACHE_FALLBACK = '20260727draftready';
 function lsGet(k,d){try{const v=localStorage.getItem(LS_KEY+k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function lsSet(k,v){localStorage.setItem(LS_KEY+k,JSON.stringify(v));}
+
+function updateDataStatus(){
+  const status=document.getElementById('dataStatus');
+  const market=dataMetadata.market||{};
+  const model=dataMetadata.model||{};
+  const counts=dataMetadata.counts||{};
+  const fetchedAt=new Date(market.fetched_at||'');
+  const ageHours=Number.isNaN(fetchedAt.getTime())?Infinity:(Date.now()-fetchedAt.getTime())/36e5;
+  const periodEnd=market.period_end?new Date(`${market.period_end}T12:00:00Z`):null;
+  const dateLabel=periodEnd&&!Number.isNaN(periodEnd.getTime())
+    ?periodEnd.toLocaleDateString(undefined,{month:'short',day:'numeric'}).toUpperCase()
+    :'UNKNOWN';
+  status.textContent=`ADP ${dateLabel}`;
+  status.style.color=ageHours<=36?'var(--wr)':ageHours<=72?'var(--te)':'var(--alert)';
+  status.style.borderColor=ageHours<=36?'var(--wr)':ageHours<=72?'var(--te)':'var(--alert)';
+  status.title=[
+    `Market data through ${market.period_end||'unknown'} (${market.drafts||0} drafts)`,
+    `Fetched ${market.fetched_at||'unknown'}`,
+    `Projection model generated ${model.generated_at||'unknown'}`,
+    `${counts.total_players||allPlayers.length||0} board entries`,
+  ].join(' · ');
+  const summary=document.getElementById('dataCoverageSummary');
+  if(summary&&counts.skill_players){
+    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF entries</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, and bye weeks were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
+  }
+}
 
 function getRosterSlots(){
   const s=rosterConfig.roster_slots||{};
@@ -1662,7 +1704,12 @@ async function loadData(){
     hydrateCachedAuth();
     checkPaymentReturn();
 
-    const _v='?v='+DATA_VERSION; // cache buster and saved-draft compatibility boundary
+    const metaRes=await fetch('data/metadata.json?bootstrap='+Date.now(),{cache:'no-store'});
+    if(!metaRes.ok)throw new Error('metadata.json HTTP '+metaRes.status);
+    dataMetadata=await metaRes.json();
+    updateDataStatus();
+    const cacheVersion=dataMetadata.market?.fetched_at||APP_CACHE_FALLBACK;
+    const _v='?v='+encodeURIComponent(cacheVersion);
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
       fetch('data/bye_weeks.json'+_v),
@@ -1670,6 +1717,9 @@ async function loadData(){
       fetch('data/roster_config.json'+_v),
       fetch('data/accuracy.json'+_v),
     ]);
+    for(const response of [pRes,bRes,sRes,rcRes,accRes]){
+      if(!response.ok)throw new Error(response.url+' HTTP '+response.status);
+    }
     allPlayers=await pRes.json();
     byeWeeks=await bRes.json();
     gaEvent('app_loaded', { player_count: Array.isArray(allPlayers)?allPlayers.length:0, user_plan: userPlan||'free' });
@@ -1694,18 +1744,23 @@ async function loadData(){
     }catch(e){}
     buildDraftIntel();
     // Restore draft state from localStorage
-    if(lsGet('draftDataVersion',null)!==DATA_VERSION){
+    const savedDraftVersion=lsGet('draftDataVersion',null);
+    const draftStateCompatible=(
+      savedDraftVersion===DRAFT_STATE_VERSION
+      || LEGACY_DRAFT_STATE_VERSIONS.has(savedDraftVersion)
+    );
+    if(!draftStateCompatible){
       // A saved draft from an older board can silently hide newly ranked stars.
       // Preserve league settings, but start a clean player-availability state.
       myTeamIds=[];
       opponentIds=[];
       lsSet('myTeam',myTeamIds);
       lsSet('opponentPicks',opponentIds);
-      lsSet('draftDataVersion',DATA_VERSION);
     }else{
-      myTeamIds=lsGet('myTeam',[]);
-      opponentIds=lsGet('opponentPicks',[]);
+      myTeamIds=lsGet('myTeam',[]).filter(id=>playerMap[id]);
+      opponentIds=lsGet('opponentPicks',[]).filter(id=>playerMap[id]);
     }
+    lsSet('draftDataVersion',DRAFT_STATE_VERSION);
     restoreSettings(); // apply saved scoring format & roster config
     computeClientVBD();
     getRecommendations();
@@ -1743,6 +1798,55 @@ function resetDraft(){
   myTeamIds=[];opponentIds=[];
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
   refreshAll();
+}
+
+function csvValue(value){
+  const text=String(value??'');
+  return `"${text.replace(/"/g,'""')}"`;
+}
+
+function exportDraftBoard(){
+  if(!isPaid()){
+    showUpgrade();
+    return;
+  }
+  if(!allPlayers.length){
+    alert('Initialize the board before exporting.');
+    return;
+  }
+  const skillPool=allPlayers.filter(p=>p.position!=='K'&&p.position!=='DEF');
+  const skill=[...skillPool].sort((a,b)=>
+    draftBoardScore(b,skillPool)-draftBoardScore(a,skillPool)
+    ||(b.vbd||0)-(a.vbd||0)
+    ||(b.projected_points||0)-(a.projected_points||0)
+  );
+  const special=allPlayers
+    .filter(p=>p.position==='K'||p.position==='DEF')
+    .sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
+  const headers=['Board','Player','Pos','Team','Bye','ADP','Projection','VBD','Range Low','Range High','Uncertainty','Draft Risk','Status'];
+  const rows=[headers.map(csvValue).join(',')];
+  [...skill,...special].forEach((p,index)=>{
+    const status=myTeamIds.includes(p.player_id)?'MY TEAM':opponentIds.includes(p.player_id)?'TAKEN':'AVAILABLE';
+    const bye=(byeWeeks[p.team]||[]).join('/');
+    rows.push([
+      index+1,p.player_name,p.position,p.team,bye,
+      Number(p.adp)<200?Number(p.adp).toFixed(1):'UDFA',
+      Number(p.projected_points||0).toFixed(1),
+      Number(p.vbd||0).toFixed(1),
+      p.ci_low??'',p.ci_high??'',p.risk||'',p.draft_risk||'',status,
+    ].map(csvValue).join(','));
+  });
+  const blob=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  const marketDate=dataMetadata.market?.period_end||'current';
+  link.href=url;
+  link.download=`overadp-draft-board-${marketDate}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  gaEvent('draft_board_exported',{market_date:marketDate,player_count:allPlayers.length});
 }
 
 // Client-side VBD computation (matches backend logic)
@@ -2097,7 +2201,7 @@ function renderPlayerPool(){
   let h=`<table class="pool-table"><thead><tr><th>BOARD</th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EDGE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>UNC</th><th>DRAFT RISK</th><th>ACTION</th></tr></thead><tbody>`;
   // K/DEF notice banner
   if(currentFilter==='K'||currentFilter==='DEF'){
-    h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:6px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">Projections sourced from FantasyPros consensus. K & DEF have low year-over-year correlation — consider streaming.</td></tr>`;
+    h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:6px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">K/DEF use consensus and regression-to-mean support; newly ranked kickers use a conservative position median. These positions are volatile — consider streaming.</td></tr>`;
   }
   f.forEach((p,i)=>{
     const paid=isPaid();

@@ -12,14 +12,37 @@ Machine-learning fantasy football draft assistant with walk-forward validation, 
 
 ## Updating Data
 
-From the main `nflmodel` repo:
+### Daily draft-market refresh
+
+Production refreshes current half-PPR ADP, teams, bye weeks, K/DEF coverage,
+and sleeper/bust labels every morning during draft season:
+
+```bash
+python scripts/refresh_market_data.py
+python scripts/validate_draft_data.py
+```
+
+The scheduled GitHub workflow runs the same commands and commits only after
+all freshness, player-count, team/bye, duplicate, and source-join gates pass.
+Daily market updates do not retrain or silently change the projection model,
+and they do not invalidate a saved in-progress draft.
+
+### Full projection refresh
+
+From the full `nflmodel` working tree:
 
 ```bash
 python -m src.api.export_static --seasons 5 --scoring half_ppr
 cp src/api/static/data/*.json site/app/data/
+python scripts/validate_draft_data.py
 ```
 
-Then commit and push — Netlify auto-deploys.
+Run full model exports deliberately after meaningful preseason/roster changes,
+then review accuracy, player coverage, and the browser rehearsal before
+publishing.
+
+See [`docs/DRAFT_DAY_RUNBOOK.md`](docs/DRAFT_DAY_RUNBOOK.md) for the release
+and pre-draft checklist.
 
 ## Deploy
 
