@@ -517,6 +517,38 @@
     gap: 4px;
     align-items: center;
   }
+  .opening-matchups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    min-width: 190px;
+  }
+  .matchup-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 5px;
+    border: 1px solid var(--rust);
+    border-radius: 2px;
+    color: var(--chalk);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .matchup-chip.grade-a { border-color: rgba(68,255,68,0.5); color: #44ff44; }
+  .matchup-chip.grade-b { border-color: rgba(16,185,129,0.5); color: var(--wr); }
+  .matchup-chip.grade-c { border-color: rgba(245,158,11,0.45); color: var(--te); }
+  .matchup-chip.grade-d { border-color: rgba(255,68,68,0.45); color: #ff7777; }
+  .stream-tier {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
 
   /* Position tag */
   .pos-tag {
@@ -1091,7 +1123,7 @@
       <tr><td><strong>Target Intel</strong></td><td>Opportunity-cost next-pick scoring for live draft recommendations.</td></tr>
       <tr><td><strong>ADP Baseline</strong></td><td>Held out as the market comparison, not used as a target leak.</td></tr>
       <tr><td><strong>Conformal Quantiles</strong></td><td>Parallel interval pipeline for 80%-target projection ranges.</td></tr>
-      <tr><td><strong>K/DEF</strong></td><td>Consensus/regression-to-mean board support, not overfit ML projections.</td></tr>
+      <tr><td><strong>K/DEF</strong></td><td>Current depth-chart starters ranked for Weeks 1–3 by market-implied scoring, opponent, venue, and a backtested late-round streaming policy.</td></tr>
     </table>
 
     <h3>Key Features (July 2026)</h3>
@@ -1535,7 +1567,7 @@ function updateDataStatus(){
   ].join(' · ');
   const summary=document.getElementById('dataCoverageSummary');
   if(summary&&counts.skill_players){
-    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF entries</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, and bye weeks were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
+    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
   }
 }
 
@@ -1666,7 +1698,12 @@ function buildDraftIntel(){
   ['QB','RB','WR','TE','K','DEF'].forEach(pos=>{
     allPlayers
       .filter(p=>p.position===pos)
-      .sort((a,b)=>(b.projected_points||0)-(a.projected_points||0))
+      .sort((a,b)=>{
+        if(pos==='K'||pos==='DEF'){
+          return (b.stream_score||0)-(a.stream_score||0);
+        }
+        return (b.projected_points||0)-(a.projected_points||0);
+      })
       .forEach((p,i)=>{ p.model_pos_rank = i + 1; });
   });
 
@@ -1728,7 +1765,7 @@ async function loadData(){
     Object.keys(byeWeeks).forEach(k=>{if(!Array.isArray(byeWeeks[k]))byeWeeks[k]=[byeWeeks[k]];});
     scarcityData=await sRes.json();
     rosterConfig=await rcRes.json();
-    // Load K/DEF (ADP-based, no ML projections)
+    // Load K/DEF opening-schedule streaming ranks.
     try{const kdRes=await fetch('data/k_def.json'+_v);
       if(!kdRes.ok)throw new Error('HTTP '+kdRes.status);
       const kd=await kdRes.json();
@@ -1823,8 +1860,8 @@ function exportDraftBoard(){
   );
   const special=allPlayers
     .filter(p=>p.position==='K'||p.position==='DEF')
-    .sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
-  const headers=['Board','Player','Pos','Team','Bye','ADP','Projection','VBD','Range Low','Range High','Uncertainty','Draft Risk','Status'];
+    .sort((a,b)=>(b.stream_score||0)-(a.stream_score||0));
+  const headers=['Board','Player','Pos','Team','Bye','ADP','Projection','Opening Rank','Opening Score','Opening Schedule','Draft Timing','VBD','Range Low','Range High','Uncertainty','Draft Risk','Status'];
   const rows=[headers.map(csvValue).join(',')];
   [...skill,...special].forEach((p,index)=>{
     const status=myTeamIds.includes(p.player_id)?'MY TEAM':opponentIds.includes(p.player_id)?'TAKEN':'AVAILABLE';
@@ -1833,6 +1870,10 @@ function exportDraftBoard(){
       index+1,p.player_name,p.position,p.team,bye,
       Number(p.adp)<200?Number(p.adp).toFixed(1):'UDFA',
       Number(p.projected_points||0).toFixed(1),
+      p.stream_rank||'',
+      p.stream_score!=null?Number(p.stream_score).toFixed(1):'',
+      (p.opening_schedule||[]).map(g=>`W${g.week} ${g.location} ${g.opponent} (${g.matchup_grade})`).join(' | '),
+      p.draft_guidance||'',
       Number(p.vbd||0).toFixed(1),
       p.ci_low??'',p.ci_high??'',p.risk||'',p.draft_risk||'',status,
     ].map(csvValue).join(','));
@@ -2013,7 +2054,7 @@ function adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round){
 }
 
 function draftBoardScore(p,ownList){
-  if(p.position==='K'||p.position==='DEF')return Number(p.projected_points||0);
+  if(p.position==='K'||p.position==='DEF')return Number(p.stream_score||0);
   const plan=getRosterPlan();
   const counts={};
   myTeamIds.forEach(id=>{const x=playerMap[id];if(x){counts[x.position]=(counts[x.position]||0)+1;}});
@@ -2091,7 +2132,10 @@ function getRecommendations(){
     const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,draftNeeds,plan,round);
 
     let score=(p.vbd||0);
-    if(kd) score=(p.projected_points||0)*0.15;
+    if(kd){
+      score=Number(p.stream_score||0)*0.45;
+      if(p.stream_rank)reasons.push(`opening ${p.position}${p.stream_rank}`);
+    }
     if(!kd){
       score+=Math.max(-36,Math.min(54,guarded.score*0.50));
       if(guarded.urgency>=12)reasons.push("won't come back");
@@ -2144,9 +2188,16 @@ function getRecommendations(){
     }
 
     if(kd){
-      const lateKDefWindow=round>=Math.max(1,totalRounds-2);
-      if(!lateKDefWindow)score-=80;
-      if(directNeed>0&&lateKDefWindow){score+=110;reasons.push('late K/DEF');}
+      const needCount=Math.max(1,directNeed);
+      const windowStart=p.position==='K'
+        ?Math.max(1,totalRounds-needCount+1)
+        :Math.max(1,totalRounds-needCount);
+      const positionWindow=round>=windowStart;
+      if(!positionWindow)score-=200;
+      if(directNeed>0&&positionWindow){
+        score+=125;
+        reasons.push(p.position==='K'?'last-round kicker':'late-round defense');
+      }
     }else if(round>=Math.max(1,totalRounds-2)&&missingKDef>=benchOpen){
       score-=60;
     }
@@ -2177,17 +2228,65 @@ function posTag(p){
   return `<span class="pos-tag ${cls}">${p}</span>`;
 }
 
+function streamTierColor(tier){
+  return {
+    TARGET:'#44ff44',
+    PLAYABLE:'var(--wr)',
+    STREAM:'var(--te)',
+    FADE:'#ff7777'
+  }[String(tier||'').toUpperCase()]||'var(--smoke)';
+}
+
+function openingMatchupsHtml(player){
+  return (player.opening_schedule||[]).map(game=>
+    `<span class="matchup-chip grade-${String(game.matchup_grade||'c').toLowerCase()}" title="${game.venue||''} · team implied ${Number(game.own_implied||0).toFixed(1)} · opponent implied ${Number(game.opponent_implied||0).toFixed(1)}">W${game.week} ${game.location} ${game.opponent} · ${game.matchup_grade}</span>`
+  ).join('');
+}
+
+function renderSpecialTeamsPool(container,players){
+  const position=players[0]?.position||currentFilter;
+  const note=position==='K'
+    ? 'Confirmed current depth-chart starters. Rank uses 55% Week 1, 30% Week 2, and 15% Week 3. Draft a kicker in the last round.'
+    : 'Opening-schedule streaming rank. Take an elite target in the final two rounds; otherwise wait until the last round and stream.';
+  let h=`<table class="pool-table"><thead><tr><th>OPEN</th><th>PLAYER</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EXP PPG</th><th>TIER</th><th>WEEKS 1–3</th><th>DRAFT PLAN</th><th>ACTION</th></tr></thead><tbody>`;
+  h+=`<tr><td colspan="10" style="padding:8px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">${note}</td></tr>`;
+  players.forEach(p=>{
+    const paid=isPaid();
+    const isR=paid&&recommendedIds.has(p.player_id);
+    const bye=byeWeeks[p.team]||[];
+    const tierColor=streamTierColor(p.stream_tier);
+    const adp=Number(p.adp)<200?Number(p.adp).toFixed(1):'UDFA';
+    const draftBtn=paid
+      ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`
+      :`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
+    h+=`<tr class="${isR?'rec-row':''}">
+      <td class="rank-cell"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
+      <td class="name-cell">${p.player_name||p.player_id}<div class="player-sub">${position==='K'?'DEPTH CHART #1':'TEAM UNIT'} · ${p.stream_model_used==='opening_schedule_v1'?'OPENING MODEL':'FALLBACK'}</div></td>
+      <td class="team-cell">${p.team||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${bye.length?bye.join(','):'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${adp}</td>
+      <td class="pts-cell" title="Weighted expected fantasy points per game across Weeks 1–3">${Number(p.opening_projection||0).toFixed(2)}</td>
+      <td><span class="stream-tier" style="color:${tierColor};">${p.stream_tier||'—'}</span></td>
+      <td><div class="opening-matchups">${openingMatchupsHtml(p)}</div></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:${tierColor};">${p.draft_guidance||'LAST ROUND'}</td>
+      <td class="actions-cell"><div class="actions-wrap">${draftBtn}<button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button></div></td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  container.innerHTML=h;
+}
+
 function renderPlayerPool(){
   const c=document.getElementById('playerPool');
   const drafted=new Set([...myTeamIds,...opponentIds]);
   let f=allPlayers;
   // Filter out drafted players
   f=f.filter(p=>!drafted.has(p.player_id));
-  // Sort: skill players by ADP-anchored draft board score; K/DEF by projected points
+  // Sort: skill players by ADP-anchored draft board score; K/DEF by opening schedule.
   const isKD=p=>p.position==='K'||p.position==='DEF';
   const skillPool=[...f].filter(p=>!isKD(p));
   const skillPlayers=skillPool.sort((a,b)=>draftBoardScore(b,skillPool)-draftBoardScore(a,skillPool)||(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
-  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
+  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(b.stream_score||0)-(a.stream_score||0));
   if(currentFilter==='ALL'){
     // Interleave: skill players first, then K/DEF at the bottom
     f=[...skillPlayers,...kdPlayers];
@@ -2198,12 +2297,12 @@ function renderPlayerPool(){
   }
   if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
+  if(currentFilter==='K'||currentFilter==='DEF'){
+    renderSpecialTeamsPool(c,f);
+    return;
+  }
   const vbdHead=vbdMode?'<th>VBD</th>':'';
   let h=`<table class="pool-table"><thead><tr><th>BOARD</th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EDGE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>UNC</th><th>DRAFT RISK</th><th>ACTION</th></tr></thead><tbody>`;
-  // K/DEF notice banner
-  if(currentFilter==='K'||currentFilter==='DEF'){
-    h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:6px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">K/DEF use consensus and regression-to-mean support; newly ranked kickers use a conservative position median. These positions are volatile — consider streaming.</td></tr>`;
-  }
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
@@ -2364,8 +2463,8 @@ function renderRecommendations(recs){
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
-      <div class="intel-pts">${isPaid()?(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD':'🔒 UNLOCK'}</div>
-      <div class="player-sub">Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${r.adp_rank||'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.adp_edge)?` · edge ${r.adp_edge>0?'+':''}${r.adp_edge}`:''}${r.position!=='K'&&r.position!=='DEF'?` · draft risk ${r.draft_risk||'low'}`:''}</div>
+      <div class="intel-pts">${isPaid()?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
+      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${r.adp_rank||'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.adp_edge)?` · edge ${r.adp_edge>0?'+':''}${r.adp_edge}`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}

@@ -14,8 +14,9 @@ Machine-learning fantasy football draft assistant with walk-forward validation, 
 
 ### Daily draft-market refresh
 
-Production refreshes current half-PPR ADP, teams, bye weeks, K/DEF coverage,
-and sleeper/bust labels every morning during draft season:
+Production refreshes current half-PPR ADP, teams, bye weeks, kicker depth
+charts, the K/DEF Week 1-3 schedule model, and sleeper/bust labels every morning
+during draft season:
 
 ```bash
 python scripts/refresh_market_data.py
@@ -42,7 +43,9 @@ then review accuracy, player coverage, and the browser rehearsal before
 publishing.
 
 See [`docs/DRAFT_DAY_RUNBOOK.md`](docs/DRAFT_DAY_RUNBOOK.md) for the release
-and pre-draft checklist.
+and pre-draft checklist. See
+[`docs/KDEF_STREAMING_MODEL.md`](docs/KDEF_STREAMING_MODEL.md) for the special
+teams formulas, holdout evidence, and release gates.
 
 ## Deploy
 

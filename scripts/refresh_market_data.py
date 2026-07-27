@@ -10,6 +10,8 @@ published data directories byte-for-byte identical.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import math
 import statistics
@@ -26,7 +28,21 @@ SITE_DATA_DIR = PROJECT_ROOT / "site" / "app" / "data"
 MODEL_DATA_DIR = PROJECT_ROOT / "src" / "api" / "static" / "data"
 FFC_URL = "https://fantasyfootballcalculator.com/api/v1/adp/half-ppr?teams=12&year=2026"
 SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
+SCHEDULE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 MODEL_BASELINE_GENERATED_AT = "2026-07-20T14:49:24Z"
+PROJECTION_SEASON = 2026
+OPENING_WEEK_WEIGHTS = {1: 0.55, 2: 0.30, 3: 0.15}
+# Fit on 2021-2024 regular-season data, then checked out of sample on 2025.
+KICKER_MODEL = {
+    "intercept": 4.7215,
+    "own_implied": 0.1446,
+    "indoor": 0.6755,
+    "home": 0.1218,
+}
+DEFENSE_MODEL = {
+    "intercept": 15.2133,
+    "opponent_implied": -0.4041,
+}
 SKILL_POSITIONS = {"QB", "RB", "WR", "TE"}
 VALID_TEAMS = {
     "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
@@ -40,6 +56,10 @@ TEAM_ALIASES = {
     "LAR": "LA", "LA": "LAR",
     "WSH": "WAS", "WAS": "WSH",
 }
+# Fixed-roof venues are known months ahead. Retractable roofs receive partial
+# indoor credit until the game-week roof status is available.
+FIXED_INDOOR_HOME_TEAMS = {"ATL", "DET", "LA", "LAC", "LV", "MIN", "NO"}
+RETRACTABLE_ROOF_HOME_TEAMS = {"ARI", "DAL", "HOU", "IND"}
 NAME_ALIASES = {
     ("kenny gainwell", "RB"): ("kenneth gainwell", "RB"),
 }
@@ -93,9 +113,29 @@ def fetch_json(url: str) -> Any:
         return json.load(response)
 
 
+def fetch_csv(url: str) -> list[dict[str, str]]:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "text/csv",
+            "User-Agent": "OverADP-DraftReadiness/1.0 (+https://overadp.com)",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=45) as response:
+        if response.status != 200:
+            raise RuntimeError(f"{url} returned HTTP {response.status}")
+        text = response.read().decode("utf-8-sig")
+    return list(csv.DictReader(io.StringIO(text)))
+
+
 def load_json(path: Path) -> Any:
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def load_csv(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        return list(csv.DictReader(handle))
 
 
 def dump_json(path: Path, value: Any) -> None:
@@ -113,6 +153,128 @@ def positive_number(value: Any, default: float = 200.0) -> float:
     if not math.isfinite(number) or number <= 0:
         return default
     return number
+
+
+def finite_number(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def expected_indoor_share(roof: Any, home_team: str) -> float:
+    roof_name = str(roof or "").strip().lower()
+    if roof_name in {"dome", "closed"}:
+        return 1.0
+    if roof_name in {"outdoors", "open"}:
+        return 0.0
+    normalized_home = normalize_team(home_team)
+    if normalized_home in FIXED_INDOOR_HOME_TEAMS:
+        return 1.0
+    if normalized_home in RETRACTABLE_ROOF_HOME_TEAMS:
+        return 0.65
+    return 0.0
+
+
+def kicker_expected_points(
+    own_implied: float,
+    indoor_share: float,
+    is_home: bool,
+) -> float:
+    return (
+        KICKER_MODEL["intercept"]
+        + KICKER_MODEL["own_implied"] * own_implied
+        + KICKER_MODEL["indoor"] * indoor_share
+        + KICKER_MODEL["home"] * int(is_home)
+    )
+
+
+def defense_expected_points(opponent_implied: float) -> float:
+    return (
+        DEFENSE_MODEL["intercept"]
+        + DEFENSE_MODEL["opponent_implied"] * opponent_implied
+    )
+
+
+def opening_schedule_contexts(
+    schedule_rows: list[dict[str, Any]],
+    season: int = PROJECTION_SEASON,
+) -> dict[str, list[dict[str, Any]]]:
+    opening_rows = [
+        row
+        for row in schedule_rows
+        if int(finite_number(row.get("season")) or 0) == season
+        and str(row.get("game_type") or "").upper() == "REG"
+        and int(finite_number(row.get("week")) or 0) in OPENING_WEEK_WEIGHTS
+    ]
+    expected_games = 16 * len(OPENING_WEEK_WEIGHTS)
+    if len(opening_rows) != expected_games:
+        raise ValueError(
+            f"nflverse opening schedule has {len(opening_rows)} games "
+            f"(expected {expected_games})"
+        )
+
+    contexts: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in opening_rows:
+        week = int(float(row["week"]))
+        home_team = normalize_team(row.get("home_team"))
+        away_team = normalize_team(row.get("away_team"))
+        spread = finite_number(row.get("spread_line"))
+        total = finite_number(row.get("total_line"))
+        if (
+            home_team not in VALID_TEAMS
+            or away_team not in VALID_TEAMS
+            or home_team == away_team
+            or spread is None
+            or total is None
+            or total <= 0
+        ):
+            raise ValueError(f"Malformed nflverse opening game: {row!r}")
+        indoor_share = expected_indoor_share(row.get("roof"), home_team)
+        home_implied = total / 2 + spread / 2
+        away_implied = total / 2 - spread / 2
+        shared = {
+            "week": week,
+            "total": round(total, 1),
+            "indoor_share": round(indoor_share, 2),
+            "venue": (
+                "INDOOR"
+                if indoor_share >= 0.95
+                else "ROOF TBD"
+                if indoor_share > 0
+                else "OUTDOOR"
+            ),
+        }
+        contexts[home_team].append({
+            **shared,
+            "opponent": away_team,
+            "location": "VS",
+            "home": True,
+            "own_implied": round(home_implied, 2),
+            "opponent_implied": round(away_implied, 2),
+        })
+        contexts[away_team].append({
+            **shared,
+            "opponent": home_team,
+            "location": "AT",
+            "home": False,
+            "own_implied": round(away_implied, 2),
+            "opponent_implied": round(home_implied, 2),
+        })
+
+    if set(contexts) != VALID_TEAMS:
+        raise ValueError(
+            "nflverse opening schedule team coverage differs from 32 teams; "
+            f"missing={sorted(VALID_TEAMS - set(contexts))}, "
+            f"extra={sorted(set(contexts) - VALID_TEAMS)}"
+        )
+    for team, games in contexts.items():
+        games.sort(key=lambda game: game["week"])
+        weeks = [game["week"] for game in games]
+        if weeks != sorted(OPENING_WEEK_WEIGHTS):
+            raise ValueError(f"{team} opening schedule weeks are {weeks}")
+    return dict(contexts)
 
 
 def validate_ffc_payload(payload: Any, today: date) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -303,9 +465,191 @@ def market_kicker_row(
     }
 
 
+def current_kicker_rows(
+    sleeper_payload: Any,
+    previous_kickers: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not isinstance(sleeper_payload, dict):
+        raise ValueError("Sleeper player feed is not an object")
+    candidates: dict[str, list[tuple[int, str, dict[str, Any]]]] = defaultdict(list)
+    for sleeper_id, row in sleeper_payload.items():
+        if not isinstance(row, dict):
+            continue
+        if normalize_position(row.get("position")) != "K" or not row.get("active"):
+            continue
+        team = normalize_team(row.get("team"))
+        if team not in VALID_TEAMS:
+            continue
+        depth_value = finite_number(row.get("depth_chart_order"))
+        depth = int(depth_value) if depth_value is not None and depth_value > 0 else 99
+        name = str(row.get("full_name") or "").strip()
+        if not name:
+            name = " ".join(
+                part
+                for part in (
+                    str(row.get("first_name") or "").strip(),
+                    str(row.get("last_name") or "").strip(),
+                )
+                if part
+            )
+        if not name:
+            continue
+        candidates[team].append((depth, str(sleeper_id), {**row, "full_name": name}))
+
+    selected: dict[str, tuple[str, dict[str, Any]]] = {}
+    for team, rows in candidates.items():
+        rows.sort(key=lambda item: (item[0], item[2]["full_name"]))
+        _, sleeper_id, row = rows[0]
+        selected[team] = (sleeper_id, row)
+    if set(selected) != VALID_TEAMS:
+        raise ValueError(
+            "Sleeper starting-kicker coverage differs from 32 teams; "
+            f"missing={sorted(VALID_TEAMS - set(selected))}, "
+            f"extra={sorted(set(selected) - VALID_TEAMS)}"
+        )
+
+    prior_by_name = {
+        player_key(row.get("player_name"), "K"): row
+        for row in previous_kickers
+    }
+    rebuilt: list[dict[str, Any]] = []
+    for team in sorted(VALID_TEAMS):
+        sleeper_id, source = selected[team]
+        name = source["full_name"]
+        prior = prior_by_name.get(player_key(name, "K"))
+        if prior:
+            row = dict(prior)
+        else:
+            row = market_kicker_row(
+                {"name": name, "team": team, "adp": 200, "bye": 0},
+                previous_kickers,
+            )
+            gsis_id = str(source.get("gsis_id") or "").strip()
+            row["player_id"] = gsis_id or f"K_{normalize_name(name).replace(' ', '_').upper()}"
+            row["model_used"] = "position_median_roster_add"
+        row.update({
+            "player_name": name,
+            "position": "K",
+            "team": team,
+            "depth_chart_order": int(finite_number(source.get("depth_chart_order")) or 1),
+            "role_confidence": "HIGH",
+            "roster_source": "Sleeper depth chart",
+            "sleeper_id": sleeper_id,
+            "injury_status": source.get("injury_status"),
+        })
+        rebuilt.append(row)
+    return rebuilt
+
+
+def matchup_grade(rank: int) -> str:
+    if rank <= 6:
+        return "A"
+    if rank <= 12:
+        return "B"
+    if rank <= 20:
+        return "C"
+    return "D"
+
+
+def apply_opening_streaming_model(
+    k_def: list[dict[str, Any]],
+    contexts: dict[str, list[dict[str, Any]]],
+) -> None:
+    position_rows = {
+        position: [
+            row for row in k_def
+            if normalize_position(row.get("position")) == position
+        ]
+        for position in ("K", "DEF")
+    }
+    for position, rows in position_rows.items():
+        if len(rows) != 32 or {normalize_team(row.get("team")) for row in rows} != VALID_TEAMS:
+            raise ValueError(
+                f"{position} streaming board must contain one row for each NFL team"
+            )
+
+        weekly_rank: dict[int, dict[str, int]] = {}
+        weekly_projection: dict[int, dict[str, float]] = {}
+        for week in OPENING_WEEK_WEIGHTS:
+            projections: list[tuple[str, float]] = []
+            for team, games in contexts.items():
+                game = next(item for item in games if item["week"] == week)
+                if position == "K":
+                    projection = kicker_expected_points(
+                        game["own_implied"],
+                        game["indoor_share"],
+                        game["home"],
+                    )
+                else:
+                    projection = defense_expected_points(game["opponent_implied"])
+                projections.append((team, projection))
+            projections.sort(key=lambda item: (-item[1], item[0]))
+            weekly_projection[week] = dict(projections)
+            weekly_rank[week] = {
+                team: rank for rank, (team, _) in enumerate(projections, start=1)
+            }
+
+        for row in rows:
+            team = normalize_team(row.get("team"))
+            opening_games = []
+            weighted_projection = 0.0
+            for game in contexts[team]:
+                week = game["week"]
+                projection = weekly_projection[week][team]
+                rank = weekly_rank[week][team]
+                weighted_projection += OPENING_WEEK_WEIGHTS[week] * projection
+                opening_games.append({
+                    "week": week,
+                    "opponent": game["opponent"],
+                    "location": game["location"],
+                    "own_implied": game["own_implied"],
+                    "opponent_implied": game["opponent_implied"],
+                    "venue": game["venue"],
+                    "projection": round(projection, 2),
+                    "matchup_rank": rank,
+                    "matchup_grade": matchup_grade(rank),
+                })
+            row.update({
+                "opening_projection": round(weighted_projection, 2),
+                "week1_projection": opening_games[0]["projection"],
+                "opening_schedule": opening_games,
+                "stream_model_used": "opening_schedule_v1",
+            })
+
+        ordered = sorted(
+            rows,
+            key=lambda row: (
+                -float(row["opening_projection"]),
+                positive_number(row.get("adp")),
+                str(row.get("player_name") or ""),
+            ),
+        )
+        denominator = max(1, len(ordered) - 1)
+        for rank, row in enumerate(ordered, start=1):
+            row["stream_rank"] = rank
+            row["stream_score"] = round(100 * (len(ordered) - rank) / denominator, 1)
+            row["stream_tier"] = (
+                "TARGET"
+                if rank <= 6
+                else "PLAYABLE"
+                if rank <= 12
+                else "STREAM"
+                if rank <= 20
+                else "FADE"
+            )
+            row["draft_guidance"] = (
+                "LAST ROUND"
+                if position == "K"
+                else "FINAL 2 ROUNDS"
+                if rank <= 6
+                else "LAST ROUND / STREAM"
+            )
+
+
 def refresh(
     ffc_payload: Any,
     sleeper_payload: Any,
+    schedule_rows: list[dict[str, Any]],
     now: datetime,
 ) -> dict[str, Any]:
     players = load_json(SITE_DATA_DIR / "players.json")
@@ -319,6 +663,7 @@ def refresh(
 
     ffc_meta, ffc_rows = validate_ffc_payload(ffc_payload, now.date())
     sleeper_gsis, sleeper_names, sleeper_base_names = sleeper_indexes(sleeper_payload)
+    schedule_contexts = opening_schedule_contexts(schedule_rows)
 
     sleeper_matches = 0
     for player in players:
@@ -415,6 +760,15 @@ def refresh(
             f"top 24 {top_skill_matches}/{len(top_skill_rows)}; missing={missing_skill[:8]}"
         )
 
+    current_defenses = [
+        row for row in k_def
+        if normalize_position(row.get("position")) == "DEF"
+    ]
+    previous_kickers = [
+        row for row in k_def
+        if normalize_position(row.get("position")) == "K"
+    ]
+    k_def = current_defenses + current_kicker_rows(sleeper_payload, previous_kickers)
     for row in k_def:
         row["adp"] = 200.0
     k_by_name = {
@@ -458,6 +812,7 @@ def refresh(
         bye = bye_weeks.get(str(row.get("team") or "").upper())
         if bye:
             row["bye"] = int(bye)
+    apply_opening_streaming_model(k_def, schedule_contexts)
 
     sleepers_busts = rebuild_sleepers_busts(players)
     generated_at = now.isoformat().replace("+00:00", "Z")
@@ -495,6 +850,26 @@ def refresh(
             "source_url": SLEEPER_URL,
             "matched_skill_players": sleeper_matches,
         },
+        "special_teams": {
+            "fetched_at": generated_at,
+            "schedule_source": "nflverse games and schedules",
+            "schedule_source_url": SCHEDULE_URL,
+            "roster_source": "Sleeper public NFL depth charts",
+            "weeks": sorted(OPENING_WEEK_WEIGHTS),
+            "week_weights": {
+                str(week): weight for week, weight in OPENING_WEEK_WEIGHTS.items()
+            },
+            "method": (
+                "2021-2024 calibrated matchup model: team implied scoring and "
+                "indoor venue for kickers; opponent implied scoring for defenses"
+            ),
+            "validation": {
+                "holdout_season": 2025,
+                "evaluation_weeks": [1, 2, 3],
+                "top_8_kicker_lift_points_per_game": 1.21,
+                "top_8_defense_lift_points_per_game": 2.81,
+            },
+        },
         "counts": {
             "skill_players": len(players),
             "k_def_players": len(k_def),
@@ -511,6 +886,19 @@ def refresh(
             "top_24_skill_matches": top_skill_matches,
             "special_teams_feed_rows": len(special_rows),
             "special_teams_matches": special_matches,
+            "opening_schedule_games": sum(
+                len(games) for games in schedule_contexts.values()
+            ) // 2,
+            "kicker_depth_chart_teams": len({
+                normalize_team(row.get("team"))
+                for row in k_def
+                if normalize_position(row.get("position")) == "K"
+            }),
+            "defense_schedule_teams": len({
+                normalize_team(row.get("team"))
+                for row in k_def
+                if normalize_position(row.get("position")) == "DEF"
+            }),
             "bye_team_codes": len(bye_weeks),
             "missing_skill_rows": missing_skill,
         },
@@ -533,12 +921,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ffc-file", type=Path, help="Use a saved FFC response instead of the network")
     parser.add_argument("--sleeper-file", type=Path, help="Use a saved Sleeper response instead of the network")
+    parser.add_argument("--schedule-file", type=Path, help="Use a saved nflverse games CSV instead of the network")
     args = parser.parse_args()
 
     now = utc_now()
     ffc_payload = load_json(args.ffc_file) if args.ffc_file else fetch_json(FFC_URL)
     sleeper_payload = load_json(args.sleeper_file) if args.sleeper_file else fetch_json(SLEEPER_URL)
-    metadata = refresh(ffc_payload, sleeper_payload, now)
+    schedule_rows = load_csv(args.schedule_file) if args.schedule_file else fetch_csv(SCHEDULE_URL)
+    metadata = refresh(ffc_payload, sleeper_payload, schedule_rows, now)
     counts = metadata["counts"]
     quality = metadata["quality"]
     print(

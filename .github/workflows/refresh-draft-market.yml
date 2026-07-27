@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh current ADP, teams, and bye weeks
+      - name: Refresh ADP, rosters, schedule, and K/DEF streaming ranks
         run: python scripts/refresh_market_data.py
 
       - name: Validate release data
