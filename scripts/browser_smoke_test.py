@@ -63,6 +63,69 @@ def main() -> None:
             if "Jahmyr Gibbs" not in first_ten or "Puka Nacua" not in first_ten:
                 raise AssertionError(f"Top-ten sanity failed: {first_ten}")
 
+            driver.execute_script("currentFilter='K'; searchQuery=''; renderPlayerPool()")
+            wait.until(
+                lambda d: len(d.find_elements("css selector", "#playerPool tbody tr")) >= 33
+            )
+            kicker_rows = [
+                row for row in driver.find_elements("css selector", "#playerPool tbody tr")
+                if row.find_elements("css selector", ".name-cell")
+            ]
+            first_kicker = kicker_rows[0].find_element("css selector", ".name-cell").text.splitlines()[0]
+            if first_kicker != "Cameron Dicker":
+                raise AssertionError(f"Opening kicker rank failed: {first_kicker}")
+            if len(kicker_rows[0].find_elements("css selector", ".matchup-chip")) != 3:
+                raise AssertionError("Kicker row does not show three opening matchups")
+            if "LAST ROUND" not in kicker_rows[0].text:
+                raise AssertionError("Kicker row does not show last-round guidance")
+
+            driver.execute_script("currentFilter='DEF'; renderPlayerPool()")
+            wait.until(
+                lambda d: len(d.find_elements("css selector", "#playerPool tbody tr")) >= 33
+            )
+            defense_rows = [
+                row for row in driver.find_elements("css selector", "#playerPool tbody tr")
+                if row.find_elements("css selector", ".name-cell")
+            ]
+            first_defense = defense_rows[0].find_element("css selector", ".name-cell").text.splitlines()[0]
+            if first_defense != "LAC Defense":
+                raise AssertionError(f"Opening defense rank failed: {first_defense}")
+            if "FINAL 2 ROUNDS" not in defense_rows[0].text:
+                raise AssertionError("Defense row does not show final-two-round guidance")
+
+            recommendation_timing = driver.execute_script(
+                """
+                const skillIds=allPlayers.filter(p=>!['K','DEF'].includes(p.position)).map(p=>p.player_id);
+                myTeamIds=[]; opponentIds=[]; getRecommendations();
+                const early=[...recommendedIds].map(id=>playerMap[id].position);
+                const draftTeam=[
+                  ...allPlayers.filter(p=>p.position==='QB').slice(0,1),
+                  ...allPlayers.filter(p=>p.position==='RB').slice(0,5),
+                  ...allPlayers.filter(p=>p.position==='WR').slice(0,5),
+                  ...allPlayers.filter(p=>p.position==='TE').slice(0,2)
+                ].map(p=>p.player_id);
+                const teamSet=new Set(draftTeam);
+                const otherSkill=allPlayers
+                  .filter(p=>!['K','DEF'].includes(p.position)&&!teamSet.has(p.player_id))
+                  .sort((a,b)=>(Number(a.adp||200)-Number(b.adp||200))||(Number(b.projected_points||0)-Number(a.projected_points||0)))
+                  .map(p=>p.player_id);
+                myTeamIds=draftTeam; opponentIds=otherSkill.slice(0,143); getRecommendations();
+                const round14=[...recommendedIds].map(id=>playerMap[id].position);
+                const topDef=allPlayers.find(p=>p.position==='DEF'&&p.stream_rank===1);
+                myTeamIds=[...draftTeam,topDef.player_id];
+                opponentIds=otherSkill.slice(0,154); getRecommendations();
+                const round15=[...recommendedIds].map(id=>playerMap[id].position);
+                myTeamIds=[]; opponentIds=[]; currentFilter='ALL'; renderPlayerPool(); getRecommendations();
+                return {early,round14,round15};
+                """
+            )
+            if any(pos in {"K", "DEF"} for pos in recommendation_timing["early"]):
+                raise AssertionError(f"K/DEF recommended early: {recommendation_timing}")
+            if "DEF" not in recommendation_timing["round14"] or "K" in recommendation_timing["round14"]:
+                raise AssertionError(f"Defense timing policy failed: {recommendation_timing}")
+            if "K" not in recommendation_timing["round15"]:
+                raise AssertionError(f"Kicker timing policy failed: {recommendation_timing}")
+
             gibbs_id = driver.execute_script(
                 "return allPlayers.find(p=>p.player_name==='Jahmyr Gibbs').player_id"
             )
@@ -114,6 +177,9 @@ def main() -> None:
                 "data_status": status_text,
                 "data_status_color": status_color,
                 "top_ten": first_ten,
+                "opening_kicker_1": first_kicker,
+                "opening_defense_1": first_defense,
+                "recommendation_timing": recommendation_timing,
                 "saved_pick_survived_reload": True,
                 "csv_backup_bytes": download_path.stat().st_size,
                 "mobile_widths": mobile_widths,

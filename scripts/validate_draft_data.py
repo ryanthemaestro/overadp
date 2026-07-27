@@ -131,6 +131,66 @@ def validate(max_age_hours: float) -> list[str]:
     if len(actionable_special) < 25:
         errors.append(f"k_def.json: only {len(actionable_special)} K/DEF rows have current actionable ADP")
 
+    for position in ("K", "DEF"):
+        rows = [
+            row for row in k_def
+            if str(row.get("position") or "").upper() == position
+        ]
+        teams = {str(row.get("team") or "").upper() for row in rows}
+        if len(rows) != 32 or teams != EXPECTED_TEAMS:
+            errors.append(
+                f"k_def.json: {position} must contain one current row per team; "
+                f"rows={len(rows)}, missing={sorted(EXPECTED_TEAMS - teams)}, "
+                f"extra={sorted(teams - EXPECTED_TEAMS)}"
+            )
+        ranks = sorted(
+            int(row.get("stream_rank", 0))
+            for row in rows
+            if finite_number(row.get("stream_rank"))
+        )
+        if ranks != list(range(1, 33)):
+            errors.append(f"k_def.json: {position} streaming ranks are not 1-32")
+        for row in rows:
+            name = row.get("player_name", "<unknown>")
+            schedule = row.get("opening_schedule")
+            required_streaming = {
+                "opening_projection", "week1_projection", "stream_score",
+                "stream_rank", "stream_tier", "draft_guidance", "stream_model_used",
+            }
+            if not required_streaming.issubset(row):
+                errors.append(f"k_def.json: {name} lacks opening-schedule fields")
+                continue
+            if (
+                not finite_number(row.get("opening_projection"))
+                or not finite_number(row.get("week1_projection"))
+                or not finite_number(row.get("stream_score"))
+            ):
+                errors.append(f"k_def.json: {name} has invalid streaming values")
+            if not isinstance(schedule, list) or len(schedule) != 3:
+                errors.append(f"k_def.json: {name} opening schedule is not three games")
+                continue
+            weeks = [int(game.get("week", 0)) for game in schedule]
+            if weeks != [1, 2, 3]:
+                errors.append(f"k_def.json: {name} opening weeks are {weeks}")
+            for game in schedule:
+                opponent = str(game.get("opponent") or "").upper()
+                if opponent not in EXPECTED_TEAMS or opponent == str(row.get("team") or "").upper():
+                    errors.append(f"k_def.json: {name} has invalid opponent {opponent!r}")
+                if game.get("matchup_grade") not in {"A", "B", "C", "D"}:
+                    errors.append(f"k_def.json: {name} has invalid matchup grade")
+        if position == "K":
+            low_role_confidence = [
+                row.get("player_name")
+                for row in rows
+                if row.get("role_confidence") != "HIGH"
+                or int(row.get("depth_chart_order", 0)) != 1
+            ]
+            if low_role_confidence:
+                errors.append(
+                    "k_def.json: kicker starters are not depth-chart confirmed "
+                    f"{low_role_confidence[:8]}"
+                )
+
     if not isinstance(scarcity, list) or {row.get("position") for row in scarcity} != SKILL_POSITIONS:
         errors.append("scarcity.json: must contain exactly QB/RB/WR/TE")
     if not isinstance(accuracy, dict) or set(accuracy) != SKILL_POSITIONS:
@@ -168,6 +228,17 @@ def validate(max_age_hours: float) -> list[str]:
         errors.append("metadata.json: not all top-24 market players matched the board")
     if int(quality.get("special_teams_matches", 0)) < 25:
         errors.append("metadata.json: fewer than 25 K/DEF market rows matched")
+    if int(quality.get("opening_schedule_games", 0)) != 48:
+        errors.append("metadata.json: opening schedule does not contain 48 games")
+    if int(quality.get("kicker_depth_chart_teams", 0)) != 32:
+        errors.append("metadata.json: kicker depth-chart coverage is not 32 teams")
+    if int(quality.get("defense_schedule_teams", 0)) != 32:
+        errors.append("metadata.json: defense schedule coverage is not 32 teams")
+    special_teams = metadata.get("special_teams") or {}
+    if special_teams.get("weeks") != [1, 2, 3]:
+        errors.append("metadata.json: K/DEF opening weeks are not 1-3")
+    if special_teams.get("schedule_source") != "nflverse games and schedules":
+        errors.append("metadata.json: K/DEF schedule provenance is missing")
     if int((metadata.get("rosters") or {}).get("matched_skill_players", 0)) < 650:
         errors.append("metadata.json: fewer than 650 skill players matched the live Sleeper roster")
 

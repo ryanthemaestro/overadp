@@ -4,9 +4,9 @@
 
 - Every day at 10:17 UTC, GitHub Actions fetches the latest 12-team half-PPR
   market from Fantasy Football Calculator and the current Sleeper NFL player
-  feed.
-- The job updates ADP, teams, bye weeks, K/DEF coverage, sleeper/bust labels,
-  and `metadata.json`.
+  feed, plus the nflverse schedule and betting lines.
+- The job updates ADP, teams, bye weeks, the current kicker depth chart, K/DEF
+  Week 1-3 streaming ranks, sleeper/bust labels, and `metadata.json`.
 - The job stops without publishing if the source is stale, player volume
   drops, a top-24 market player is missing, join coverage falls, team/bye
   coverage breaks, IDs duplicate, or the two published data copies differ.
@@ -55,6 +55,9 @@ A healthy release reports:
 - at least 98% current offensive ADP join coverage;
 - all top-24 market players matched;
 - at least 25 current K/DEF ADP matches;
+- exactly one depth-chart starting kicker and one defense for every NFL team;
+- complete spread/total coverage for all 48 games in Weeks 1-3;
+- unique 1-32 opening-schedule ranks at both K and DEF;
 - market metadata no older than 72 hours;
 - identical `site/app/data` and `src/api/static/data` files.
 
