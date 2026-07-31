@@ -1082,6 +1082,12 @@
       width: 100%;
       align-items: center;
     }
+    .pool-table tbody tr:not(.full-span-row) {
+      border-bottom: 1px solid rgba(42,53,72,0.5);
+    }
+    .pool-table tbody tr:not(.full-span-row) > td {
+      border-bottom: 0;
+    }
     .skill-table tr { grid-template-columns: minmax(0, 1fr) 43px 48px 112px; }
     .special-table tr { grid-template-columns: minmax(0, 1fr) 43px 48px 58px 112px; }
     .pool-table th,
