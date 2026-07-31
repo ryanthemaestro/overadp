@@ -174,7 +174,7 @@ def html_foot(related_pairs: list[tuple[str, str]] | None = None) -> str:
     {cta}
   </div></main>
 <footer>
-  <div>Updated {today} · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated {today} · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>
@@ -643,6 +643,7 @@ def main():
         "/2026/top-sleepers/",
         "/2026/top-busts/",
         "/methodology/",
+        "/support/",
     ]
     (SITE / "sitemap.xml").write_text(build_sitemap(pages))
     print(f"  wrote /sitemap.xml ({len(pages)+2} URLs)")
