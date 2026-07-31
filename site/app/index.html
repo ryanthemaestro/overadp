@@ -12,6 +12,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#06080c">
 <title>WAR ROOM — Fantasy Draft Command</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,11 +44,21 @@
     --confirm: #10b981;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
   html, body { height: 100%; overflow: hidden; }
   body {
     font-family: 'Barlow Condensed', sans-serif;
     background: var(--void);
     color: var(--chalk);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(59,130,246,0.2);
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--wr);
+    outline-offset: 2px;
   }
   /* Scanline overlay */
   body::after {
@@ -128,7 +139,7 @@
     0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
     50% { box-shadow: 0 0 20px var(--rb-glow); }
   }
-  .top-actions { display: flex; gap: 8px; align-items: center; }
+  .top-actions { display: flex; gap: 8px; align-items: center; min-width: 0; }
   .btn {
     font-family: 'Oswald', sans-serif;
     font-size: 12px;
@@ -141,7 +152,7 @@
     background: var(--steel);
     color: var(--ash);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
   }
   .btn:hover { background: var(--iron); color: var(--chalk); border-color: var(--smoke); }
   .btn-activate {
@@ -214,6 +225,9 @@
     background: var(--rust);
   }
 
+  .mobile-tabs { display: none; }
+  .mobile-player-meta { display: none; }
+
   /* === LEFT PANEL — MY ROSTER === */
   .left-panel {
     background: var(--pit);
@@ -241,7 +255,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: all 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
     position: relative;
   }
   .roster-slot::before {
@@ -339,7 +353,7 @@
     background: var(--steel);
     color: var(--ash);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
   }
   .pos-filter:hover { border-color: var(--smoke); color: var(--chalk); }
   .pos-filter.on {
@@ -370,7 +384,7 @@
     background: var(--steel);
     color: var(--ash);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: background-color 0.12s, border-color 0.12s, color 0.12s;
   }
   .scoring-btn:hover { border-color: var(--smoke); color: var(--chalk); }
   .scoring-btn.active {
@@ -583,7 +597,7 @@
     margin-bottom: 8px;
     position: relative;
     overflow: visible;
-    transition: all 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
   .intel-card::before {
     content: '';
@@ -911,10 +925,263 @@
 
   /* VBD column */
   .vbd-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; color: var(--te); }
+
+  @media (max-width: 960px) {
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body::after { display: none; }
+
+    .war-room {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 38px 46px minmax(0, 1fr);
+      width: 100%;
+      height: 100svh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      grid-column: 1;
+      min-width: 0;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 8px;
+      z-index: 20;
+    }
+    .top-bar .logo {
+      min-width: 0;
+      font-size: 18px;
+      justify-content: flex-start;
+    }
+    .top-bar .logo .icon { width: 25px; height: 25px; font-size: 14px; }
+    .data-status { margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+    .top-actions {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      width: 100%;
+      gap: 5px;
+    }
+    .top-actions #userStatus,
+    #exportBtn { display: none !important; }
+    .top-actions .btn {
+      min-width: 0;
+      min-height: 40px;
+      padding: 7px 3px !important;
+      font-size: 9px !important;
+      line-height: 1.05;
+      letter-spacing: 0.35px;
+      white-space: normal;
+    }
+    .top-actions .btn[aria-label="How the War Room works"] {
+      font-size: 16px !important;
+    }
+
+    .ticker-bar {
+      grid-column: 1;
+      min-width: 0;
+      padding: 0 12px;
+      gap: 16px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+    }
+    .ticker-bar::-webkit-scrollbar { display: none; }
+    .ticker-divider { flex: 0 0 1px; }
+
+    .mobile-tabs {
+      grid-column: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      background: var(--pit);
+      border-bottom: 1px solid var(--rust);
+      z-index: 15;
+    }
+    .mobile-tab {
+      min-height: 46px;
+      border: 0;
+      border-right: 1px solid var(--rust);
+      border-bottom: 2px solid transparent;
+      background: var(--steel);
+      color: var(--smoke);
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .mobile-tab:last-child { border-right: 0; }
+    .mobile-tab.active {
+      color: var(--white);
+      border-bottom-color: var(--wr);
+      background: rgba(16,185,129,0.1);
+    }
+
+    .left-panel,
+    .center-panel,
+    .right-panel {
+      grid-column: 1;
+      grid-row: 4;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      border: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+    .center-panel { padding: 10px 8px calc(18px + env(safe-area-inset-bottom)); }
+    .left-panel, .right-panel { padding: 14px 12px calc(18px + env(safe-area-inset-bottom)); }
+    .center-panel::before { display: none; }
+
+    .war-room[data-mobile-panel="board"] .left-panel,
+    .war-room[data-mobile-panel="board"] .right-panel,
+    .war-room[data-mobile-panel="team"] .center-panel,
+    .war-room[data-mobile-panel="team"] .right-panel,
+    .war-room[data-mobile-panel="intel"] .left-panel,
+    .war-room[data-mobile-panel="intel"] .center-panel { display: none; }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+    .filter-row > .pos-filter {
+      min-width: 0;
+      min-height: 40px;
+      padding: 7px 2px;
+      font-size: 11px;
+    }
+    #playerSearch {
+      grid-column: 1 / -1;
+      min-width: 0;
+      min-height: 42px;
+      font-size: 16px;
+    }
+    #vbdToggle { grid-column: 1 / 3; }
+    #settingsBtn { grid-column: 3 / -1; }
+
+    #playerPool { min-width: 0; width: 100%; overflow-x: hidden; }
+    .pool-table,
+    .pool-table thead,
+    .pool-table tbody { display: block; width: 100%; }
+    .pool-table thead {
+      position: sticky;
+      top: -1px;
+      z-index: 5;
+      background: var(--void);
+    }
+    .pool-table tr {
+      display: grid;
+      width: 100%;
+      align-items: center;
+    }
+    .skill-table tr { grid-template-columns: minmax(0, 1fr) 43px 48px 112px; }
+    .special-table tr { grid-template-columns: minmax(0, 1fr) 43px 48px 58px 112px; }
+    .pool-table th,
+    .pool-table td { padding: 7px 5px; }
+    .pool-table th { position: static; width: auto; font-size: 8px; letter-spacing: 0.7px; }
+    .pool-table td { width: auto; }
+    .pool-table .col-board,
+    .pool-table .col-pos,
+    .pool-table .col-team,
+    .pool-table .col-bye,
+    .pool-table .col-edge,
+    .pool-table .col-vbd,
+    .pool-table .col-range,
+    .pool-table .col-unc,
+    .pool-table .col-risk,
+    .pool-table .col-schedule,
+    .pool-table .col-plan { display: none; }
+    .pool-table .full-span-row { display: block; }
+    .pool-table .full-span-row > td {
+      display: block;
+      width: 100%;
+    }
+    .name-cell {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      line-height: 1.15;
+    }
+    .name-cell .player-sub {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .mobile-player-meta {
+      display: block;
+      margin-top: 4px;
+      color: var(--ash);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      line-height: 1.35;
+    }
+    .intel-badge { display: block; width: max-content; margin: 4px 0 0; }
+    .actions-cell { white-space: normal; }
+    .actions-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      gap: 4px;
+    }
+    .actions-wrap .btn {
+      min-width: 0;
+      min-height: 40px;
+      padding: 4px 2px;
+      font-size: 8px;
+      letter-spacing: 0.25px;
+    }
+    .opening-matchups { min-width: 0; }
+    .paywall-cta { padding: 10px 8px; }
+    .paywall-cta-title { font-size: 12px; }
+
+    .roster-slot { min-height: 46px; }
+    .intel-card { padding: 12px; }
+    .intel-actions .btn { min-height: 40px; }
+
+    .info-overlay,
+    .auth-overlay {
+      padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+      overscroll-behavior: contain;
+    }
+    .info-modal,
+    .auth-modal {
+      width: 100%;
+      max-height: calc(100dvh - 16px);
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    .info-modal table { display: block; overflow-x: auto; }
+  }
+
+  @media (max-width: 430px) {
+    .top-bar .logo { font-size: 17px; }
+    .data-status { max-width: 122px; font-size: 8px; }
+    .ticker-bar { font-size: 10px; }
+    .skill-table tr { grid-template-columns: minmax(0, 1fr) 39px 44px 104px; }
+    .special-table tr { grid-template-columns: minmax(0, 1fr) 39px 44px 54px 104px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
-<div class="war-room">
+<div class="war-room" id="warRoom" data-mobile-panel="board">
   <!-- TOP BAR -->
   <div class="top-bar">
     <div class="logo">
@@ -928,9 +1195,9 @@
       <button class="btn" id="logoutBtn" onclick="logOut()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);display:none;">LOG OUT</button>
       <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
-      <button class="btn" onclick="exportDraftBoard()" title="Download a draft-day backup CSV">EXPORT</button>
+      <button class="btn" id="exportBtn" onclick="exportDraftBoard()" title="Download a draft-day backup CSV">EXPORT</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
-      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works">ⓘ</button>
+      <button class="btn" onclick="toggleInfo()" style="font-size:16px;padding:4px 10px;" title="How it works" aria-label="How the War Room works">ⓘ</button>
     </div>
   </div>
 
@@ -952,8 +1219,14 @@
     <div class="ticker-stat">DEF <span class="val" id="defCount" style="color:var(--def);">0</span></div>
   </div>
 
+  <div class="mobile-tabs" role="tablist" aria-label="War Room sections">
+    <button class="mobile-tab active" type="button" role="tab" aria-selected="true" aria-controls="boardPanel" data-panel="board" onclick="setMobilePanel('board')">Board</button>
+    <button class="mobile-tab" type="button" role="tab" aria-selected="false" aria-controls="teamPanel" data-panel="team" onclick="setMobilePanel('team')">My Team</button>
+    <button class="mobile-tab" type="button" role="tab" aria-selected="false" aria-controls="intelPanel" data-panel="intel" onclick="setMobilePanel('intel')">Intel</button>
+  </div>
+
   <!-- LEFT — MY ROSTER -->
-  <div class="left-panel">
+  <div class="left-panel" id="teamPanel" role="tabpanel" aria-label="My Team">
     <div class="panel-title">My Roster</div>
     <div id="myTeamSlots"></div>
     <div class="total-bar">
@@ -963,7 +1236,7 @@
   </div>
 
   <!-- CENTER — PLAYER POOL -->
-  <div class="center-panel">
+  <div class="center-panel" id="boardPanel" role="tabpanel" aria-label="Draft Board">
     <div class="filter-row">
       <button class="pos-filter on" data-pos="ALL" onclick="filterPos('ALL', this)">ALL</button>
       <button class="pos-filter" data-pos="QB" onclick="filterPos('QB', this)">QB</button>
@@ -975,7 +1248,7 @@
       <!-- decoy inputs to absorb Chrome autofill -->
       <input type="email" name="email" style="display:none" tabindex="-1" autocomplete="email">
       <input type="password" name="password" style="display:none" tabindex="-1" autocomplete="current-password">
-      <input class="search-field" id="playerSearch" type="text" name="q" placeholder="SEARCH PLAYER / TEAM..." oninput="searchPlayers(this.value)" onfocus="focusSearch(this)" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
+      <input class="search-field" id="playerSearch" type="search" name="q" aria-label="Search players or teams" placeholder="SEARCH PLAYER / TEAM…" oninput="searchPlayers(this.value)" onfocus="focusSearch(this)" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
       <button class="pos-filter settings-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙ SETTINGS</button>
     </div>
@@ -989,7 +1262,7 @@
   </div>
 
   <!-- RIGHT — INTEL -->
-  <div class="right-panel">
+  <div class="right-panel" id="intelPanel" role="tabpanel" aria-label="Target Intel">
     <div class="panel-title">Target Intel</div>
     <div id="recommendations">
       <div class="empty-state" style="padding:20px 8px;">
@@ -1021,7 +1294,7 @@
 
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
-    <button class="close-btn" onclick="toggleInfo()">&times;</button>
+    <button class="close-btn" onclick="toggleInfo()" aria-label="Close War Room guide">&times;</button>
     <h2>OverADP — How to Use the War Room</h2>
     <p id="dataCoverageSummary">OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. The projection model and daily draft-market refresh are dated separately so you can verify freshness.</p>
 
@@ -1215,14 +1488,14 @@
 
 <div class="loading-overlay hidden" id="loadingOverlay">
   <div class="load-spinner"></div>
-  <div class="load-text" id="loadingText">ACQUIRING DATA...</div>
+  <div class="load-text" id="loadingText">ACQUIRING DATA…</div>
   <div class="load-bar"><div class="load-bar-inner"></div></div>
 </div>
 
 <!-- SETTINGS OVERLAY -->
 <div class="info-overlay hidden" id="settingsOverlay" onclick="if(event.target===this)toggleSettings()">
   <div class="info-modal" style="max-width:480px;">
-    <button class="close-btn" onclick="toggleSettings()">&times;</button>
+    <button class="close-btn" onclick="toggleSettings()" aria-label="Close draft settings">&times;</button>
     <h2>Draft Settings</h2>
 
     <h3>Scoring Format</h3>
@@ -1279,6 +1552,33 @@ let rosterConfig = {};
 let dataMetadata = {};
 let playerMap = {};  // player_id → player object
 let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
+
+const mobilePanelMedia = window.matchMedia('(max-width: 960px)');
+const mobilePanelIds = {board:'boardPanel', team:'teamPanel', intel:'intelPanel'};
+
+function syncMobilePanelA11y(){
+  const room=document.getElementById('warRoom');
+  const active=room?.dataset.mobilePanel||'board';
+  Object.entries(mobilePanelIds).forEach(([panel,id])=>{
+    const el=document.getElementById(id);
+    if(el)el.setAttribute('aria-hidden',mobilePanelMedia.matches&&panel!==active?'true':'false');
+  });
+}
+
+function setMobilePanel(panel){
+  if(!mobilePanelIds[panel])return;
+  const room=document.getElementById('warRoom');
+  room.dataset.mobilePanel=panel;
+  document.querySelectorAll('.mobile-tab').forEach(btn=>{
+    const active=btn.dataset.panel===panel;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-selected',String(active));
+    btn.tabIndex=active?0:-1;
+  });
+  syncMobilePanelA11y();
+}
+
+mobilePanelMedia.addEventListener?.('change',syncMobilePanelA11y);
 
 // ═══════════════════════════════════════
 // AUTH & PAYWALL
@@ -1739,7 +2039,7 @@ function showLoading(t){document.getElementById('loadingText').textContent=t;doc
 function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden');}
 
 async function loadData(){
-  showLoading('ACQUIRING NFL DATA...');
+  showLoading('ACQUIRING NFL DATA…');
   try{
     // Use cached auth immediately, but never block board data on auth/session checks.
     hydrateCachedAuth();
@@ -2251,8 +2551,8 @@ function renderSpecialTeamsPool(container,players){
   const note=position==='K'
     ? 'Confirmed current depth-chart starters. Rank uses 55% Week 1, 30% Week 2, and 15% Week 3. Draft a kicker in the last round.'
     : 'Opening-schedule streaming rank. Take an elite target in the final two rounds; otherwise wait until the last round and stream.';
-  let h=`<table class="pool-table"><thead><tr><th>OPEN</th><th>PLAYER</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EXP PPG</th><th>TIER</th><th>WEEKS 1–3</th><th>DRAFT PLAN</th><th>ACTION</th></tr></thead><tbody>`;
-  h+=`<tr><td colspan="10" style="padding:8px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">${note}</td></tr>`;
+  let h=`<table class="pool-table special-table"><thead><tr><th class="col-board">OPEN</th><th class="col-player">PLAYER</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-proj">EXP PPG</th><th class="col-tier">TIER</th><th class="col-schedule">WEEKS 1–3</th><th class="col-plan">DRAFT PLAN</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
+  h+=`<tr class="full-span-row"><td colspan="10" style="padding:8px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">${note}</td></tr>`;
   players.forEach(p=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
@@ -2263,16 +2563,16 @@ function renderSpecialTeamsPool(container,players){
       ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`
       :`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
-      <td class="rank-cell"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
-      <td class="name-cell">${p.player_name||p.player_id}<div class="player-sub">${position==='K'?'DEPTH CHART #1':'TEAM UNIT'} · ${p.stream_model_used==='opening_schedule_v1'?'OPENING MODEL':'FALLBACK'}</div></td>
-      <td class="team-cell">${p.team||'—'}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${bye.length?bye.join(','):'—'}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${adp}</td>
-      <td class="pts-cell" title="Weighted expected fantasy points per game across Weeks 1–3">${Number(p.opening_projection||0).toFixed(2)}</td>
-      <td><span class="stream-tier" style="color:${tierColor};">${p.stream_tier||'—'}</span></td>
-      <td><div class="opening-matchups">${openingMatchupsHtml(p)}</div></td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:${tierColor};">${p.draft_guidance||'LAST ROUND'}</td>
-      <td class="actions-cell"><div class="actions-wrap">${draftBtn}<button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button></div></td>
+      <td class="rank-cell col-board"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
+      <td class="name-cell col-player">${p.player_name||p.player_id}<div class="player-sub">${position==='K'?'DEPTH CHART #1':'TEAM UNIT'} · ${p.stream_model_used==='opening_schedule_v1'?'OPENING MODEL':'FALLBACK'}</div><div class="mobile-player-meta">#${p.stream_rank||'—'} · ${p.team||'—'} · BYE ${bye.length?bye.join(','):'—'}</div></td>
+      <td class="team-cell col-team">${p.team||'—'}</td>
+      <td class="col-bye" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${bye.length?bye.join(','):'—'}</td>
+      <td class="col-adp" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${adp}</td>
+      <td class="pts-cell col-proj" title="Weighted expected fantasy points per game across Weeks 1–3">${Number(p.opening_projection||0).toFixed(2)}</td>
+      <td class="col-tier"><span class="stream-tier" style="color:${tierColor};">${p.stream_tier||'—'}</span></td>
+      <td class="col-schedule"><div class="opening-matchups">${openingMatchupsHtml(p)}</div></td>
+      <td class="col-plan" style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:${tierColor};">${p.draft_guidance||'LAST ROUND'}</td>
+      <td class="actions-cell col-action"><div class="actions-wrap">${draftBtn}<button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button></div></td>
     </tr>`;
   });
   h+='</tbody></table>';
@@ -2304,8 +2604,8 @@ function renderPlayerPool(){
     renderSpecialTeamsPool(c,f);
     return;
   }
-  const vbdHead=vbdMode?'<th>VBD</th>':'';
-  let h=`<table class="pool-table"><thead><tr><th>BOARD</th><th>PLAYER</th><th>POS</th><th>TEAM</th><th>BYE</th><th>ADP</th><th>EDGE</th><th>PROJ</th>${vbdHead}<th>RANGE</th><th>UNC</th><th>DRAFT RISK</th><th>ACTION</th></tr></thead><tbody>`;
+  const vbdHead=vbdMode?'<th class="col-vbd">VBD</th>':'';
+  let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-edge">EDGE</th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
@@ -2323,13 +2623,13 @@ function renderPlayerPool(){
     const rankLabel=`#${i+1}`;
     const modelRank=p.model_rank?`M#${p.model_rank}`:'M—';
     const posRank=p.model_pos_rank?`${p.position}${p.model_pos_rank}`:p.position;
-    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell" style="color:var(--smoke);">—</td>':'';
+    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell col-vbd" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell col-vbd" style="color:var(--smoke);">—</td>':'';
     let projCell;
     if(kd){
       const proj=p.projected_points>0?p.projected_points.toFixed(0):'—';
-      projCell=`<td class="pts-cell" style="font-size:10px;" title="FantasyPros consensus projection">${proj}</td>`;
+      projCell=`<td class="pts-cell col-proj" style="font-size:10px;" title="FantasyPros consensus projection">${proj}</td>`;
     }else{
-      projCell=`<td class="pts-cell" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
+      projCell=`<td class="pts-cell col-proj" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
     }
     const ciLow=kd&&p.ci_low!=null?p.ci_low.toFixed(0):(paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—');
     const ciHigh=kd&&p.ci_high!=null?p.ci_high.toFixed(0):(paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—');
@@ -2347,19 +2647,19 @@ function renderPlayerPool(){
       `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
       `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}">
-      <td class="rank-cell"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
-      <td class="name-cell">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div></td>
-      <td>${posTag(p.position)}</td>
-      <td class="team-cell">${p.team||'—'}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}"><div>${adp}</div><div class="player-sub">${p.adp_cost}</div></td>
-      <td class="edge-cell" style="${edgeStyle}">${edgeLabel}</td>
+      <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
+      <td class="name-cell col-player">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}</div></td>
+      <td class="col-pos">${posTag(p.position)}</td>
+      <td class="team-cell col-team">${p.team||'—'}</td>
+      <td class="col-bye" style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
+      <td class="col-adp" style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}"><div>${adp}</div><div class="player-sub">${p.adp_cost}</div></td>
+      <td class="edge-cell col-edge" style="${edgeStyle}">${edgeLabel}</td>
       ${projCell}
       ${vbdCell}
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
-      <td${draftRiskTitle} style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${draftRiskColor};">${draftRisk.toUpperCase()}</td>
-      <td class="actions-cell">
+      <td class="col-range" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
+      <td class="col-unc" style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${riskColor};">${risk.toUpperCase()}</td>
+      <td class="col-risk"${draftRiskTitle} style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${draftRiskColor};">${draftRisk.toUpperCase()}</td>
+      <td class="actions-cell col-action">
         <div class="actions-wrap">
           ${draftBtn}
           <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
@@ -2367,7 +2667,7 @@ function renderPlayerPool(){
       </td></tr>`;
     // Insert upgrade CTA after rank 5 (first visible gap)
     if(!paid&&i===4){
-      h+=`<tr><td colspan="${vbdMode?13:12}" style="padding:0;">
+      h+=`<tr class="full-span-row"><td colspan="${vbdMode?13:12}" style="padding:0;">
         <div class="paywall-cta" onclick="showUpgrade()">
           <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
           <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
@@ -2869,6 +3169,7 @@ function loadScarcity(){
 }
 
 // Auto-load data on page load
+syncMobilePanelA11y();
 loadData();
 // Clear any browser-autofilled search value
 document.getElementById('playerSearch').value='';
