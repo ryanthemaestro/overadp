@@ -43,7 +43,7 @@ BASE_CSS = """
   --mono:'IBM Plex Mono',monospace;--display:'Chakra Petch',sans-serif;--body:'Outfit',sans-serif;
   --grid:rgba(0,255,106,0.04);
 }
-html{scroll-behavior:smooth;}
+html{scroll-behavior:smooth;overflow-x:hidden;}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;}
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:60px 60px;}
 .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 32px;}
@@ -54,6 +54,9 @@ nav a.logo span{color:var(--green);}
 nav .links{display:flex;gap:24px;font-family:var(--mono);font-size:12px;}
 nav .links a{color:var(--fg2);text-decoration:none;transition:color 0.2s;}
 nav .links a:hover{color:var(--green);}
+.nav-toggle{display:none;min-width:64px;min-height:44px;align-items:center;justify-content:center;padding:0 12px;background:var(--bg3);border:1px solid var(--fg3);border-radius:4px;color:var(--fg);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;touch-action:manipulation;}
+.nav-toggle:hover{border-color:var(--green);color:var(--green);}
+.nav-toggle:focus-visible,nav a:focus-visible{outline:2px solid var(--green);outline-offset:3px;}
 .btn{display:inline-block;padding:12px 24px;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;text-decoration:none;border-radius:3px;transition:all 0.2s;cursor:pointer;border:1px solid transparent;}
 .btn-primary{background:var(--green);color:var(--bg);}
 .btn-primary:hover{background:var(--green2);transform:translateY(-1px);}
@@ -107,6 +110,18 @@ table.rank td.warn{color:var(--amber);}
 footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
 footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
 footer a:hover{color:var(--green);}
+@media(max-width:760px){
+  .wrap{padding-right:max(16px,env(safe-area-inset-right));padding-left:max(16px,env(safe-area-inset-left));}
+  nav{padding:6px 0;}
+  nav .wrap{min-height:44px;flex-wrap:wrap;}
+  .nav-toggle{display:inline-flex;}
+  nav .links{display:none;flex:0 0 100%;width:100%;padding-top:6px;flex-direction:column;gap:0;}
+  nav .links.open{display:flex;}
+  nav .links a{display:flex;align-items:center;min-height:44px;padding:0 2px;border-top:1px solid rgba(0,255,106,0.08);}
+  nav .links a:last-child{color:var(--green);}
+  main{padding-top:36px;}
+  table.rank{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
+}
 """
 
 
@@ -138,7 +153,8 @@ def html_head(title: str, desc: str, path: str, schema_json: str = "") -> str:
 <body>
 <nav><div class="wrap">
   <a href="/" class="logo">OVER<span>ADP</span></a>
-  <div class="links">
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hub-nav-links" onclick="toggleHubNav(this)">Menu</button>
+  <div class="links" id="hub-nav-links">
     <a href="/2026/top-sleepers/">Sleepers</a>
     <a href="/2026/top-busts/">Busts</a>
     <a href="/2026/qb-rankings/">QB</a>
@@ -149,6 +165,13 @@ def html_head(title: str, desc: str, path: str, schema_json: str = "") -> str:
     <a href="/app/" style="color:var(--green);">War Room →</a>
   </div>
 </div></nav>
+<script>
+function toggleHubNav(button){{
+  const links = document.getElementById('hub-nav-links');
+  const isOpen = links.classList.toggle('open');
+  button.setAttribute('aria-expanded', String(isOpen));
+}}
+</script>
 <main><div class="wrap">
 """
 
