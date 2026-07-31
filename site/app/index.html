@@ -445,6 +445,7 @@
   .pool-table tr {
     transition: background 0.1s;
   }
+  .pool-table tr[hidden] { display: none !important; }
   .pool-table tr:hover {
     background: rgba(59,130,246,0.06);
   }
@@ -1547,6 +1548,8 @@ let opponentIds = [];
 let recommendedIds = new Set();
 let currentFilter = 'ALL';
 let searchQuery = '';
+let searchFrame = 0;
+let boardOrderCache = null;
 let vbdMode = false;
 let vbdPlayers = [];
 let byeWeeks = {};
@@ -2203,6 +2206,7 @@ function exportDraftBoard(){
 // Client-side VBD computation (matches backend logic)
 let replacementLevels={};
 function computeClientVBD(){
+  boardOrderCache=null;
   const rawSlots=rosterConfig.roster_slots||{};
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const numTeams=rosterConfig.num_teams||12;
@@ -2568,7 +2572,7 @@ function renderSpecialTeamsPool(container,players){
     const draftBtn=paid
       ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`
       :`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
-    h+=`<tr class="${isR?'rec-row':''}">
+    h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
       <td class="name-cell col-player">${p.player_name||p.player_id}<div class="player-sub">${position==='K'?'DEPTH CHART #1':'TEAM UNIT'} · ${p.stream_model_used==='opening_schedule_v1'?'OPENING MODEL':'FALLBACK'}</div><div class="mobile-player-meta">#${p.stream_rank||'—'} · ${p.team||'—'} · BYE ${bye.length?bye.join(','):'—'}</div></td>
       <td class="team-cell col-team">${p.team||'—'}</td>
@@ -2581,21 +2585,58 @@ function renderSpecialTeamsPool(container,players){
       <td class="actions-cell col-action"><div class="actions-wrap">${draftBtn}<button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button></div></td>
     </tr>`;
   });
+  h+=`<tr class="full-span-row search-empty-row" hidden><td colspan="10" style="padding:22px 12px;text-align:center;color:var(--smoke);">No matching players.</td></tr>`;
   h+='</tbody></table>';
   container.innerHTML=h;
+  applyPlayerSearch();
+}
+
+function playerSearchKey(player){
+  if(!player._searchKey){
+    player._searchKey=[player.player_name,player.player_id,player.team,player.position]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+  }
+  return player._searchKey;
+}
+
+function escapeHtmlAttr(value){
+  return String(value||'')
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function getBoardOrder(availablePlayers){
+  if(boardOrderCache)return boardOrderCache;
+  const isKD=p=>p.position==='K'||p.position==='DEF';
+  const skillPool=availablePlayers.filter(p=>!isKD(p));
+  const availableByPos={};
+  skillPool.forEach(p=>{
+    if(!availableByPos[p.position])availableByPos[p.position]=[];
+    availableByPos[p.position].push(p);
+  });
+  const boardScoreById=new Map(skillPool.map(p=>[
+    p.player_id,
+    draftBoardScore(p,availableByPos[p.position]||[])
+  ]));
+  const skillPlayers=[...skillPool].sort((a,b)=>(boardScoreById.get(b.player_id)||0)-(boardScoreById.get(a.player_id)||0)||(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
+  const kdPlayers=availablePlayers.filter(p=>isKD(p)).sort((a,b)=>(b.stream_score||0)-(a.stream_score||0));
+  const boardRankById=new Map(skillPlayers.map((p,index)=>[p.player_id,index+1]));
+  boardOrderCache={skillPlayers,kdPlayers,boardRankById};
+  return boardOrderCache;
 }
 
 function renderPlayerPool(){
   const c=document.getElementById('playerPool');
   const drafted=new Set([...myTeamIds,...opponentIds]);
-  let f=allPlayers;
-  // Filter out drafted players
-  f=f.filter(p=>!drafted.has(p.player_id));
+  const availablePlayers=allPlayers.filter(p=>!drafted.has(p.player_id));
   // Sort: skill players by ADP-anchored draft board score; K/DEF by opening schedule.
   const isKD=p=>p.position==='K'||p.position==='DEF';
-  const skillPool=[...f].filter(p=>!isKD(p));
-  const skillPlayers=skillPool.sort((a,b)=>draftBoardScore(b,skillPool)-draftBoardScore(a,skillPool)||(b.vbd||0)-(a.vbd||0)||(b.projected_points||0)-(a.projected_points||0));
-  const kdPlayers=[...f].filter(p=>isKD(p)).sort((a,b)=>(b.stream_score||0)-(a.stream_score||0));
+  const {skillPlayers,kdPlayers,boardRankById}=getBoardOrder(availablePlayers);
+  let f;
   if(currentFilter==='ALL'){
     // Interleave: skill players first, then K/DEF at the bottom
     f=[...skillPlayers,...kdPlayers];
@@ -2604,7 +2645,6 @@ function renderPlayerPool(){
   }else{
     f=skillPlayers.filter(p=>p.position===currentFilter);
   }
-  if(searchQuery){const q=searchQuery.toLowerCase();f=f.filter(p=>(p.player_name||p.player_id||'').toLowerCase().includes(q)||(p.team||'').toLowerCase().includes(q));}
   if(!f.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div><h3>No Players</h3><p>Try a different filter.</p></div>';return;}
   if(currentFilter==='K'||currentFilter==='DEF'){
     renderSpecialTeamsPool(c,f);
@@ -2626,7 +2666,7 @@ function renderPlayerPool(){
       : p.intel_label==='BUST'
         ? '<span class="intel-badge bust">BUST</span>'
         : '';
-    const rankLabel=`#${i+1}`;
+    const rankLabel=`#${boardRankById.get(p.player_id)||i+1}`;
     const modelRank=p.model_rank?`M#${p.model_rank}`:'M—';
     const posRank=p.model_pos_rank?`${p.position}${p.model_pos_rank}`:p.position;
     const vbdCell=vbdMode&&!kd?`<td class="vbd-cell col-vbd" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell col-vbd" style="color:var(--smoke);">—</td>':'';
@@ -2652,7 +2692,7 @@ function renderPlayerPool(){
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
       `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
       `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
-    h+=`<tr class="${isR?'rec-row':''}">
+    h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
       <td class="name-cell col-player">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}</div></td>
       <td class="col-pos">${posTag(p.position)}</td>
@@ -2673,7 +2713,7 @@ function renderPlayerPool(){
       </td></tr>`;
     // Insert upgrade CTA after rank 5 (first visible gap)
     if(!paid&&i===4){
-      h+=`<tr class="full-span-row"><td colspan="${vbdMode?13:12}" style="padding:0;">
+      h+=`<tr class="full-span-row search-hide-when-active"><td colspan="${vbdMode?13:12}" style="padding:0;">
         <div class="paywall-cta" onclick="showUpgrade()">
           <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
           <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
@@ -2681,7 +2721,9 @@ function renderPlayerPool(){
       </td></tr>`;
     }
   });
+  h+=`<tr class="full-span-row search-empty-row" hidden><td colspan="${vbdMode?13:12}" style="padding:22px 12px;text-align:center;color:var(--smoke);">No matching players.</td></tr>`;
   h+='</tbody></table>';c.innerHTML=h;
+  applyPlayerSearch();
 }
 
 function assignRosterSlots(players){
@@ -2817,8 +2859,27 @@ function focusSearch(el){
   el.value=searchQuery||'';
 }
 function searchPlayers(q){
-  searchQuery=String(q||'').trim();
-  renderPlayerPool();
+  searchQuery=String(q||'').trim().toLowerCase();
+  if(searchFrame)cancelAnimationFrame(searchFrame);
+  searchFrame=requestAnimationFrame(()=>{
+    searchFrame=0;
+    applyPlayerSearch();
+  });
+}
+
+function applyPlayerSearch(){
+  const pool=document.getElementById('playerPool');
+  if(!pool)return;
+  const rows=pool.querySelectorAll('tr[data-player-row]');
+  if(!rows.length)return;
+  let matches=0;
+  rows.forEach(row=>{
+    const visible=!searchQuery||(row.dataset.search||'').includes(searchQuery);
+    row.hidden=!visible;
+    if(visible)matches++;
+  });
+  pool.querySelectorAll('.search-empty-row').forEach(row=>{row.hidden=matches!==0;});
+  pool.querySelectorAll('.search-hide-when-active').forEach(row=>{row.hidden=!!searchQuery;});
 }
 
 function checkByeConflictForPlayer(player){
