@@ -1314,13 +1314,14 @@
     </ul>
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
-      <tr><td><span class="tag tag-green">VBD</span></td><td>Value Based Drafting — projected points above the replacement level at each position. Higher = more valuable relative to a waiver-wire fill-in.</td></tr>
+      <tr><td><span class="tag tag-green">ADP</span></td><td><strong>Average Draft Position</strong> — where the market usually selects the player. A lower number means an earlier pick.</td></tr>
+      <tr><td><span class="tag tag-green">EDGE</span></td><td><strong>ADP rank minus model rank</strong>, measured in overall draft spots. +12 means the model ranks the player 12 spots earlier than the market; −12 means 12 spots later. Positive/green can signal value. Negative/red can signal an overpay.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
-      <tr><td><span class="tag tag-yellow">CI</span></td><td><strong>Split-conformal 80% target range</strong> [low–high]. The adjustment is learned on 2025 calibration rows and targets marginal coverage across players; it does not guarantee an individual outcome. Rookies and second-year players receive additional widening.</td></tr>
-      <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high — computed as a <em>position-relative quartile</em> on relative CI width (range width ÷ projection). Low = a tight projection range. High = wide CI or near-replacement-level depth.</td></tr>
-      <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>low / medium / high — an explainable draft-value score using CI uncertainty, recent injury history, rookie/second-year unknowns, ADP overpay, and low VBD at cost. It is a decision aid, not a medical projection.</td></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
+      <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
+      <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high, based on RANGE width relative to PROJ within the player's position. Low means a tighter range. High means a wider range or a player near replacement level.</td></tr>
+      <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>Low / medium / high — a draft-value warning that combines RANGE uncertainty, recent injury history, rookie/second-year unknowns, possible ADP overpay, and low VBD at the player's cost. It is not a medical projection.</td></tr>
       <tr><td><span class="tag tag-blue">BYE</span></td><td>Bye week for this player's team. Watch for conflicts with your other starters.</td></tr>
-      <tr><td><span class="tag tag-green">ADP</span></td><td>Average Draft Position from Fantasy Football Calculator — where the market values this player. Sleepers = model rank better than ADP; busts = worse.</td></tr>
     </table>
     <h3>Draft Board Sort</h3>
     <p>Offensive players (QB/RB/WR/TE) are sorted by an opportunity-cost draft score. VBD and projections measure value, ADP measures price, and the board estimates whether a player is likely to make it back to your next pick. Kickers (K) and Defenses (DEF) are sorted by projected points since they have no meaningful VBD signal.</p>
@@ -1367,7 +1368,7 @@
     </table>
     <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
 
-    <h3>Confidence Intervals (CQR)</h3>
+    <h3>Projection Range (CQR)</h3>
     <p>The 80% target range is built via <strong>Conformalized Quantile Regression</strong> — separate 10th- and 90th-percentile models plus a split-conformal adjustment learned from 2025 calibration rows.</p>
     <p>The procedure targets 80% marginal coverage across comparable players. Its post-adjustment 2025 coverage is a calibration diagnostic, not an independent test result or a guarantee for one player.</p>
     <p>Rookies and 2nd-year players get a 1.8× / 1.3× width multiplier to reflect their scarcer historical data.</p>
@@ -1396,7 +1397,7 @@
 
     <h3>Model Architecture</h3>
     <p>OverADP currently runs tuned <strong>CatBoost models per position</strong>, selected after walk-forward experiments against simpler baselines. The production models use per-position feature sets, temporal sample weighting (more recent seasons matter more), and leakage-controlled lag features so current-season outcomes never feed their own predictions.</p>
-    <p>80%-target projection ranges come from a parallel <strong>split-conformal quantile regression</strong> pipeline (see Confidence Intervals section above).</p>
+    <p>80%-target projection ranges come from a parallel <strong>split-conformal quantile regression</strong> pipeline (see Projection Range section above).</p>
     <table>
       <tr><th>Model</th><th>Role</th></tr>
       <tr><td><strong>CatBoost</strong> (production)</td><td>Ordered boosting for the QB/RB/WR/TE projection models.</td></tr>
@@ -1468,7 +1469,7 @@
       <div class="upgrade-feature">✓ 900+ player board: 844 skill projections + current K/DEF entries</div>
       <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
       <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
-      <div class="upgrade-feature">✓ Confidence intervals &amp; risk tiers</div>
+      <div class="upgrade-feature">✓ Projection ranges &amp; risk tiers</div>
       <div class="upgrade-feature">✓ Draft better or your money back</div>
     </div>
     <div style="display:flex;gap:12px;margin:12px 0;">
@@ -1931,8 +1932,8 @@ function computeDraftRisk(p){
   const reasons=[];
   const uncertainty=normalizeRiskTier(p.risk || p.uncertainty);
   let score=uncertainty==='high'?2:uncertainty==='medium'?1:0;
-  if(uncertainty==='high') reasons.push('wide CI');
-  if(uncertainty==='medium') reasons.push('moderate CI');
+  if(uncertainty==='high') reasons.push('wide range');
+  if(uncertainty==='medium') reasons.push('moderate range');
 
   const gamesMissed=Number(p.games_missed_lag1||0);
   const injLag1=Number(p.injury_count_lag1||0);
