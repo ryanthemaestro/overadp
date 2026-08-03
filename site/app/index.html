@@ -504,10 +504,52 @@
     border: 1px solid rgba(255,68,68,0.45);
     background: rgba(255,68,68,0.08);
   }
-  .edge-cell {
+  .value-adp-cell {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    min-width: 62px;
+    text-align: center;
+  }
+  .value-adp-badge {
+    display: inline-flex;
+    min-width: 52px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border: 1px solid rgba(148,163,184,0.2);
+    border-radius: 3px;
+    background: rgba(148,163,184,0.06);
+    color: var(--smoke);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .value-adp-number {
+    font-size: 11px;
     font-weight: 700;
+  }
+  .value-adp-unit {
+    margin-top: 3px;
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    opacity: 0.75;
+  }
+  .value-adp-badge.value-positive {
+    color: #44ff44;
+    border-color: rgba(68,255,68,0.28);
+    background: rgba(68,255,68,0.08);
+  }
+  .value-adp-badge.value-negative {
+    color: #ff6666;
+    border-color: rgba(255,68,68,0.3);
+    background: rgba(255,68,68,0.08);
+  }
+  .pool-table th .th-sub {
+    display: block;
+    margin-top: 1px;
+    font-size: 7px;
+    letter-spacing: 0.8px;
+    color: var(--ash);
   }
   .pts-cell {
     font-family: 'JetBrains Mono', monospace;
@@ -1099,7 +1141,7 @@
     .pool-table .col-pos,
     .pool-table .col-team,
     .pool-table .col-bye,
-    .pool-table .col-edge,
+    .pool-table .col-value,
     .pool-table .col-vbd,
     .pool-table .col-range,
     .pool-table .col-unc,
@@ -1131,6 +1173,12 @@
       font-size: 9px;
       line-height: 1.35;
     }
+    .mobile-value {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .mobile-value.value-positive { color: #44ff44; }
+    .mobile-value.value-negative { color: #ff6666; }
     .intel-badge { display: block; width: max-content; margin: 4px 0 0; }
     .actions-cell { white-space: normal; }
     .actions-wrap {
@@ -1315,7 +1363,7 @@
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
       <tr><td><span class="tag tag-green">ADP</span></td><td><strong>Average Draft Position</strong> — where the market usually selects the player. A lower number means an earlier pick.</td></tr>
-      <tr><td><span class="tag tag-green">EDGE</span></td><td><strong>ADP rank minus model rank</strong>, measured in overall draft spots. +12 means the model ranks the player 12 spots earlier than the market; −12 means 12 spots later. Positive/green can signal value. Negative/red can signal an overpay.</td></tr>
+      <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus model rank</strong>, measured in draft picks. If a player's ADP is 11.2 and the model ranks him #3, his Value vs. ADP is +8.2 picks. Positive/green can signal value; negative/red can signal an overpay. Roster need and positional scarcity can still move a player on the live board.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
@@ -1340,7 +1388,7 @@
     <h3>Right Sidebar Panels</h3>
     <table>
       <tr><th>Panel</th><th>What It Shows</th></tr>
-      <tr><td><strong>Target Intel</strong></td><td>Top 5 recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, ADP edge, sleeper/bust flags, draft risk, and late-round K/DEF timing.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Top 5 recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, Value vs. ADP, sleeper/bust flags, draft risk, and late-round K/DEF timing.</td></tr>
       <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
       <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
       <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
@@ -1916,6 +1964,15 @@ function formatAdpCost(adp){
   return `R${round}.${String(pick).padStart(2,'0')}`;
 }
 
+function formatPickValue(value){
+  if(value===null||value===undefined||value==='')return '—';
+  const n=Number(value);
+  if(!Number.isFinite(n))return '—';
+  const rounded=Math.abs(n)<0.05?0:n;
+  const sign=rounded>0?'+':rounded<0?'−':'';
+  return `${sign}${Math.abs(rounded).toFixed(1)}`;
+}
+
 function riskTierColor(tier, fallback='#888'){
   return {'high':'#ff4444','medium':'#ffaa00','low':'#44ff44'}[String(tier||'').toLowerCase()] || fallback;
 }
@@ -2041,6 +2098,10 @@ function buildDraftIntel(){
       p.adp_gap = intel.adp_gap;
       p.adp_pos_rank = intel.adp_pos_rank;
     }
+    const marketAdp=Number(p.adp);
+    p.value_vs_adp=Number.isFinite(marketAdp)&&marketAdp>0&&marketAdp<200&&p.model_rank
+      ?marketAdp-p.model_rank
+      :null;
   });
   annotateDraftRisks();
 }
@@ -2652,16 +2713,21 @@ function renderPlayerPool(){
     return;
   }
   const vbdHead=vbdMode?'<th class="col-vbd">VBD</th>':'';
-  let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-edge">EDGE</th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
+  let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-value" title="Market ADP minus model rank">VALUE<span class="th-sub">vs ADP</span></th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
     const kd=isKD(p);
-    const adp=p.adp_rank || '—';
+    const rawAdp=Number(p.adp);
+    const adp=Number.isFinite(rawAdp)&&rawAdp>0&&rawAdp<200?rawAdp.toFixed(1):'—';
     const adpGap=Number.isFinite(p.adp_edge)?p.adp_edge:0;
     const adpStyle=adpGap>12?'color:#44ff44;font-weight:700;':adpGap<-12?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
-    const edgeLabel=Number.isFinite(p.adp_edge)?(p.adp_edge>0?`+${p.adp_edge}`:`${p.adp_edge}`):'—';
-    const edgeStyle=p.intel_label==='SLEEPER'||p.adp_edge>24?'color:#44ff44;':p.intel_label==='BUST'||p.adp_edge<-24?'color:#ff4444;':'color:var(--smoke);';
+    const hasPickValue=Number.isFinite(p.value_vs_adp);
+    const pickValue=hasPickValue?p.value_vs_adp:0;
+    const valueLabel=formatPickValue(p.value_vs_adp);
+    const valueClass=hasPickValue&&pickValue>0.05?'value-positive':hasPickValue&&pickValue<-0.05?'value-negative':'value-neutral';
+    const valueTitle=hasPickValue?`ADP ${adp} − Model #${p.model_rank} = ${valueLabel} picks`:'Value vs. ADP unavailable';
+    const mobileValue=hasPickValue?` · <span class="mobile-value ${valueClass}">VALUE ${valueLabel}</span>`:'';
     const badge=p.intel_label==='SLEEPER'
       ? '<span class="intel-badge sleeper">SLEEPER</span>'
       : p.intel_label==='BUST'
@@ -2695,12 +2761,12 @@ function renderPlayerPool(){
       `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
-      <td class="name-cell col-player">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}</div></td>
+      <td class="name-cell col-player">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}${mobileValue}</div></td>
       <td class="col-pos">${posTag(p.position)}</td>
       <td class="team-cell col-team">${p.team||'—'}</td>
       <td class="col-bye" style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
       <td class="col-adp" style="font-family:'JetBrains Mono',monospace;font-size:10px;${adpStyle}"><div>${adp}</div><div class="player-sub">${p.adp_cost}</div></td>
-      <td class="edge-cell col-edge" style="${edgeStyle}">${edgeLabel}</td>
+      <td class="value-adp-cell col-value" title="${valueTitle}"><span class="value-adp-badge ${valueClass}"><span class="value-adp-number">${valueLabel}</span><span class="value-adp-unit">PICKS</span></span></td>
       ${projCell}
       ${vbdCell}
       <td class="col-range" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--smoke);">${ciLow}–${ciHigh}</td>
@@ -2816,7 +2882,7 @@ function renderRecommendations(recs){
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
       <div class="intel-pts">${isPaid()?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
-      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${r.adp_rank||'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.adp_edge)?` · edge ${r.adp_edge>0?'+':''}${r.adp_edge}`:''} · draft risk ${r.draft_risk||'low'}`}</div>
+      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
