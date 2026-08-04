@@ -1363,7 +1363,7 @@
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
       <tr><td><span class="tag tag-green">ADP</span></td><td><strong>Average Draft Position</strong> — where the market usually selects the player. A lower number means an earlier pick.</td></tr>
-      <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus model rank</strong>, measured in draft picks. If a player's ADP is 11.2 and the model ranks him #3, his Value vs. ADP is +8.2 picks. Positive/green can signal value; negative/red can signal an overpay. Roster need and positional scarcity can still move a player on the live board.</td></tr>
+      <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus the live board's estimated draft slot</strong>, measured in picks. Estimated slot = current overall pick + BOARD rank − 1. At pick 1, an ADP of 35.7 and BOARD rank #38 equals −2.3 picks. Positive/green means the board would take the player earlier than the market; negative/red means later. It updates with league settings, roster needs, positional scarcity, and live picks.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
@@ -2098,10 +2098,8 @@ function buildDraftIntel(){
       p.adp_gap = intel.adp_gap;
       p.adp_pos_rank = intel.adp_pos_rank;
     }
-    const marketAdp=Number(p.adp);
-    p.value_vs_adp=Number.isFinite(marketAdp)&&marketAdp>0&&marketAdp<200&&p.model_rank
-      ?marketAdp-p.model_rank
-      :null;
+    p.model_draft_pick=null;
+    p.value_vs_adp=null;
   });
   annotateDraftRisks();
 }
@@ -2453,6 +2451,7 @@ function draftBoardScore(p,ownList){
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
+  updateLiveValueVsAdp(available);
   const myPosCount={};
   myTeamIds.forEach(id=>{const p=playerMap[id];if(p){myPosCount[p.position]=(myPosCount[p.position]||0)+1;}});
   const plan=getRosterPlan();
@@ -2691,6 +2690,24 @@ function getBoardOrder(availablePlayers){
   return boardOrderCache;
 }
 
+function updateLiveValueVsAdp(availablePlayers){
+  const currentOverallPick=new Set([...myTeamIds,...opponentIds]).size+1;
+  allPlayers.forEach(p=>{
+    p.model_draft_pick=null;
+    p.value_vs_adp=null;
+  });
+  const {skillPlayers,boardRankById}=getBoardOrder(availablePlayers);
+  skillPlayers.forEach(p=>{
+    const boardRank=boardRankById.get(p.player_id);
+    const modelDraftPick=currentOverallPick+boardRank-1;
+    const marketAdp=Number(p.adp);
+    p.model_draft_pick=modelDraftPick;
+    p.value_vs_adp=Number.isFinite(marketAdp)&&marketAdp>0&&marketAdp<200
+      ?marketAdp-modelDraftPick
+      :null;
+  });
+}
+
 function renderPlayerPool(){
   const c=document.getElementById('playerPool');
   const drafted=new Set([...myTeamIds,...opponentIds]);
@@ -2713,7 +2730,7 @@ function renderPlayerPool(){
     return;
   }
   const vbdHead=vbdMode?'<th class="col-vbd">VBD</th>':'';
-  let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-value" title="Market ADP minus model rank">VALUE<span class="th-sub">vs ADP</span></th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
+  let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-value" title="Market ADP minus live model draft slot">VALUE<span class="th-sub">vs ADP</span></th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
   f.forEach((p,i)=>{
     const paid=isPaid();
     const isR=paid&&recommendedIds.has(p.player_id);
@@ -2726,7 +2743,7 @@ function renderPlayerPool(){
     const pickValue=hasPickValue?p.value_vs_adp:0;
     const valueLabel=formatPickValue(p.value_vs_adp);
     const valueClass=hasPickValue&&pickValue>0.05?'value-positive':hasPickValue&&pickValue<-0.05?'value-negative':'value-neutral';
-    const valueTitle=hasPickValue?`ADP ${adp} − Model #${p.model_rank} = ${valueLabel} picks`:'Value vs. ADP unavailable';
+    const valueTitle=hasPickValue?`ADP ${adp} − live draft slot #${p.model_draft_pick} = ${valueLabel} picks`:'Value vs. ADP unavailable';
     const mobileValue=hasPickValue?` · <span class="mobile-value ${valueClass}">VALUE ${valueLabel}</span>`:'';
     const badge=p.intel_label==='SLEEPER'
       ? '<span class="intel-badge sleeper">SLEEPER</span>'
@@ -2882,7 +2899,7 @@ function renderRecommendations(recs){
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
       <div class="intel-pts">${isPaid()?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
-      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
+      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
