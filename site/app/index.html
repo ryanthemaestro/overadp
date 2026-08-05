@@ -1388,7 +1388,7 @@
     <h3>Right Sidebar Panels</h3>
     <table>
       <tr><th>Panel</th><th>What It Shows</th></tr>
-      <tr><td><strong>Target Intel</strong></td><td>Top recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, Value vs. ADP, sleeper/bust flags, and draft risk. It schedules DEF for the second-to-last round and K for the last round, then forces any missing special-teams slots before the roster can fill.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Top recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, Value vs. ADP, sleeper/bust flags, and draft risk. It schedules DEF and K late, adapts their timing when multiple slots are required, and activates Roster Lock before any pick could make the configured lineup impossible to complete.</td></tr>
       <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
       <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
       <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
@@ -1575,6 +1575,7 @@
     </div>
 
     <h3>Roster Slots</h3>
+    <p style="margin:0 0 10px;color:var(--smoke);font-family:var(--mono);font-size:10px;line-height:1.45;">ZERO VALUES ARE HONORED. WHEN OPEN PICKS EQUAL UNFILLED REQUIRED SLOTS, ROSTER LOCK ALLOWS ONLY PICKS THAT CAN COMPLETE THE CONFIGURED TEAM.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin:8px 0 16px;font-family:var(--mono);font-size:12px;">
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">QB <input type="number" id="slotQB" value="1" min="0" max="3" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
       <label style="display:flex;justify-content:space-between;color:var(--fg2);">RB <input type="number" id="slotRB" value="2" min="0" max="4" style="width:40px;background:var(--bg);border:1px solid var(--border);color:var(--fg);text-align:center;border-radius:2px;padding:2px 4px;"></label>
@@ -1942,7 +1943,7 @@ function getRosterSlots(){
     {key:'flex',label:'FLEX',pos:'RB/WR/TE',count:s.flex!=null?s.flex:1},
     {key:'k',label:'K',pos:'K',count:s.k!=null?s.k:1},
     {key:'def',label:'DEF',pos:'DEF',count:s.defense!=null?s.defense:1},
-    {key:'bench',label:'BN',pos:'ANY',count:rosterConfig.bench_size||s.bench||6},
+    {key:'bench',label:'BN',pos:'ANY',count:rosterConfig.bench_size!=null?rosterConfig.bench_size:(s.bench!=null?s.bench:6)},
   ];
 }
 
@@ -2189,6 +2190,12 @@ async function loadData(){
 function draftPlayer(pid,team){
   if(team==='mine'){
     if(myTeamIds.includes(pid))return;
+    const player=playerMap[pid];
+    const constraint=getRosterDraftConstraint(player?.position);
+    if(!constraint.allowed){
+      alert(constraint.message);
+      return;
+    }
     myTeamIds.push(pid);
   }else{
     if(opponentIds.includes(pid))return;
@@ -2270,7 +2277,7 @@ function computeClientVBD(){
   const rawSlots=rosterConfig.roster_slots||{};
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const numTeams=rosterConfig.num_teams||12;
-  const benchSize=rosterConfig.bench_size||6;
+  const benchSize=rosterConfig.bench_size!=null?rosterConfig.bench_size:6;
   const flexSlots=rawSlots.flex!=null?rawSlots.flex:1;
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
@@ -2354,6 +2361,53 @@ function rosterNeeds(counts,plan){
   const flexOverflow=Math.max(0,(counts.RB||0)-plan.starters.RB)+Math.max(0,(counts.WR||0)-plan.starters.WR)+Math.max(0,(counts.TE||0)-plan.starters.TE);
   needs.FLEX=Math.max(0,plan.starters.FLEX-flexOverflow);
   return needs;
+}
+
+function mandatoryRosterNeeds(counts,plan=getRosterPlan()){
+  const rawSlots=rosterConfig.roster_slots||{};
+  const directTargets={
+    QB:Number(rawSlots.qb!=null?rawSlots.qb:1),
+    RB:Number(rawSlots.rb!=null?rawSlots.rb:2),
+    WR:Number(rawSlots.wr!=null?rawSlots.wr:2),
+    TE:Number(rawSlots.te!=null?rawSlots.te:1),
+    K:Number(rawSlots.k!=null?rawSlots.k:1),
+    DEF:Number(rawSlots.defense!=null?rawSlots.defense:1)
+  };
+  const directNeeds={};
+  let directMissing=0;
+  for(const pos of ['QB','RB','WR','TE','K','DEF']){
+    directNeeds[pos]=Math.max(0,directTargets[pos]-(counts[pos]||0));
+    directMissing+=directNeeds[pos];
+  }
+  const flexTarget=Number(rawSlots.flex!=null?rawSlots.flex:1);
+  const flexUsed=plan.flexEligible.reduce((sum,pos)=>
+    sum+Math.max(0,(counts[pos]||0)-(directTargets[pos]||0)),0);
+  const flexNeed=Math.max(0,flexTarget-Math.min(flexTarget,flexUsed));
+  return {directTargets,directNeeds,flexTarget,flexNeed,total:directMissing+flexNeed};
+}
+
+function formatMandatoryNeeds(state){
+  const parts=['QB','RB','WR','TE','K','DEF']
+    .filter(pos=>state.directNeeds[pos]>0)
+    .map(pos=>`${pos} ${state.directNeeds[pos]}`);
+  if(state.flexNeed>0)parts.push(`FLEX ${state.flexNeed}`);
+  return parts.join(' · ')||'COMPLETE';
+}
+
+function getRosterDraftConstraint(position,counts=getPositionCounts(myTeamIds),plan=getRosterPlan()){
+  const rawSlots=rosterConfig.roster_slots||{};
+  const totalRosterSlots=Object.values(rawSlots).reduce((sum,n)=>sum+(Number(n)||0),0);
+  const rosterSlotsOpen=Math.max(0,totalRosterSlots-myTeamIds.length);
+  if(rosterSlotsOpen<=0){
+    return {allowed:false,message:'Your configured roster is full. Undo a pick or add a roster slot in Settings.'};
+  }
+  const before=mandatoryRosterNeeds(counts,plan);
+  const afterCounts={...counts,[position]:(counts[position]||0)+1};
+  const after=mandatoryRosterNeeds(afterCounts,plan);
+  const remainingAfter=rosterSlotsOpen-1;
+  const allowed=after.total<=remainingAfter;
+  const message=allowed?'':`That ${position||'player'} pick would leave ${remainingAfter} roster spot${remainingAfter===1?'':'s'} for ${after.total} required selection${after.total===1?'':'s'} (${formatMandatoryNeeds(after)}). Choose a required position or change the roster settings.`;
+  return {allowed,message,before,after,remainingAfter,rosterSlotsOpen,fillsRequired:after.total<before.total};
 }
 
 function rosterCoverage(counts,plan){
@@ -2493,6 +2547,8 @@ function getRecommendations(){
   },0);
   const flexOpen=Math.max(0,flexSlots-Math.min(flexSlots,directFlexUsed));
   const rosterSlotsOpen=Math.max(0,totalRosterSlots-myTeamIds.length);
+  const mandatoryNeeds=mandatoryRosterNeeds(myPosCount,plan);
+  const hardRosterDeadline=mandatoryNeeds.total>0&&rosterSlotsOpen>0&&mandatoryNeeds.total>=rosterSlotsOpen;
   const missingKDef=['K','DEF'].reduce((sum,pos)=>sum+Math.max(0,(starterSlots[pos]||0)-(myPosCount[pos]||0)),0);
   const hardSpecialTeamsDeadline=missingKDef>0&&rosterSlotsOpen>0&&missingKDef>=rosterSlotsOpen;
   const maxTierGap=Math.max(1,...scarcityData.map(d=>Number(d.tier_gap)||0));
@@ -2504,7 +2560,8 @@ function getRecommendations(){
     availableByPos[p.position].push(p);
   });
   Object.values(availableByPos).forEach(list=>list.sort((a,b)=>(b.projected_points||0)-(a.projected_points||0)));
-  const scored=available.map(p=>{
+  const feasibleAvailable=available.filter(p=>getRosterDraftConstraint(p.position,myPosCount,plan).allowed);
+  const scored=feasibleAvailable.map(p=>{
     const reasons=[];
     const kd=p.position==='K'||p.position==='DEF';
     const directNeed=Math.max(0,(starterSlots[p.position]||0)-(myPosCount[p.position]||0));
@@ -2544,6 +2601,8 @@ function getRecommendations(){
       score+=6;
       reasons.push('bench depth');
     }
+
+    if(hardRosterDeadline)reasons.push('roster required');
 
     if(atOrOverCap){
       score-=70;
@@ -2879,6 +2938,15 @@ function assignRosterSlots(players){
     }
   });
 
+  // Keep picks that no longer fit after a settings change visible and undoable.
+  remaining.forEach((p,i)=>{
+    slotAssignments.push({
+      slot:{key:'overflow',label:'UNSLOTTED',pos:'ANY',count:remaining.length},
+      label:remaining.length>1?`UNSLOTTED${i+1}`:'UNSLOTTED',
+      player:p
+    });
+  });
+
   return slotAssignments;
 }
 
@@ -2891,8 +2959,9 @@ function renderMyTeam(){
       const posCls=(p.position||'').toLowerCase();
       const bye=byeWeeks[p.team]||[];
       const byeStr=bye.length?`<span style="font-size:9px;color:var(--smoke);margin-left:4px;">BYE:${bye.join(',')}</span>`:'';
+      const overflowStyle=slot.key==='overflow'?' style="color:var(--alert);" title="This pick does not fit the current roster settings. Undo it or add a compatible slot."':'';
       h+=`<div class="roster-slot filled-${posCls}">
-        <div><div class="slot-label">${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
+        <div><div class="slot-label"${overflowStyle}>${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
         <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
@@ -2915,7 +2984,6 @@ function renderOpponentPicks(){
 
 function renderRecommendations(recs){
   const c=document.getElementById('recommendations');
-  if(!recs||!recs.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">No intel yet.</div>';return;}
   const plan=getRosterPlan();
   const counts=getPositionCounts(myTeamIds);
   const needs=rosterNeeds(counts,plan);
@@ -2927,6 +2995,8 @@ function renderRecommendations(recs){
     DEF:Math.max(0,specialRequired.DEF-(counts.DEF||0))
   };
   const rosterSlotsOpen=Math.max(0,timing.totalRosterSlots-myTeamIds.length);
+  const required=mandatoryRosterNeeds(counts,plan);
+  const hardRosterDeadline=required.total>0&&rosterSlotsOpen>0&&required.total>=rosterSlotsOpen;
   const missingSpecial=specialNeed.K+specialNeed.DEF;
   const hardDeadline=missingSpecial>0&&rosterSlotsOpen>0&&missingSpecial>=rosterSlotsOpen;
   const specialStatus=pos=>{
@@ -2940,7 +3010,15 @@ function renderRecommendations(recs){
   const header=`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 2px 8px;">
     <div>PICK ${timing.pickNum} · SLOT ${plan.draftSlot||'—'} · ROUND ${timing.round} · TARGET INTEL · NEEDS QB ${needs.QB} RB ${needs.RB} WR ${needs.WR} TE ${needs.TE} FLEX ${needs.FLEX}</div>
     <div style="margin-top:4px;color:var(--fg3);">SPECIAL TEAMS · DEF ${specialStatus('DEF')} · K ${specialStatus('K')}</div>
+    ${hardRosterDeadline?`<div style="margin-top:4px;color:var(--te);">ROSTER LOCK · ${formatMandatoryNeeds(required)} · ${rosterSlotsOpen} PICK${rosterSlotsOpen===1?'':'S'} LEFT</div>`:''}
   </div>`;
+  if(!recs||!recs.length){
+    const empty=required.total<=0
+      ?'Roster complete.'
+      :`No legal recommendation. Undo an UNSLOTTED pick or review Settings. Required: ${formatMandatoryNeeds(required)}.`;
+    c.innerHTML=header+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
+    return;
+  }
   c.innerHTML=header+recs.map((r,i)=>
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
@@ -3276,20 +3354,23 @@ function applySettings(){
   // Update scoring
   adjustScoring();
   // Update roster config from inputs
-  const qbv=parseInt(document.getElementById('slotQB').value)||1;
-  const rbv=parseInt(document.getElementById('slotRB').value)||2;
-  const wrv=parseInt(document.getElementById('slotWR').value)||2;
-  const tev=parseInt(document.getElementById('slotTE').value)||1;
-  const flexRaw=parseInt(document.getElementById('slotFlex').value);
-  const flexv=Number.isFinite(flexRaw)?flexRaw:1;
-  const kv=parseInt(document.getElementById('slotK').value);
-  const defv=parseInt(document.getElementById('slotDEF').value);
-  const benchv=parseInt(document.getElementById('slotBench').value)||6;
+  const slotValue=(id,fallback)=>{
+    const value=parseInt(document.getElementById(id).value);
+    return Number.isFinite(value)?Math.max(0,value):fallback;
+  };
+  const qbv=slotValue('slotQB',1);
+  const rbv=slotValue('slotRB',2);
+  const wrv=slotValue('slotWR',2);
+  const tev=slotValue('slotTE',1);
+  const flexv=slotValue('slotFlex',1);
+  const kv=slotValue('slotK',1);
+  const defv=slotValue('slotDEF',1);
+  const benchv=slotValue('slotBench',6);
   const teamsBtn=document.querySelector('.scoring-btn.active[data-teams]');
   const numTeams=teamsBtn?parseInt(teamsBtn.dataset.teams):12;
   const draftSlotRaw=parseInt(document.getElementById('draftSlot')?.value);
   const draftSlot=Math.max(1,Math.min(numTeams,Number.isFinite(draftSlotRaw)?draftSlotRaw:Math.ceil(numTeams/2)));
-  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:isNaN(kv)?1:kv,defense:isNaN(defv)?1:defv,bench:benchv};
+  rosterConfig.roster_slots={qb:qbv,rb:rbv,wr:wrv,te:tev,flex:flexv,k:kv,defense:defv,bench:benchv};
   rosterConfig.num_teams=numTeams;
   rosterConfig.draft_slot=draftSlot;
   rosterConfig.bench_size=benchv;
@@ -3307,7 +3388,8 @@ function restoreSettings(){
   if(s.numTeams)rosterConfig.num_teams=s.numTeams;
   if(s.draftSlot)rosterConfig.draft_slot=s.draftSlot;
   if(s.slots)rosterConfig.roster_slots=s.slots;
-  if(s.bench)rosterConfig.bench_size=s.bench;
+  if(s.bench!=null)rosterConfig.bench_size=s.bench;
+  else if(s.slots?.bench!=null)rosterConfig.bench_size=s.slots.bench;
   // Update UI buttons
   document.querySelectorAll('.scoring-btn[data-scoring]').forEach(b=>{
     b.classList.toggle('active',b.dataset.scoring===scoringFormat);
@@ -3321,14 +3403,14 @@ function restoreSettings(){
     draftSlotInput.value=s.draftSlot||Math.ceil(teams/2);
   }
   if(s.slots){
-    document.getElementById('slotQB').value=s.slots.qb||1;
-    document.getElementById('slotRB').value=s.slots.rb||2;
-    document.getElementById('slotWR').value=s.slots.wr||2;
-    document.getElementById('slotTE').value=s.slots.te||1;
+    document.getElementById('slotQB').value=s.slots.qb!=null?s.slots.qb:1;
+    document.getElementById('slotRB').value=s.slots.rb!=null?s.slots.rb:2;
+    document.getElementById('slotWR').value=s.slots.wr!=null?s.slots.wr:2;
+    document.getElementById('slotTE').value=s.slots.te!=null?s.slots.te:1;
     document.getElementById('slotFlex').value=s.slots.flex!=null?s.slots.flex:1;
     if(document.getElementById('slotK'))document.getElementById('slotK').value=s.slots.k!=null?s.slots.k:1;
     if(document.getElementById('slotDEF'))document.getElementById('slotDEF').value=s.slots.defense!=null?s.slots.defense:1;
-    document.getElementById('slotBench').value=s.bench||6;
+    document.getElementById('slotBench').value=s.bench!=null?s.bench:(s.slots.bench!=null?s.slots.bench:6);
   }
   adjustScoring();
 }
