@@ -241,6 +241,22 @@ def validate(max_age_hours: float) -> list[str]:
         errors.append("metadata.json: K/DEF schedule provenance is missing")
     if int((metadata.get("rosters") or {}).get("matched_skill_players", 0)) < 650:
         errors.append("metadata.json: fewer than 650 skill players matched the live Sleeper roster")
+    active_coverage = quality.get("active_player_coverage") or {}
+    expected_active = int(active_coverage.get("expected_active_depth_players", 0))
+    matched_active = int(active_coverage.get("matched_active_depth_players", 0))
+    missing_active = active_coverage.get("missing_active_depth_players")
+    if expected_active < 650 or matched_active != expected_active or missing_active != []:
+        errors.append(
+            "metadata.json: active depth-chart projection coverage failed "
+            f"({matched_active}/{expected_active}, missing={missing_active})"
+        )
+    model_coverage = (metadata.get("model") or {}).get("coverage") or {}
+    if (
+        int(model_coverage.get("matched_active_depth_players", 0))
+        != int(model_coverage.get("expected_active_depth_players", -1))
+        or model_coverage.get("missing_active_depth_players") != []
+    ):
+        errors.append("metadata.json: model export coverage evidence is missing or failed")
 
     board_lookup = {
         (normalize_name(row.get("player_name")), str(row.get("position") or "").upper()): row
