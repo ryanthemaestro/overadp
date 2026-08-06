@@ -28,6 +28,10 @@ def merge_player_context(
     # then fall back to player_id-only for players missing from that season's roster.
     if "player_id" in roster_df.columns and "player_id" in df.columns:
         roster_cols = ["player_id", "position", "age", "team"]
+        # Preserve Sleeper's stable provider ID through the feature matrix so
+        # coverage checks survive public-name and hybrid-position changes.
+        if "sleeper_id" in roster_df.columns:
+            roster_cols.append("sleeper_id")
         # Add draft/entry year for accurate rookie detection
         for c in ["entry_year", "rookie_year", "draft_club", "draft_number"]:
             if c in roster_df.columns and c not in roster_cols:

@@ -16,7 +16,7 @@ NOT available: import_team_seasonal_data, import_adp, import_rosters
 Team stats are derived by aggregating player seasonal data.
 """
 from datetime import datetime, timezone
-from io import StringIO
+from io import BytesIO, StringIO
 import re
 
 import pandas as pd
@@ -24,12 +24,31 @@ import numpy as np
 from pathlib import Path
 from typing import Optional
 
+# nfl_data_py declares fastparquet as its parquet backend. Some environments
+# also install pyarrow, causing pandas' ``auto`` selection to choose pyarrow;
+# recent nflverse list-encoded assets are currently unreadable in affected
+# pyarrow builds. Select the backend nfl_data_py ships for explicitly so clean
+# local and CI exports behave the same way.
+pd.options.io.parquet.engine = "fastparquet"
+
 try:
     import nfl_data_py as nfl
 except ImportError:
     nfl = None
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+
+
+def _read_release_csv(url: str, timeout: int = 45) -> pd.DataFrame:
+    """Read an official nflverse CSV release asset with a stable user agent."""
+    import urllib.request
+
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "nflmodel/1.0 (+https://overadp.com)"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return pd.read_csv(BytesIO(response.read()))
 
 
 def _ensure_data_dir() -> Path:
@@ -64,7 +83,10 @@ def _fetch_seasonal_from_nflverse(seasons: list[int]) -> pd.DataFrame:
     dfs = []
     base_url = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/"
     for season in seasons:
-        for suffix in ["reg", "post"]:
+        # Draft projections target regular-season scoring. Pulling POST here
+        # is unnecessary and creates duplicate player-season rows that the
+        # cleaner only discards later.
+        for suffix in ["reg"]:
             url = f"{base_url}stats_player_{suffix}_{season}.parquet"
             try:
                 req = urllib.request.Request(url)
@@ -74,8 +96,19 @@ def _fetch_seasonal_from_nflverse(seasons: list[int]) -> pd.DataFrame:
                 tmp_path.write_bytes(resp.read())
                 df = pd.read_parquet(tmp_path)
                 dfs.append(df)
-            except Exception:
-                pass
+            except Exception as parquet_exc:
+                # nflverse publishes equivalent CSV assets. Keep the exporter
+                # operational if a parquet asset is temporarily malformed or
+                # uses an encoding unsupported by the runner's pyarrow build.
+                csv_url = f"{base_url}stats_player_{suffix}_{season}.csv"
+                try:
+                    dfs.append(_read_release_csv(csv_url))
+                except Exception as csv_exc:
+                    print(
+                        f"  Warning: seasonal {season} {suffix} unavailable "
+                        f"(parquet {parquet_exc.__class__.__name__}; "
+                        f"csv {csv_exc.__class__.__name__})."
+                    )
     if dfs:
         return pd.concat(dfs, ignore_index=True)
     return pd.DataFrame()
@@ -135,6 +168,11 @@ def fetch_seasonal_stats(seasons: list[int], cache: bool = True) -> pd.DataFrame
     if df is None or df.empty:
         df = _fetch_seasonal_from_nflverse(seasons)
     if df is not None and not df.empty:
+        # CSV fallbacks represent list-valued kicking details as a mixture of
+        # text and blank floats. They are not model inputs, but normalizing
+        # them keeps the reusable parquet cache Arrow-compatible.
+        for column in [col for col in df.columns if col.endswith("_list")]:
+            df[column] = df[column].astype("string")
         col_map = {
             "passing_interceptions": "interceptions",
             "sacks_suffered": "sacks",
@@ -236,23 +274,93 @@ def fetch_roster_info(seasons: list[int], cache: bool = True) -> pd.DataFrame:
         raise ImportError("nfl_data_py required: pip install nfl_data_py")
     cache_path = DATA_DIR / "roster_info.parquet"
 
-    # Try fetching normally first
-    try:
-        return _load_or_fetch(cache_path, lambda: nfl.import_seasonal_rosters(seasons), cache=cache, required_seasons=seasons)
-    except (OSError, Exception) as e:
-        # nfl_data_py can fail for future seasons (corrupted parquet, 404, etc.)
-        # Fall back to loading whatever we have locally
-        print(f"  Warning: nfl_data_py roster fetch failed ({e.__class__.__name__}). Using local cache.")
-        if cache_path.exists():
-            df = pd.read_parquet(cache_path)
-            if "season" in df.columns:
-                available = set(df["season"].unique())
-                missing = set(seasons) - available
-                if missing:
-                    print(f"  Warning: roster cache missing seasons {sorted(missing)}. Proceeding with available data.")
-                return df[df["season"].isin(available & set(seasons))] if available & set(seasons) else df
-            return df
-        raise
+    # Fetch each season separately. One newly published/future parquet can be
+    # missing or malformed while every completed-season file is healthy. A
+    # single bulk call would otherwise prevent a clean CI runner from building
+    # any projections at all. The Sleeper overlay later synthesizes the target
+    # season from the most recent historical roster when that target file is
+    # unavailable.
+    frames: list[pd.DataFrame] = []
+    cached_seasons: set[int] = set()
+    if cache and cache_path.exists():
+        try:
+            cached = pd.read_parquet(cache_path)
+            if "season" in cached.columns:
+                cached_seasons = set(
+                    pd.to_numeric(cached["season"], errors="coerce")
+                    .dropna()
+                    .astype(int)
+                )
+                frames.append(cached[cached["season"].isin(seasons)].copy())
+            elif not cached.empty:
+                frames.append(cached.copy())
+        except Exception as exc:
+            print(
+                "  Warning: roster cache is unreadable "
+                f"({exc.__class__.__name__}). Re-fetching."
+            )
+
+    failed: list[int] = []
+    for season in sorted(set(seasons) - cached_seasons):
+        try:
+            season_df = nfl.import_seasonal_rosters([season])
+        except Exception as exc:
+            csv_url = (
+                "https://github.com/nflverse/nflverse-data/releases/download/"
+                f"rosters/roster_{season}.csv"
+            )
+            try:
+                season_df = _read_release_csv(csv_url)
+                season_df = season_df.rename(
+                    columns={"gsis_id": "player_id", "full_name": "player_name"}
+                )
+                if "birth_date" in season_df.columns:
+                    season_df["birth_date"] = pd.to_datetime(
+                        season_df["birth_date"], errors="coerce"
+                    )
+                print(
+                    f"  Roster {season}: using nflverse CSV fallback "
+                    f"after {exc.__class__.__name__}."
+                )
+            except Exception as csv_exc:
+                failed.append(season)
+                print(
+                    f"  Warning: roster {season} unavailable "
+                    f"(parquet {exc.__class__.__name__}; "
+                    f"csv {csv_exc.__class__.__name__})."
+                )
+                continue
+        if season_df is None or season_df.empty:
+            failed.append(season)
+            print(f"  Warning: roster {season} returned no rows.")
+            continue
+        frames.append(season_df)
+
+    frames = [frame for frame in frames if frame is not None and not frame.empty]
+    if not frames:
+        raise RuntimeError(f"No roster seasons available for {sorted(set(seasons))}")
+
+    combined = pd.concat(frames, ignore_index=True)
+    if "season" in combined.columns:
+        combined = combined[combined["season"].isin(seasons)].copy()
+        combined = combined.drop_duplicates(
+            subset=[col for col in ("player_id", "season") if col in combined.columns],
+            keep="last",
+        )
+    # CSV and parquet roster releases infer some identifier columns
+    # differently across seasons (for example, numeric ESPN IDs in one year
+    # and blank strings in another). Roster object columns are categorical
+    # text, so a nullable string representation is lossless and cache-safe.
+    for column in combined.select_dtypes(include=["object", "string"]).columns:
+        combined[column] = combined[column].astype("string")
+    if cache and not combined.empty:
+        combined.to_parquet(cache_path, index=False)
+    if failed:
+        print(
+            f"  Warning: roster seasons {failed} are unavailable; "
+            "continuing with the available seasons."
+        )
+    return combined
 
 
 def fetch_team_stats(seasons: list[int], cache: bool = True) -> pd.DataFrame:

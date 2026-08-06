@@ -19,13 +19,33 @@ STAT_TO_RULE = {
     "receiving_2pt": "two_point_conversion",
 }
 
+LEGACY_STAT_ALIASES = {
+    "passing_tds": "passing_td",
+    "interceptions": "passing_int",
+    "rushing_tds": "rushing_td",
+    "receiving_tds": "receiving_td",
+    "sack_fumbles_lost": "fumble_lost",
+    "rushing_fumbles_lost": "fumble_lost",
+}
+
 
 def calculate_fantasy_points(stats: dict | pd.Series, format: str = "half_ppr") -> float:
     """Calculate fantasy points for a single player stat line."""
     rules = get_scoring_rules(format)
     points = 0.0
+    used_aliases: set[str] = set()
     for stat_key, rule_key in STAT_TO_RULE.items():
-        points += float(stats.get(stat_key, 0)) * rules.get(rule_key, 0)
+        if stat_key in stats:
+            value = stats.get(stat_key, 0)
+        else:
+            alias = LEGACY_STAT_ALIASES.get(stat_key)
+            if not alias or alias in used_aliases:
+                value = 0
+            else:
+                value = stats.get(alias, 0)
+                if alias in stats:
+                    used_aliases.add(alias)
+        points += float(value or 0) * rules.get(rule_key, 0)
     return points
 
 
@@ -63,9 +83,15 @@ def add_fantasy_points_to_df(df: pd.DataFrame, format: str = "half_ppr") -> pd.D
     # Fallback: manual calculation
     rules = get_scoring_rules(format)
     points = pd.Series(0.0, index=df.index)
+    used_aliases: set[str] = set()
     for stat_col, rule_key in STAT_TO_RULE.items():
         if stat_col in df.columns:
             points += df[stat_col].fillna(0) * rules.get(rule_key, 0)
+            continue
+        alias = LEGACY_STAT_ALIASES.get(stat_col)
+        if alias and alias in df.columns and alias not in used_aliases:
+            points += df[alias].fillna(0) * rules.get(rule_key, 0)
+            used_aliases.add(alias)
 
     df["fantasy_points"] = points
     if "games" in df.columns:
@@ -79,9 +105,15 @@ def add_all_scoring_formats(df: pd.DataFrame) -> pd.DataFrame:
     for fmt in ["standard", "half_ppr", "ppr"]:
         rules = get_scoring_rules(fmt)
         points = pd.Series(0.0, index=df.index)
+        used_aliases: set[str] = set()
         for stat_col, rule_key in STAT_TO_RULE.items():
             if stat_col in df.columns:
                 points += df[stat_col].fillna(0) * rules.get(rule_key, 0)
+                continue
+            alias = LEGACY_STAT_ALIASES.get(stat_col)
+            if alias and alias in df.columns and alias not in used_aliases:
+                points += df[alias].fillna(0) * rules.get(rule_key, 0)
+                used_aliases.add(alias)
         df[f"fantasy_points_{fmt}"] = points
 
     return df
