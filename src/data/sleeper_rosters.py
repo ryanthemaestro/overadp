@@ -102,13 +102,25 @@ def build_override_maps(sleeper: dict) -> tuple[dict[str, str], dict[str, str]]:
     return by_id, by_name
 
 
-def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[tuple[str, str], dict]]:
-    """Return (by_gsis_id, by_normalized_name) maps of the full Sleeper record.
+def _clean_id(value) -> str:
+    """Normalize provider IDs read from JSON, CSV, or nullable DataFrames."""
+    if value is None or pd.isna(value):
+        return ""
+    result = str(value).strip()
+    return result[:-2] if result.endswith(".0") and result[:-2].isdigit() else result
+
+
+def _build_overlay_maps(
+    sleeper: dict,
+) -> tuple[dict[str, dict], dict[str, dict], dict[tuple[str, str], dict]]:
+    """Return GSIS, Sleeper-ID, and normalized-name maps of current players.
+
     Each value carries at least {team, position, status, full_name}. Used both
     for overriding existing rows and synthesizing missing ones."""
     by_id: dict[str, dict] = {}
+    by_sleeper_id: dict[str, dict] = {}
     by_name: dict[tuple[str, str], dict] = {}
-    for _pid, p in sleeper.items():
+    for sleeper_id, p in sleeper.items():
         if not isinstance(p, dict):
             continue
         team = p.get("team")
@@ -119,6 +131,7 @@ def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[tuple[str,
             continue
         full = p.get("full_name") or f"{p.get('first_name', '')} {p.get('last_name', '')}"
         rec = {
+            "sleeper_id": _clean_id(sleeper_id),
             "team": team,
             "position": pos,
             "status": p.get("status"),
@@ -133,11 +146,12 @@ def _build_overlay_maps(sleeper: dict) -> tuple[dict[str, dict], dict[tuple[str,
             continue
         gsis = p.get("gsis_id") or p.get("gsis_player_id")
         if gsis:
-            by_id[str(gsis)] = rec
+            by_id[_clean_id(gsis)] = rec
+        by_sleeper_id[rec["sleeper_id"]] = rec
         key = _normalize_name(full)
         if key:
             by_name[(key, pos)] = rec
-    return by_id, by_name
+    return by_id, by_sleeper_id, by_name
 
 
 def build_sleeper_depth_chart(
@@ -243,6 +257,7 @@ def build_sleeper_depth_chart(
 def apply_sleeper_team_overrides(
     roster_df: pd.DataFrame,
     target_season: int,
+    sleeper: Optional[dict] = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
     """Ensure `roster_df` has correct team assignments for `target_season`.
@@ -259,16 +274,18 @@ def apply_sleeper_team_overrides(
     if "season" not in roster_df.columns or "team" not in roster_df.columns:
         return roster_df
 
-    try:
-        sleeper = fetch_sleeper_players()
-    except Exception as e:
-        if verbose:
-            print(f"  Sleeper override skipped — fetch failed: {e}")
-        return roster_df
+    if sleeper is None:
+        try:
+            sleeper = fetch_sleeper_players()
+        except Exception as e:
+            if verbose:
+                print(f"  Sleeper override skipped — fetch failed: {e}")
+            return roster_df
 
-    by_id, by_name = _build_overlay_maps(sleeper)
+    by_id, by_sleeper_id, by_name = _build_overlay_maps(sleeper)
     if verbose:
         print(f"  Sleeper: {len(by_id):,} players indexed by gsis_id, "
+              f"{len(by_sleeper_id):,} by Sleeper ID, "
               f"{len(by_name):,} by name (QB/RB/WR/TE only)")
 
     df = roster_df.copy()
@@ -277,8 +294,12 @@ def apply_sleeper_team_overrides(
 
     def resolve(row) -> Optional[dict]:
         pid = row.get("player_id")
-        if pid and str(pid) in by_id:
-            return by_id[str(pid)]
+        clean_pid = _clean_id(pid)
+        if clean_pid and clean_pid in by_id:
+            return by_id[clean_pid]
+        sleeper_id = _clean_id(row.get("sleeper_id"))
+        if sleeper_id and sleeper_id in by_sleeper_id:
+            return by_sleeper_id[sleeper_id]
         for name_col in ("player_name", "full_name", "display_name"):
             nm = row.get(name_col)
             if nm:
@@ -291,6 +312,7 @@ def apply_sleeper_team_overrides(
     # ----- Case 1: patch existing rows -----
     trades = 0
     alias_fixes = 0
+    position_fixes = 0
     if existing_count > 0:
         fantasy_mask = existing_mask & df["position"].isin({"QB", "RB", "WR", "TE"})
         if "status" in df.columns:
@@ -304,6 +326,9 @@ def apply_sleeper_team_overrides(
                 continue
             if "status" in df.columns:
                 df.at[idx, "status"] = "ACT"
+            if row.get("position") != hit["position"]:
+                df.at[idx, "position"] = hit["position"]
+                position_fixes += 1
             new_team = hit["team"]
             old_team = row.get("team")
             canon_new = _canonical_team(new_team)
@@ -344,7 +369,7 @@ def apply_sleeper_team_overrides(
             # Prefer first match (latest row is already deduped per player_id)
             name_to_pid.setdefault((key, str(pos).upper()), pid)
 
-    matched_by = {"gsis": 0, "name": 0, "missing": 0}
+    matched_by = {"gsis": 0, "sleeper_id": 0, "name": 0, "missing": 0}
     linked_pids: set[str] = set()  # avoid double-synthesizing via gsis + name
 
     def _emit_synth(pid: str, rec: dict):
@@ -365,7 +390,21 @@ def apply_sleeper_team_overrides(
             _emit_synth(gsis_id, rec)
             matched_by["gsis"] += 1
 
-    # Pass 2: name match for everything else (covers players without GSIS in Sleeper)
+    # Pass 2: Sleeper ID is stable even when a player's public first name or
+    # listed position changes (Kenneth/Kenny, Josh/Joshua, RB/WR hybrids).
+    sleeper_to_pid: dict[str, str] = {}
+    if "sleeper_id" in latest_by_pid.columns:
+        for pid, sleeper_id in zip(latest_by_pid.index.astype(str), latest_by_pid["sleeper_id"]):
+            clean_sleeper_id = _clean_id(sleeper_id)
+            if clean_sleeper_id:
+                sleeper_to_pid.setdefault(clean_sleeper_id, pid)
+    for sleeper_id, rec in by_sleeper_id.items():
+        pid = sleeper_to_pid.get(sleeper_id)
+        if pid and pid not in linked_pids:
+            _emit_synth(pid, rec)
+            matched_by["sleeper_id"] += 1
+
+    # Pass 3: name match for everything else (covers players without provider links)
     for (key, pos), rec in by_name.items():
         pid = name_to_pid.get((key, pos))
         if pid and pid not in linked_pids:
@@ -388,11 +427,67 @@ def apply_sleeper_team_overrides(
         print(f"    existing rows patched : {existing_count}")
         print(f"      trades/moves        : {trades}")
         print(f"      alias normalized    : {alias_fixes}")
+        print(f"      position corrected  : {position_fixes}")
         print(f"    synthesized new rows  : {len(synth_rows)}")
         print(f"      matched via gsis_id : {matched_by['gsis']}")
+        print(f"      matched via sleeper : {matched_by['sleeper_id']}")
         print(f"      matched via name    : {matched_by['name']}")
         print(f"      sleeper w/o nflverse: {matched_by['missing']}")
         total_proj = int((df["season"] == target_season).sum())
         print(f"    total {target_season} roster rows now: {total_proj}")
 
     return df
+
+
+def projection_coverage(
+    projections: pd.DataFrame,
+    sleeper: dict,
+) -> dict:
+    """Measure coverage of reliable current Sleeper depth-chart players."""
+    board_ids = {_clean_id(value) for value in projections.get("player_id", [])}
+    board_sleeper_ids = {
+        _clean_id(value) for value in projections.get("sleeper_id", [])
+    }
+    board_names = {
+        (_normalize_name(row.get("player_name", "")), str(row.get("position") or "").upper())
+        for row in projections.to_dict("records")
+    }
+
+    expected = 0
+    missing: list[dict] = []
+    for sleeper_id, player in sleeper.items():
+        if not isinstance(player, dict):
+            continue
+        position = str(player.get("position") or "").upper()
+        if (
+            player.get("status") != "Active"
+            or not player.get("team")
+            or player.get("depth_chart_order") is None
+            or position not in {"QB", "RB", "WR", "TE"}
+        ):
+            continue
+        expected += 1
+        full_name = player.get("full_name") or (
+            f"{player.get('first_name', '')} {player.get('last_name', '')}"
+        ).strip()
+        gsis_id = _clean_id(player.get("gsis_id") or player.get("gsis_player_id"))
+        clean_sleeper_id = _clean_id(sleeper_id)
+        matched = (
+            (gsis_id and gsis_id in board_ids)
+            or clean_sleeper_id in board_sleeper_ids
+            or (_normalize_name(full_name), position) in board_names
+        )
+        if not matched:
+            missing.append({
+                "sleeper_id": clean_sleeper_id,
+                "player_name": full_name,
+                "position": position,
+                "team": player.get("team"),
+                "depth_chart_order": player.get("depth_chart_order"),
+            })
+
+    return {
+        "expected_active_depth_players": expected,
+        "matched_active_depth_players": expected - len(missing),
+        "missing_active_depth_players": missing,
+    }

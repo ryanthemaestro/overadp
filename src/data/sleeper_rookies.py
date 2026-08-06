@@ -145,6 +145,84 @@ def fetch_sleeper_rookies(
     return df
 
 
+def fetch_sleeper_projection_players(
+    target_season: int,
+    sleeper: Optional[dict] = None,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Return the complete reliable Sleeper projection pool.
+
+    This includes every active QB/RB/WR/TE with a team and current depth-chart
+    slot, plus active rookies who have not received a slot yet. Existing
+    nflverse players are removed later by the projection scaffold; this pool
+    fills genuinely new or provider-unlinked players without requiring a new
+    model training target.
+    """
+    if sleeper is None:
+        try:
+            sleeper = fetch_sleeper_players()
+        except Exception as exc:
+            if verbose:
+                print(f"  Sleeper projection pool skipped — fetch failed: {exc}")
+            return pd.DataFrame()
+
+    today = date.today()
+    rows: list[dict] = []
+    for sleeper_id, player in sleeper.items():
+        if not isinstance(player, dict) or player.get("status") != "Active":
+            continue
+        team = player.get("team")
+        position = str(player.get("position") or "").upper()
+        years_exp = player.get("years_exp")
+        if (
+            not team
+            or position not in FANTASY_POSITIONS
+            or (player.get("depth_chart_order") is None and years_exp not in (None, 0))
+        ):
+            continue
+        full_name = player.get("full_name") or (
+            f"{player.get('first_name', '')} {player.get('last_name', '')}"
+        ).strip()
+        if not full_name:
+            continue
+        metadata = player.get("metadata") if isinstance(player.get("metadata"), dict) else {}
+        try:
+            rookie_year = int(metadata.get("rookie_year"))
+        except (TypeError, ValueError):
+            rookie_year = target_season - int(years_exp or 0)
+        gsis_id = player.get("gsis_id") or player.get("gsis_player_id") or ""
+        rows.append({
+            "player_id": f"SL-{sleeper_id}",
+            "sleeper_id": str(sleeper_id),
+            "gsis_id": str(gsis_id).strip() if gsis_id else "",
+            "player_name": full_name,
+            "first_name": player.get("first_name") or "",
+            "last_name": player.get("last_name") or "",
+            "football_name": full_name,
+            "position": position,
+            "team": team,
+            "college": player.get("college") or "",
+            "age": _age_from_birth_date(player.get("birth_date"), today),
+            "height_in": _parse_height_inches(player.get("height")),
+            "weight_lb": float(player["weight"]) if player.get("weight") else None,
+            "years_exp": int(years_exp or 0),
+            "entry_year": rookie_year,
+            "rookie_year": rookie_year,
+            "depth_chart_order": player.get("depth_chart_order"),
+            "status": "ACT",
+            "season": target_season,
+        })
+
+    result = pd.DataFrame(rows)
+    if verbose:
+        by_position = result.groupby("position").size().to_dict() if not result.empty else {}
+        print(
+            f"  Sleeper projection pool ({target_season}): {len(result)} players "
+            f"[{', '.join(f'{key}:{value}' for key, value in sorted(by_position.items()))}]"
+        )
+    return result
+
+
 def build_rookie_stub_rows(
     target_season: int,
     template_row: pd.Series,

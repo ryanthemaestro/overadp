@@ -220,6 +220,14 @@ def _clean_feature_matrix(X: pd.DataFrame) -> pd.DataFrame:
     return X.replace([np.inf, -np.inf], np.nan).fillna(0)
 
 
+def _provider_id(value) -> str:
+    """Serialize nullable numeric/string provider IDs consistently."""
+    if value is None or pd.isna(value):
+        return ""
+    result = str(value).strip()
+    return result[:-2] if result.endswith(".0") and result[:-2].isdigit() else result
+
+
 class PositionPipeline:
     """Orchestrates per-position model training and prediction.
 
@@ -569,6 +577,7 @@ class PositionPipeline:
 
                 projections.append({
                     "player_id": row.get("player_id", f"player_{i}"),
+                    "sleeper_id": _provider_id(row.get("sleeper_id", "")),
                     "player_name": row.get("player_name") or row.get("football_name") or row.get("player_display_name", ""),
                     "position": pos,
                     "team": row.get("team", ""),
