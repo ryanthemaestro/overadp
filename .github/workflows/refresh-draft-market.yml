@@ -16,25 +16,48 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Check out production
         uses: actions/checkout@v4
         with:
           ref: main
+          path: production
+
+      - name: Check out projection model
+        uses: actions/checkout@v4
+        with:
+          ref: model-experiments
+          path: model
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: model/requirements.txt
+
+      - name: Install projection dependencies
+        run: python -m pip install -r model/requirements.txt
+
+      - name: Rebuild current skill-player projections
+        working-directory: model
+        run: python -m src.api.export_static --seasons 5 --scoring half_ppr
+
+      - name: Validate and stage the model export
+        working-directory: production
+        run: python scripts/import_model_export.py ../model/src/api/static/data
 
       - name: Refresh ADP, rosters, schedule, and K/DEF streaming ranks
+        working-directory: production
         run: python scripts/refresh_market_data.py
 
       - name: Validate release data
+        working-directory: production
         run: python scripts/validate_draft_data.py --max-age-hours 72
 
       - name: Publish changed market data
+        working-directory: production
         run: |
           if git diff --quiet -- site/app/data src/api/static/data; then
             echo "Market data is unchanged."
@@ -43,5 +66,5 @@ jobs:
           git config user.name "overadp-data-bot"
           git config user.email "actions@users.noreply.github.com"
           git add site/app/data src/api/static/data
-          git commit -m "Refresh draft market data $(date -u +%F)"
+          git commit -m "Refresh projections and draft market $(date -u +%F)"
           git push origin HEAD:main

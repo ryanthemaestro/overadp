@@ -99,6 +99,13 @@ def player_key(name: Any, position: Any) -> tuple[str, str]:
     return NAME_ALIASES.get(key, key)
 
 
+def normalize_provider_id(value: Any) -> str:
+    if value is None:
+        return ""
+    result = str(value).strip()
+    return result[:-2] if result.endswith(".0") and result[:-2].isdigit() else result
+
+
 def fetch_json(url: str) -> Any:
     request = urllib.request.Request(
         url,
@@ -352,6 +359,58 @@ def sleeper_indexes(
         key: rows[0] for key, rows in base_candidates.items() if len(rows) == 1
     }
     return by_gsis, unique_names, unique_base_names
+
+
+def active_depth_projection_coverage(
+    players: list[dict[str, Any]],
+    sleeper_payload: Any,
+) -> dict[str, Any]:
+    """Require every reliable active Sleeper depth-chart player on the board."""
+    if not isinstance(sleeper_payload, dict):
+        raise ValueError("Sleeper player feed is not an object")
+    board_ids = {normalize_provider_id(row.get("player_id")) for row in players}
+    board_sleeper_ids = {
+        normalize_provider_id(row.get("sleeper_id")) for row in players
+    }
+    board_names = {
+        player_key(row.get("player_name"), row.get("position")) for row in players
+    }
+
+    expected = 0
+    missing: list[str] = []
+    for sleeper_id, row in sleeper_payload.items():
+        if not isinstance(row, dict):
+            continue
+        position = normalize_position(row.get("position"))
+        if (
+            row.get("status") != "Active"
+            or not row.get("team")
+            or row.get("depth_chart_order") is None
+            or position not in SKILL_POSITIONS
+        ):
+            continue
+        expected += 1
+        full_name = row.get("full_name") or " ".join(
+            part
+            for part in (
+                str(row.get("first_name") or "").strip(),
+                str(row.get("last_name") or "").strip(),
+            )
+            if part
+        )
+        gsis_id = normalize_provider_id(row.get("gsis_id") or row.get("gsis_player_id"))
+        matched = (
+            (gsis_id and gsis_id in board_ids)
+            or normalize_provider_id(sleeper_id) in board_sleeper_ids
+            or player_key(full_name, position) in board_names
+        )
+        if not matched:
+            missing.append(f"{full_name}|{position}")
+    return {
+        "expected_active_depth_players": expected,
+        "matched_active_depth_players": expected - len(missing),
+        "missing_active_depth_players": missing,
+    }
 
 
 def tied_ranks(rows: list[dict[str, Any]], field: str, reverse: bool) -> dict[int, int]:
@@ -663,6 +722,14 @@ def refresh(
 
     ffc_meta, ffc_rows = validate_ffc_payload(ffc_payload, now.date())
     sleeper_gsis, sleeper_names, sleeper_base_names = sleeper_indexes(sleeper_payload)
+    active_coverage = active_depth_projection_coverage(players, sleeper_payload)
+    if active_coverage["missing_active_depth_players"]:
+        raise ValueError(
+            "Active-player projection coverage failed: "
+            f"{active_coverage['matched_active_depth_players']}/"
+            f"{active_coverage['expected_active_depth_players']}; "
+            f"missing={active_coverage['missing_active_depth_players'][:8]}"
+        )
     schedule_contexts = opening_schedule_contexts(schedule_rows)
 
     sleeper_matches = 0
@@ -824,6 +891,9 @@ def refresh(
             "generated_at": prior_model.get("generated_at", MODEL_BASELINE_GENERATED_AT),
             "scoring": "half_ppr",
             "method": "validated CatBoost projections with split-conformal 80% target ranges",
+            "projection_mode": prior_model.get("projection_mode", "catboost"),
+            "skill_players": prior_model.get("skill_players", len(players)),
+            "coverage": prior_model.get("coverage", active_coverage),
         },
         "market": {
             "fetched_at": generated_at,
@@ -901,6 +971,7 @@ def refresh(
             }),
             "bye_team_codes": len(bye_weeks),
             "missing_skill_rows": missing_skill,
+            "active_player_coverage": active_coverage,
         },
     }
 
