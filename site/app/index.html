@@ -134,6 +134,19 @@
     border-radius: 2px;
     padding: 3px 6px;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1;
+  }
+  .data-status::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    flex: 0 0 5px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
   }
   @keyframes pulse-ring {
     0%, 100% { box-shadow: 0 0 8px var(--rb-glow); }
@@ -1242,7 +1255,7 @@
     <div class="logo">
       <div class="icon">Δ</div>
       OverADP
-      <span class="data-status" id="dataStatus" title="Checking draft-market freshness">ADP CHECKING</span>
+      <span class="data-status" id="dataStatus" role="status" aria-live="polite" title="Checking board freshness">BOARD CHECKING</span>
     </div>
     <div class="top-actions">
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
@@ -1918,15 +1931,17 @@ function updateDataStatus(){
   const dateLabel=periodEnd&&!Number.isNaN(periodEnd.getTime())
     ?periodEnd.toLocaleDateString(undefined,{month:'short',day:'numeric'}).toUpperCase()
     :'UNKNOWN';
-  status.textContent=`ADP ${dateLabel}`;
+  status.textContent=`BOARD ${dateLabel}`;
   status.style.color=ageHours<=36?'var(--wr)':ageHours<=72?'var(--te)':'var(--alert)';
   status.style.borderColor=ageHours<=36?'var(--wr)':ageHours<=72?'var(--te)':'var(--alert)';
-  status.title=[
+  const statusDetails=[
     `Market data through ${market.period_end||'unknown'} (${market.drafts||0} drafts)`,
     `Fetched ${market.fetched_at||'unknown'}`,
     `Projection model generated ${model.generated_at||'unknown'}`,
     `${counts.total_players||allPlayers.length||0} board entries`,
   ].join(' · ');
+  status.title=statusDetails;
+  status.setAttribute('aria-label',statusDetails);
   const summary=document.getElementById('dataCoverageSummary');
   if(summary&&counts.skill_players){
     summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
