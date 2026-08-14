@@ -667,6 +667,7 @@ def main():
         "/2026/top-busts/",
         "/methodology/",
         "/support/",
+        "/draft-assistant/",
     ]
     (SITE / "sitemap.xml").write_text(build_sitemap(pages))
     print(f"  wrote /sitemap.xml ({len(pages)+2} URLs)")

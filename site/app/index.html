@@ -8,7 +8,20 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-8GM0JH1DM4');
-  function gaEvent(name, params){ try{ if(typeof gtag==='function') gtag('event', name, params||{}); }catch(e){} }
+  function captureAttribution(){
+    try{
+      const query=new URLSearchParams(window.location.search);
+      const keys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid'];
+      const incoming={};
+      keys.forEach(key=>{const value=query.get(key);if(value)incoming[key]=value.slice(0,120);});
+      if(Object.keys(incoming).length)localStorage.setItem('oa_attribution',JSON.stringify(incoming));
+      return JSON.parse(localStorage.getItem('oa_attribution')||'{}');
+    }catch(e){return {};}
+  }
+  const marketingAttribution=captureAttribution();
+  function gaEvent(name, params){
+    try{if(typeof gtag==='function')gtag('event',name,Object.assign({},marketingAttribution,params||{}));}catch(e){}
+  }
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1261,7 +1274,7 @@
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
       <button class="btn" id="loginBtn" onclick="showAuth()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);">LOG IN</button>
       <button class="btn" id="logoutBtn" onclick="logOut()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);display:none;">LOG OUT</button>
-      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">UNLOCK PRO</button>
+      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">5 FREE PICKS</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
       <button class="btn" id="exportBtn" onclick="exportDraftBoard()" title="Download a draft-day backup CSV">EXPORT</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
@@ -1278,6 +1291,8 @@
     <div class="ticker-stat">OPPONENT <span class="val" id="oppCount">0</span></div>
     <div class="ticker-divider"></div>
     <div class="ticker-stat">ROUND <span class="val wr-c" id="roundNum">1</span></div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-stat">ACCESS <span class="val" id="previewStatus">5 FREE PICKS</span></div>
     <div class="ticker-divider"></div>
     <div class="ticker-stat">QB <span class="val qb-c" id="qbCount">0</span></div>
     <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
@@ -1534,17 +1549,17 @@
       <div class="upgrade-feature">✓ Draft better or your money back</div>
     </div>
     <div style="display:flex;gap:12px;margin:12px 0;">
-      <div style="flex:1;padding:12px;border:1px solid var(--rust);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('season')">
-        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Season Pass</div>
-        <div style="font-size:24px;font-weight:700;color:var(--rb);">$24.99</div>
-        <div style="font-size:10px;color:var(--green);">MOST POPULAR</div>
-        <div style="font-size:10px;color:var(--smoke);">Unlimited drafts, all season</div>
-      </div>
-      <div style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('draft')">
+      <div style="flex:1;padding:12px;border:1px solid var(--rust);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('draft')">
         <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Single Draft</div>
         <div style="font-size:24px;font-weight:700;color:var(--fg);">$6.99</div>
-        <div style="font-size:10px;color:var(--smoke);">&nbsp;</div>
+        <div style="font-size:10px;color:var(--green);">START HERE</div>
         <div style="font-size:10px;color:var(--smoke);">One draft session</div>
+      </div>
+      <div style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('season')">
+        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Season Pass</div>
+        <div style="font-size:24px;font-weight:700;color:var(--rb);">$24.99</div>
+        <div style="font-size:10px;color:var(--smoke);">&nbsp;</div>
+        <div style="font-size:10px;color:var(--smoke);">Unlimited drafts, all season</div>
       </div>
     </div>
     <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
@@ -1609,6 +1624,7 @@ let allPlayers = [];
 let myTeamIds = [];
 let opponentIds = [];
 let recommendedIds = new Set();
+let recommendationViewMilestones = new Set();
 let currentFilter = 'ALL';
 let searchQuery = '';
 let searchFrame = 0;
@@ -1656,12 +1672,13 @@ mobilePanelMedia.addEventListener?.('change',syncMobilePanelA11y);
 // AUTH & PAYWALL
 // ═══════════════════════════════════════
 const API_BASE = '/.netlify/functions';
+const FREE_PICK_LIMIT = 5;
 let currentUser = null;   // { id, email, ... }
 let userPlan = 'free';    // 'free' | 'paid'
 let userPlanType = 'season'; // 'season' | 'draft'
 let isAuthMode = 'register'; // 'register' | 'login'
-// Paywall: free users see names/positions/teams/bye weeks for ALL players
-// Projections, VBD, CI, risk, and DRAFT buttons are gated
+// Free users can make five picks and preview live Target Intel.
+// Full-board projections, VBD, CI, and risk remain paid features.
 // TAKEN is free on all rows (builds investment via IKEA effect)
 // Auth prompted when user tries to DRAFT, not on load
 
@@ -1849,7 +1866,7 @@ async function startCheckout(planType){
   try{
     const res = await fetch(API_BASE+'/stripe-checkout',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season'})
+      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season',attribution:marketingAttribution})
     });
     const data = await res.json();
     if(data.url){window.location.href=data.url;}
@@ -1860,7 +1877,11 @@ async function startCheckout(planType){
 function checkPaymentReturn(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
-    gaEvent('purchase_complete', { source: 'stripe_redirect' });
+    const purchasedPlan=params.get('plan')||'season';
+    const purchaseValue=purchasedPlan==='draft'?6.99:24.99;
+    const transactionId=params.get('session_id')||undefined;
+    gaEvent('purchase_complete',{source:'stripe_redirect',plan_type:purchasedPlan,value:purchaseValue,currency:'USD',transaction_id:transactionId});
+    gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency:'USD',items:[{item_id:`overadp_${purchasedPlan}`,item_name:purchasedPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:purchaseValue,quantity:1}]});
     // Refresh session to get updated plan
     restoreSession().then(()=>{
       if(userPlan==='paid'&&allPlayers.length){
@@ -1873,6 +1894,9 @@ function checkPaymentReturn(){
 
 // Paywall: free users see all names but no projections
 function isPaid(){ return userPlan==='paid'; }
+function hasFreePick(){ return !isPaid()&&myTeamIds.length<FREE_PICK_LIMIT; }
+function canDraftMine(){ return isPaid()||hasFreePick(); }
+function canPreviewIntel(){ return isPaid()||hasFreePick(); }
 function lockStyle(){ return 'color:var(--fg3);font-family:"JetBrains Mono",monospace;font-size:10px;'; }
 
 // Update top bar user status
@@ -1891,11 +1915,13 @@ function updateUserUI(){
     statusEl.style.display='inline';
     statusEl.textContent = currentUser.email;
     upgradeBtn.style.display = 'inline-block';
+    upgradeBtn.textContent = `${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
   } else {
     statusEl.style.display='none';
     upgradeBtn.style.display = 'inline-block';
+    upgradeBtn.textContent = `${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
   }
@@ -2197,13 +2223,13 @@ async function loadData(){
         refreshAll();
       }
     });
-    // No auth gate on load — let users browse the board freely
-    // Auth is prompted when they try to DRAFT (progressive engagement)
+    // No auth gate on load: visitors can browse and make five preview picks.
   }catch(e){hideLoading();alert('ERROR: '+e.message);}
 }
 
 function draftPlayer(pid,team){
   if(team==='mine'){
+    if(!canDraftMine()){showUpgrade();return;}
     if(myTeamIds.includes(pid))return;
     const player=playerMap[pid];
     const constraint=getRosterDraftConstraint(player?.position);
@@ -2217,7 +2243,17 @@ function draftPlayer(pid,team){
     opponentIds.push(pid);
   }
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  if(team==='mine'){
+    const pickCount=myTeamIds.length;
+    gaEvent('draft_pick_recorded',{pick_count:pickCount,preview_user:!isPaid()});
+    if((pickCount===1||pickCount===3)&&!isPaid())gaEvent('free_preview_progress',{pick_count:pickCount});
+    if(pickCount===FREE_PICK_LIMIT&&!isPaid()){
+      gaEvent('free_preview_completed',{pick_count:pickCount});
+      setTimeout(showUpgrade,350);
+    }
+  }
   refreshAll();
+  updateUserUI();
 }
 function undoDraft(pid){
   myTeamIds=myTeamIds.filter(id=>id!==pid);
@@ -2229,7 +2265,9 @@ function resetDraft(){
   if(!confirm('RESET ALL DRAFT PICKS?'))return;
   myTeamIds=[];opponentIds=[];
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  gaEvent('draft_reset',{user_plan:userPlan,user_plan_type:userPlanType});
   refreshAll();
+  updateUserUI();
 }
 
 function csvValue(value){
@@ -2730,13 +2768,15 @@ function renderSpecialTeamsPool(container,players){
   h+=`<tr class="full-span-row"><td colspan="10" style="padding:8px 12px;background:rgba(0,255,106,0.05);border:1px solid rgba(0,255,106,0.15);font-size:11px;color:var(--fg3);text-align:center;">${note}</td></tr>`;
   players.forEach(p=>{
     const paid=isPaid();
-    const isR=paid&&recommendedIds.has(p.player_id);
+    const preview=canPreviewIntel();
+    const canDraft=canDraftMine();
+    const isR=preview&&recommendedIds.has(p.player_id);
     const bye=byeWeeks[p.team]||[];
     const tierColor=streamTierColor(p.stream_tier);
     const adp=Number(p.adp)<200?Number(p.adp).toFixed(1):'UDFA';
-    const draftBtn=paid
-      ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`
-      :`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
+    const draftBtn=canDraft
+      ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':'FREE PICK'}</button>`
+      :`<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
       <td class="name-cell col-player">${p.player_name||p.player_id}<div class="player-sub">${position==='K'?'DEPTH CHART #1':'TEAM UNIT'} · ${p.stream_model_used==='opening_schedule_v1'?'OPENING MODEL':'FALLBACK'}</div><div class="mobile-player-meta">#${p.stream_rank||'—'} · ${p.team||'—'} · BYE ${bye.length?bye.join(','):'—'}</div></td>
@@ -2837,7 +2877,9 @@ function renderPlayerPool(){
   let h=`<table class="pool-table skill-table"><thead><tr><th class="col-board">BOARD</th><th class="col-player">PLAYER</th><th class="col-pos">POS</th><th class="col-team">TEAM</th><th class="col-bye">BYE</th><th class="col-adp">ADP</th><th class="col-value" title="Market ADP minus live model draft slot">VALUE<span class="th-sub">vs ADP</span></th><th class="col-proj">PROJ</th>${vbdHead}<th class="col-range">RANGE</th><th class="col-unc">UNC</th><th class="col-risk">DRAFT RISK</th><th class="col-action">ACTION</th></tr></thead><tbody>`;
   f.forEach((p,i)=>{
     const paid=isPaid();
-    const isR=paid&&recommendedIds.has(p.player_id);
+    const preview=canPreviewIntel();
+    const canDraft=canDraftMine();
+    const isR=preview&&recommendedIds.has(p.player_id);
     const kd=isKD(p);
     const rawAdp=Number(p.adp);
     const adp=Number.isFinite(rawAdp)&&rawAdp>0&&rawAdp<200?rawAdp.toFixed(1):'—';
@@ -2876,10 +2918,10 @@ function renderPlayerPool(){
     const byeStr=bye.length?bye.join(','):('—');
     const byeConflict=paid&&!kd?checkByeConflictForPlayer(p):false;
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
-    const draftBtn=paid?(byeConflict?
+    const draftBtn=canDraft?(byeConflict?
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
-      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`):
-      `<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`;
+      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':'FREE PICK'}</button>`):
+      `<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
       <td class="name-cell col-player">${p.player_name||p.player_id}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}${mobileValue}</div></td>
@@ -2977,15 +3019,15 @@ function renderMyTeam(){
       const overflowStyle=slot.key==='overflow'?' style="color:var(--alert);" title="This pick does not fit the current roster settings. Undo it or add a compatible slot."':'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label"${overflowStyle}>${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(isPaid()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(canPreviewIntel()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
     }
   });
   c.innerHTML=h;
-  const total=isPaid()?getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0):0;
-  document.getElementById('totalPts').textContent=isPaid()?total.toFixed(1):'🔒';
+  const total=canPreviewIntel()?getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0):0;
+  document.getElementById('totalPts').textContent=canPreviewIntel()?total.toFixed(1):'🔒';
 }
 
 function renderOpponentPicks(){
@@ -2999,6 +3041,7 @@ function renderOpponentPicks(){
 
 function renderRecommendations(recs){
   const c=document.getElementById('recommendations');
+  const preview=canPreviewIntel();
   const plan=getRosterPlan();
   const counts=getPositionCounts(myTeamIds);
   const needs=rosterNeeds(counts,plan);
@@ -3034,15 +3077,20 @@ function renderRecommendations(recs){
     c.innerHTML=header+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
     return;
   }
+  const recommendationMilestone=`${isPaid()?'paid':'preview'}:${myTeamIds.length}:${opponentIds.length}`;
+  if(preview&&!recommendationViewMilestones.has(recommendationMilestone)){
+    recommendationViewMilestones.add(recommendationMilestone);
+    gaEvent('recommendation_viewed',{pick_count:myTeamIds.length,opponent_pick_count:opponentIds.length,recommendation_count:recs.length,preview_user:!isPaid()});
+  }
   c.innerHTML=header+recs.map((r,i)=>
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
-      <div class="intel-pts">${isPaid()?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
+      <div class="intel-pts">${preview?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
       <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
-        ${isPaid()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">DRAFT</button>':'<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>'}
+        ${canDraftMine()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">'+(isPaid()?'DRAFT':'FREE PICK')+'</button>':'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>'}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
       </div>
     </div>`
@@ -3057,6 +3105,7 @@ function updateStatus(){
   document.getElementById('myCount').textContent=myTeamP.length;
   document.getElementById('oppCount').textContent=oppP.length;
   document.getElementById('roundNum').textContent=getLiveDraftTiming(getRosterPlan()).round;
+  document.getElementById('previewStatus').textContent=isPaid()?'PRO':`${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
   // Position counts on my team
   const posCounts={};myTeamP.forEach(p=>{const pos=p.position||'?';posCounts[pos]=(posCounts[pos]||0)+1;});
   document.getElementById('qbCount').textContent=posCounts['QB']||0;
@@ -3240,9 +3289,9 @@ function loadSleepers(){
     const gapTxt = gap > 0 ? `+${gap}` : `${gap}`;
     const adpCost = p.adp_cost || formatAdpCost(item.adp);
     const bye = p.team ? (byeWeeks[p.team] || []) : [];
-    const proj = isPaid() && p.projected_points ? `${p.projected_points.toFixed(1)} pts` : isPaid() ? '—' : '🔒';
+    const proj = canPreviewIntel() && p.projected_points ? `${p.projected_points.toFixed(1)} pts` : canPreviewIntel() ? '—' : '🔒';
     const actions = p.player_id ? `<div style="display:flex;gap:4px;margin-top:4px;">
-      ${isPaid()?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">DRAFT</button>`:`<button class="btn btn-sm" onclick="promptDraftAuth()" style="opacity:0.5;">🔒 DRAFT</button>`}
+      ${canDraftMine()?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${isPaid()?'DRAFT':'FREE PICK'}</button>`:`<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`}
       <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
     </div>` : '';
     return `<div style="padding:5px 7px;font-size:10px;border-left:2px solid ${color};margin:2px 0;background:rgba(255,255,255,0.02);">

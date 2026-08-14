@@ -12,7 +12,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { user_id, email, plan_type } = JSON.parse(event.body);
+    const { user_id, email, plan_type, attribution = {} } = JSON.parse(event.body);
 
     if (!user_id || !email) {
       return { statusCode: 400, body: JSON.stringify({ error: 'User ID and email required' }) };
@@ -20,22 +20,29 @@ exports.handler = async (event) => {
 
     const priceId = PRICES[plan_type] || PRICES.season;
 
+    const safePlanType = plan_type === 'draft' ? 'draft' : 'season';
+    const metadata = {
+      user_id,
+      plan_type: safePlanType,
+      season: '2026',
+    };
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid'].forEach((key) => {
+      if (attribution[key]) metadata[key] = String(attribution[key]).slice(0, 120);
+    });
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: email,
+      client_reference_id: user_id,
       line_items: [
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      metadata: {
-        user_id,
-        plan_type: plan_type || 'season',
-        season: '2026',
-      },
-      success_url: `${process.env.SITE_URL}/app/?payment=success`,
+      metadata,
+      success_url: `${process.env.SITE_URL}/app/?payment=success&plan=${safePlanType}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.SITE_URL}/app/?payment=cancel`,
     });
 
