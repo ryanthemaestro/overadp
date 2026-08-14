@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>OverADP Reply Helper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="head">
+    <div class="title"><span class="delta">Δ</span> OverADP Reply Helper</div>
+    <div class="sub">Draft fantasy-football replies with your model.</div>
+  </div>
+
+  <label>
+    Provider
+    <select id="provider">
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="openai">OpenAI</option>
+    </select>
+  </label>
+
+  <label>
+    Model
+    <input id="model" type="text" placeholder="claude-haiku-4-6 or gpt-4o-mini">
+  </label>
+
+  <label>
+    API Key
+    <input id="apiKey" type="password" placeholder="sk-ant-... or sk-...">
+    <div class="hint">Stored locally in chrome.storage.sync. Never sent anywhere except the provider you pick.</div>
+  </label>
+
+  <label>
+    Default tone
+    <select id="tone">
+      <option value="mix">Mix</option>
+      <option value="analyst">Analyst (stats-heavy)</option>
+      <option value="casual">Casual (data receipts)</option>
+    </select>
+  </label>
+
+  <button id="save" class="btn">Save</button>
+  <div id="status" class="status"></div>
+
+  <div class="footer">
+    Scroll X normally. Every tweet gets a "Δ Draft" button next to Like.<br>
+    Click it → pick a draft → paste into X's reply box.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+Negative Keyword,Match Type,Reason
+free,Phrase,Prioritize buyers during the initial paid test
+mock draft,Phrase,Practice intent rather than live-assistant purchase intent
+mock draft simulator,Phrase,Simulator intent
+dynasty,Phrase,Product is positioned for redraft
+auction,Phrase,Auction drafts are not supported
+salary cap,Phrase,Auction intent
+dfs,Phrase,Daily fantasy intent
+betting,Phrase,Sportsbook intent
+odds,Phrase,Sportsbook intent
+prop bets,Phrase,Sportsbook intent
+nfl draft,Phrase,Real NFL Draft intent
+college,Phrase,College/NFL Draft intent
+baseball,Phrase,Wrong sport
+basketball,Phrase,Wrong sport
+soccer,Phrase,Wrong sport
+hockey,Phrase,Wrong sport
+spreadsheet,Phrase,Template intent
+excel,Phrase,Spreadsheet intent
+pdf,Phrase,Printable content intent
+printable,Phrase,Printable content intent
+cheat sheet,Phrase,Static content intent
+jobs,Phrase,Employment intent
+career,Phrase,Employment intent
+login,Phrase,Existing-user support intent
+support,Phrase,Existing-user support intent
+customer service,Phrase,Existing-user support intent
+2025,Exact,Outdated season
+2024,Exact,Outdated season

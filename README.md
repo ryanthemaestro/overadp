@@ -1,12 +1,14 @@
 # OverADP
 
-Machine-learning fantasy football draft assistant with walk-forward validation, uncertainty ranges, and opportunity-cost guidance.
+Roster-aware fantasy football draft assistant with walk-forward validation,
+uncertainty ranges, and live opportunity-cost Target Intel.
 
 **Live site:** [overadp.com](https://overadp.com)
 
 ## Structure
 
 - `/` — Landing page (SEO + conversion)
+- `/draft-assistant/` — Paid-search campaign landing page
 - `/app/` — Draft board application
 - `/app/data/` — Pre-computed projections (JSON)
 
