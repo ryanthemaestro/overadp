@@ -185,6 +185,23 @@ function toggleHubNav(button){
 <h2>7. College + draft capital features for rookies</h2>
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
+<h2 id="draft-simulation">Historical draft-strategy simulation</h2>
+<p>We separately tested the complete Target Intel decision policy against ADP-first drafting. This is not the point-model validation above: it asks whether combining projections with market ADP, roster need, positional value, and next-turn availability produced stronger simulated teams.</p>
+<p>The primary comparison pools <strong>1,000 paired drafts</strong> from the 2023 and 2024 seasons, the two seasons in the dataset with true Fantasy Football Calculator ADP. Each simulation used a 12-team, 15-round, half-PPR league. Real weekly fantasy results scored Weeks 1–14.</p>
+<div class="callout">
+  <h3>The draft-created result</h3>
+  <p>With each team's Week-1 lineup held fixed to isolate the quality of the drafted roster, Target Intel finished the regular season in the top three <strong>50.6%</strong> of the time versus <strong>25.7%</strong> for ADP-first drafting. Target Intel improved average regular-season rank from <strong>6.68 to 4.15</strong> and produced <strong>120.9 more points</strong> on average.</p>
+</div>
+<table class="rank">
+  <thead><tr><th>Draft policy</th><th>Average rank</th><th>Top-three rate</th><th>Average points</th></tr></thead>
+  <tbody>
+    <tr><td class="name">ADP first</td><td>6.68</td><td>25.7%</td><td>1,115.7</td></tr>
+    <tr><td class="name">Target Intel</td><td class="positive">4.15</td><td class="positive">50.6%</td><td class="positive">1,236.7</td></tr>
+    <tr><td class="name"><strong>Difference</strong></td><td class="positive">2.53 places better</td><td class="positive">+24.9 points</td><td class="positive">+120.9</td></tr>
+  </tbody>
+</table>
+<p><strong>Limits:</strong> This is a retrospective exploratory simulation, not an untouched holdout or a causal experiment. It approximates home-league opponents and omits trades, FAAB auctions, kickers, defenses, and explicit injury designations. Actual weekly scoring still reflects player absences. Championship rates did not improve in this test, so the evidence supports stronger drafted rosters and regular-season/top-three outcomes—not guaranteed titles, payouts, or future results.</p>
+
 <h2>The 2024, 2025 walk-forward results</h2>
 <p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. The exact-cohort market check uses true FFC ADP in 2024 but an explicitly labeled ESPN preseason-rank proxy in 2025, so no ADP improvement percentage is published here.</p>
 <table class="rank">
