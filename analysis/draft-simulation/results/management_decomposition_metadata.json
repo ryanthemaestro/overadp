@@ -1,0 +1,12 @@
+{
+  "modes": {
+    "frozen_lineup": "Week-1 lineup selected from preseason projections and never changed; no waivers.",
+    "weekly_lineups": "Weekly start/sit decisions use preseason plus only prior observed results; no waivers.",
+    "lineups_plus_waivers": "Weekly start/sit decisions plus one conservative same-position waiver move per team/week."
+  },
+  "pairing": "Identical season, seed, and draft slot across strategies and management modes.",
+  "primary_evidence": "2023-2024 true Fantasy Football Calculator ADP.",
+  "sensitivity_only": "2025 ESPN preseason-rank proxy.",
+  "episodes_per_strategy_season": 500,
+  "seed": 73
+}

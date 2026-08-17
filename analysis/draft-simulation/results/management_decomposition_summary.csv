@@ -1,0 +1,28 @@
+season,adp_source,true_adp,management_mode,strategy,simulations,avg_regular_rank,first_place_rate,top3_rate,playoff_rate,championship_rate,points
+2023,Fantasy Football Calculator ADP,True,frozen_lineup,adp,500,6.632,0.114,0.264,0.47,0.106,1102.49636
+2023,Fantasy Football Calculator ADP,True,frozen_lineup,model_only,500,6.832,0.014,0.126,0.44,0.012,1118.17228
+2023,Fantasy Football Calculator ADP,True,frozen_lineup,target_intel,500,4.264,0.176,0.488,0.76,0.11,1222.9628400000001
+2023,Fantasy Football Calculator ADP,True,lineups_plus_waivers,adp,500,6.74,0.096,0.28,0.468,0.104,1185.6389199999999
+2023,Fantasy Football Calculator ADP,True,lineups_plus_waivers,model_only,500,8.238,0.01,0.052,0.264,0.02,1145.48044
+2023,Fantasy Football Calculator ADP,True,lineups_plus_waivers,target_intel,500,4.578,0.156,0.436,0.754,0.11,1280.04828
+2023,Fantasy Football Calculator ADP,True,weekly_lineups,adp,500,6.694,0.126,0.262,0.476,0.096,1171.0033600000002
+2023,Fantasy Football Calculator ADP,True,weekly_lineups,model_only,500,8.448,0.002,0.036,0.212,0.012,1126.3821200000002
+2023,Fantasy Football Calculator ADP,True,weekly_lineups,target_intel,500,4.494,0.132,0.43,0.758,0.102,1273.65032
+2024,Fantasy Football Calculator ADP,True,frozen_lineup,adp,500,6.72,0.114,0.25,0.48,0.08,1129.0006799999999
+2024,Fantasy Football Calculator ADP,True,frozen_lineup,model_only,500,2.962,0.296,0.682,0.936,0.01,1303.0611999999999
+2024,Fantasy Football Calculator ADP,True,frozen_lineup,target_intel,500,4.038,0.2,0.524,0.802,0.06,1250.36204
+2024,Fantasy Football Calculator ADP,True,lineups_plus_waivers,adp,500,6.522,0.106,0.276,0.488,0.114,1199.9478000000001
+2024,Fantasy Football Calculator ADP,True,lineups_plus_waivers,model_only,500,3.42,0.218,0.592,0.892,0.026,1352.439
+2024,Fantasy Football Calculator ADP,True,lineups_plus_waivers,target_intel,500,4.428,0.166,0.456,0.762,0.052,1282.07328
+2024,Fantasy Football Calculator ADP,True,weekly_lineups,adp,500,6.148,0.112,0.32,0.536,0.134,1207.64056
+2024,Fantasy Football Calculator ADP,True,weekly_lineups,model_only,500,3.218,0.274,0.63,0.912,0.034,1356.90216
+2024,Fantasy Football Calculator ADP,True,weekly_lineups,target_intel,500,4.168,0.188,0.512,0.784,0.05,1289.5720800000001
+2025,ESPN preseason-rank proxy,False,frozen_lineup,adp,500,5.796,0.108,0.296,0.604,0.11,1186.42836
+2025,ESPN preseason-rank proxy,False,frozen_lineup,model_only,500,5.8,0.072,0.276,0.582,0.054,1182.78268
+2025,ESPN preseason-rank proxy,False,frozen_lineup,target_intel,500,6.03,0.076,0.258,0.56,0.058,1164.6241200000002
+2025,ESPN preseason-rank proxy,False,lineups_plus_waivers,adp,500,5.558,0.11,0.342,0.606,0.108,1220.29776
+2025,ESPN preseason-rank proxy,False,lineups_plus_waivers,model_only,500,6.332,0.07,0.24,0.516,0.048,1176.7908400000001
+2025,ESPN preseason-rank proxy,False,lineups_plus_waivers,target_intel,500,5.548,0.108,0.314,0.634,0.076,1207.80204
+2025,ESPN preseason-rank proxy,False,weekly_lineups,adp,500,5.584,0.098,0.336,0.612,0.122,1236.24444
+2025,ESPN preseason-rank proxy,False,weekly_lineups,model_only,500,7.786,0.034,0.118,0.334,0.018,1144.50756
+2025,ESPN preseason-rank proxy,False,weekly_lineups,target_intel,500,6.142,0.08,0.272,0.54,0.058,1209.54788

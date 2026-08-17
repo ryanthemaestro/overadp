@@ -6,3 +6,6 @@ node_modules
 .env
 .netlify
 marketing/video/.render/
+marketing/video/.voiced-render/
+marketing/video/overadp-adp-vs-model-voiced.mp4
+marketing/video/overadp-echo-reduced-preview.mp4

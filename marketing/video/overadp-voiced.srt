@@ -1,0 +1,34 @@
+1
+00:00:00,200 --> 00:00:07,288
+ADP tells you what the room usually does.
+OverADP tells you who your roster should draft right now.
+
+2
+00:00:07,938 --> 00:00:22,390
+OverADP combines projections, ADP price, value above replacement,
+uncertainty, and roster fit—then recalculates as every pick changes the board.
+
+3
+00:00:23,040 --> 00:00:31,892
+Target Intel identifies the best available target, explains why he fits,
+and flags when a player probably won't make it back.
+
+4
+00:00:32,542 --> 00:00:42,483
+Make your pick, and the recommendation changes with your starter needs,
+positional scarcity, flex path, and next-turn availability.
+
+5
+00:00:43,133 --> 00:00:56,739
+Our study intentionally excluded waivers, trades, lineup changes, and other in-season management.
+We froze the Week One lineup to isolate the quality of the draft itself.
+
+6
+00:00:57,389 --> 00:01:11,861
+Across 1,000 paired historical drafts, Target Intel produced a 50.6% top-three rate,
+versus 25.7% for ADP-first teams—nearly double.
+
+7
+00:01:12,511 --> 00:01:23,355
+That's historical evidence, not a guarantee. Try five roster-aware picks free,
+then unlock your complete draft for just $6.99 at OverADP.com.

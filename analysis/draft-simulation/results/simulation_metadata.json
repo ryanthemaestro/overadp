@@ -1,0 +1,26 @@
+{
+  "league": "12 teams; 1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX, 7 bench; half-PPR",
+  "regular_season": "Weeks 1-14; head-to-head; points tiebreaker",
+  "playoffs": "Top 6; Weeks 15-17; top two seeds receive byes",
+  "management": "Trailing-three-week plus preseason lineups; one conservative same-position waiver per team/week",
+  "draft_guardrails": "No backup QB or TE before Round 10; identical positional caps for every manager",
+  "strategies": [
+    "adp",
+    "target_intel",
+    "model_only"
+  ],
+  "seasons": [
+    2023,
+    2024,
+    2025
+  ],
+  "episodes_per_strategy_season": 500,
+  "seed": 73,
+  "limitations": [
+    "Retrospective exploratory backtest; the strategy was not frozen before these seasons.",
+    "2025 uses an ESPN preseason-rank proxy instead of true market ADP.",
+    "No trades, defenses, kickers, FAAB bids, or explicit injury designations.",
+    "Injuries and absences enter through actual weekly fantasy points.",
+    "Opponent behavior is a noisy ADP-and-roster-need approximation, not observed league drafts."
+  ]
+}

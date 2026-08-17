@@ -1,0 +1,10 @@
+season,adp_source,true_adp,strategy,simulations,avg_regular_rank,first_place_rate,top3_rate,playoff_rate,championship_rate,managed_points,oracle_lineup_points
+2023,Fantasy Football Calculator ADP,True,adp,500,6.74,0.096,0.28,0.468,0.104,1185.6389199999999,1487.72116
+2023,Fantasy Football Calculator ADP,True,model_only,500,8.238,0.01,0.052,0.264,0.02,1145.48044,1478.73384
+2023,Fantasy Football Calculator ADP,True,target_intel,500,4.578,0.156,0.436,0.754,0.11,1280.04828,1563.02524
+2024,Fantasy Football Calculator ADP,True,adp,500,6.522,0.106,0.276,0.488,0.114,1199.9478000000001,1532.8739200000002
+2024,Fantasy Football Calculator ADP,True,model_only,500,3.42,0.218,0.592,0.892,0.026,1352.439,1667.52752
+2024,Fantasy Football Calculator ADP,True,target_intel,500,4.428,0.166,0.456,0.762,0.052,1282.07328,1608.8654000000001
+2025,ESPN preseason-rank proxy,False,adp,500,5.558,0.11,0.342,0.606,0.108,1220.29776,1552.0372
+2025,ESPN preseason-rank proxy,False,model_only,500,6.332,0.07,0.24,0.516,0.048,1176.7908400000001,1466.3383600000002
+2025,ESPN preseason-rank proxy,False,target_intel,500,5.548,0.108,0.314,0.634,0.076,1207.80204,1544.09204

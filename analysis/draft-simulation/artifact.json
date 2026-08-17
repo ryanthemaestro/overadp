@@ -1,0 +1,502 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Can OverADP Draft a Top-Finishing Team?",
+    "description": "A retrospective managed-league simulation against an ADP-first control.",
+    "generatedAt": "2026-08-16T21:26:10.321893+00:00",
+    "sources": [
+      {
+        "id": "historical-simulation",
+        "label": "OverADP historical managed-league simulation",
+        "path": "analysis/draft-simulation/results/simulation_raw.csv",
+        "query": {
+          "description": "Paired historical 12-team snake-draft simulations scored with real weekly half-PPR outcomes.",
+          "engine": "DuckDB",
+          "language": "sql",
+          "sql": "WITH raw AS (SELECT * FROM read_csv_auto('analysis/draft-simulation/results/simulation_raw.csv')), by_strategy AS (SELECT season, adp_source, true_adp, strategy, COUNT(*) AS simulations, AVG(regular_rank) AS avg_regular_rank, AVG(CASE WHEN regular_rank = 1 THEN 1 ELSE 0 END) AS first_place_rate, AVG(CASE WHEN regular_rank <= 3 THEN 1 ELSE 0 END) AS top3_rate, AVG(CAST(made_playoffs AS INTEGER)) AS playoff_rate, AVG(CAST(champion AS INTEGER)) AS championship_rate, AVG(managed_points) AS managed_points FROM raw GROUP BY ALL) SELECT * FROM by_strategy ORDER BY season, strategy",
+          "executed_at": "2026-08-16T21:26:10.321880+00:00",
+          "tables_used": [
+            "snake_draft_boards.parquet",
+            "weekly_stats.parquet",
+            "simulation_raw.csv"
+          ],
+          "filters": [
+            "Primary claim set: 2023 and 2024 true-ADP seasons",
+            "Sensitivity only: 2025 ESPN preseason-rank proxy",
+            "12 teams, 15 rounds, half-PPR, weeks 1-17",
+            "500 paired leagues per strategy-season"
+          ],
+          "metric_definitions": [
+            "Top-three rate: share of simulated teams ranked 1-3 after weeks 1-14 by head-to-head wins, with points as tiebreaker.",
+            "Championship rate: share winning a six-team playoff in weeks 15-17.",
+            "Managed points: half-PPR points from lineups selected using preseason projection and only prior weekly results."
+          ]
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "rank-lift",
+        "description": "Lower average regular-season rank is better; positive lift favors Target Intel.",
+        "dataset": "headline",
+        "sourceId": "historical-simulation",
+        "metrics": [
+          {
+            "label": "Average rank improvement",
+            "field": "avg_rank_lift",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "top3-lift",
+        "description": "Percentage-point difference from ADP across the true-ADP seasons.",
+        "dataset": "headline",
+        "sourceId": "historical-simulation",
+        "metrics": [
+          {
+            "label": "Top-three lift (pp)",
+            "field": "top3_lift_pp",
+            "format": "number",
+            "signed": true
+          }
+        ]
+      },
+      {
+        "id": "playoff-lift",
+        "description": "Percentage-point difference in making the six-team playoff.",
+        "dataset": "headline",
+        "sourceId": "historical-simulation",
+        "metrics": [
+          {
+            "label": "Playoff lift (pp)",
+            "field": "playoff_lift_pp",
+            "format": "number",
+            "signed": true
+          }
+        ]
+      },
+      {
+        "id": "points-lift",
+        "description": "Average managed half-PPR point difference; bootstrap interval is in the findings.",
+        "dataset": "headline",
+        "sourceId": "historical-simulation",
+        "metrics": [
+          {
+            "label": "Managed points vs ADP",
+            "field": "points_lift",
+            "format": "number",
+            "signed": true
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "top3-by-season",
+        "title": "Top-three finish rate by season and strategy",
+        "subtitle": "2025 is separated and labeled because its market ordering is a proxy.",
+        "type": "bar",
+        "intent": "comparison",
+        "question": "How often did each strategy finish in the top three in each historical season?",
+        "rationale": "Grouped bars compare strategies within seasons while keeping the proxy season visible.",
+        "combinationRationale": "Color groups the three drafting strategies within each season.",
+        "dataset": "by-season",
+        "sourceId": "historical-simulation",
+        "encodings": {
+          "x": {
+            "field": "season",
+            "type": "ordinal",
+            "label": "Season"
+          },
+          "y": {
+            "field": "top3_rate",
+            "type": "quantitative",
+            "format": "percent",
+            "label": "Top-three rate"
+          },
+          "color": {
+            "field": "strategy",
+            "type": "nominal",
+            "label": "Strategy"
+          },
+          "tooltip": [
+            {
+              "field": "top3_rate",
+              "format": "percent",
+              "label": "Top-three rate"
+            },
+            {
+              "field": "simulations",
+              "format": "number",
+              "label": "Simulations"
+            },
+            {
+              "field": "adp_source",
+              "type": "text",
+              "label": "Market source"
+            }
+          ]
+        },
+        "valueFormat": "percent",
+        "layout": "full",
+        "legend": {
+          "position": "bottom",
+          "title": "Strategy"
+        }
+      }
+    ],
+    "tables": [
+      {
+        "id": "season-results",
+        "title": "Simulation results by season and strategy",
+        "subtitle": "Primary and proxy evidence are intentionally labeled separately.",
+        "dataset": "table-results",
+        "sourceId": "historical-simulation",
+        "defaultSort": {
+          "field": "season",
+          "direction": "asc"
+        },
+        "density": "dense",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "season",
+            "label": "Season",
+            "format": "number"
+          },
+          {
+            "field": "evidence",
+            "label": "Evidence",
+            "type": "text"
+          },
+          {
+            "field": "strategy",
+            "label": "Strategy",
+            "type": "text"
+          },
+          {
+            "field": "average_rank",
+            "label": "Avg rank",
+            "format": "number"
+          },
+          {
+            "field": "top3_rate",
+            "label": "Top 3",
+            "format": "percent"
+          },
+          {
+            "field": "playoff_rate",
+            "label": "Playoffs",
+            "format": "percent"
+          },
+          {
+            "field": "championship_rate",
+            "label": "Champion",
+            "format": "percent"
+          },
+          {
+            "field": "managed_points",
+            "label": "Managed pts",
+            "format": "number"
+          },
+          {
+            "field": "simulations",
+            "label": "N",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# Can OverADP Draft a Top-Finishing Team?\n\nA retrospective managed-league simulation against an ADP-first control."
+      },
+      {
+        "id": "answer",
+        "type": "markdown",
+        "sourceId": "historical-simulation",
+        "body": "## Answer\n\nAcross the 2023\u20132024 true-ADP simulations, Target Intel improved average regular-season rank by **2.13 places** and added **16.8 percentage points** to the top-three rate versus ADP-first drafting. That is encouraging evidence for the combined decision system\u2014not for model rankings in isolation\u2014and it is not a guarantee of a top finish."
+      },
+      {
+        "id": "headline-metrics",
+        "type": "metric-strip",
+        "cardIds": [
+          "rank-lift",
+          "top3-lift",
+          "playoff-lift",
+          "points-lift"
+        ]
+      },
+      {
+        "id": "what-won",
+        "type": "markdown",
+        "sourceId": "historical-simulation",
+        "body": "## What actually won\n\nThe strongest policy did not blindly draft the model's highest projection. It anchored to market ADP, then overrode the market when projected value, roster need, positional scarcity, and the chance a player would disappear before the next pick aligned. It averaged **88.3 more managed half-PPR points** than ADP (paired bootstrap 95% interval **79.5 to 97.2**)."
+      },
+      {
+        "id": "chart-block",
+        "type": "chart",
+        "chartId": "top3-by-season",
+        "layout": "full"
+      },
+      {
+        "id": "why-it-matters",
+        "type": "markdown",
+        "sourceId": "historical-simulation",
+        "body": "## Product implication\n\nThe simple benefit is: **ADP tells you who the room is drafting; OverADP helps decide who your roster should draft now and who can wait.** The simulation supports explaining OverADP as a decision layer on top of ADP. It does not support saying the raw model alone beats ADP or guarantees championships."
+      },
+      {
+        "id": "table-block",
+        "type": "table",
+        "tableId": "season-results",
+        "layout": "full"
+      },
+      {
+        "id": "method",
+        "type": "markdown",
+        "sourceId": "historical-simulation",
+        "body": "## Method\n\nEach strategy entered 500 paired 12-team, 15-round snake drafts per season. Opponents used noisy ADP plus roster need, never OverADP projections. All teams then used the same trailing-information lineup logic and one conservative same-position waiver move per week. Weeks 1\u201314 determined standings; a six-team playoff ran in Weeks 15\u201317. Real weekly half-PPR results carried injuries, missed games, and breakouts into scoring."
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "body": "## Caveats\n\nThis is a retrospective exploratory backtest, so the strategy was not frozen before the evaluated seasons. The opponent field approximates home leagues rather than replaying observed drafts. The simulation omits trades, kickers, defenses, FAAB bidding, and explicit injury designations. The 2025 result is sensitivity evidence only because it uses an ESPN preseason-rank proxy instead of true ADP. These limits make the work useful for product direction and copy discipline, but not sufficient for a causal or guaranteed-performance advertising claim."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-16T21:26:10.321893+00:00",
+    "status": "ready",
+    "datasets": {
+      "headline": [
+        {
+          "avg_rank_lift": 2.13,
+          "top3_lift_pp": 16.8,
+          "playoff_lift_pp": 28.0,
+          "title_lift_pp": -2.8,
+          "points_lift": 88.3
+        }
+      ],
+      "by-season": [
+        {
+          "season": "2023",
+          "strategy": "Adp",
+          "top3_rate": 0.28,
+          "first_place_rate": 0.096,
+          "playoff_rate": 0.468,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2023",
+          "strategy": "Model Only",
+          "top3_rate": 0.052,
+          "first_place_rate": 0.01,
+          "playoff_rate": 0.264,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2023",
+          "strategy": "Target Intel",
+          "top3_rate": 0.436,
+          "first_place_rate": 0.156,
+          "playoff_rate": 0.754,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2024",
+          "strategy": "Adp",
+          "top3_rate": 0.276,
+          "first_place_rate": 0.106,
+          "playoff_rate": 0.488,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2024",
+          "strategy": "Model Only",
+          "top3_rate": 0.592,
+          "first_place_rate": 0.218,
+          "playoff_rate": 0.892,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2024",
+          "strategy": "Target Intel",
+          "top3_rate": 0.456,
+          "first_place_rate": 0.166,
+          "playoff_rate": 0.762,
+          "simulations": 500,
+          "adp_source": "Fantasy Football Calculator ADP"
+        },
+        {
+          "season": "2025 proxy",
+          "strategy": "Adp",
+          "top3_rate": 0.342,
+          "first_place_rate": 0.11,
+          "playoff_rate": 0.606,
+          "simulations": 500,
+          "adp_source": "ESPN preseason-rank proxy"
+        },
+        {
+          "season": "2025 proxy",
+          "strategy": "Model Only",
+          "top3_rate": 0.24,
+          "first_place_rate": 0.07,
+          "playoff_rate": 0.516,
+          "simulations": 500,
+          "adp_source": "ESPN preseason-rank proxy"
+        },
+        {
+          "season": "2025 proxy",
+          "strategy": "Target Intel",
+          "top3_rate": 0.314,
+          "first_place_rate": 0.108,
+          "playoff_rate": 0.634,
+          "simulations": 500,
+          "adp_source": "ESPN preseason-rank proxy"
+        }
+      ],
+      "table-results": [
+        {
+          "season": 2023,
+          "evidence": "Primary",
+          "strategy": "Adp",
+          "average_rank": 6.74,
+          "top3_rate": 0.28,
+          "playoff_rate": 0.468,
+          "championship_rate": 0.104,
+          "managed_points": 1185.6,
+          "simulations": 500
+        },
+        {
+          "season": 2023,
+          "evidence": "Primary",
+          "strategy": "Model Only",
+          "average_rank": 8.24,
+          "top3_rate": 0.052,
+          "playoff_rate": 0.264,
+          "championship_rate": 0.02,
+          "managed_points": 1145.5,
+          "simulations": 500
+        },
+        {
+          "season": 2023,
+          "evidence": "Primary",
+          "strategy": "Target Intel",
+          "average_rank": 4.58,
+          "top3_rate": 0.436,
+          "playoff_rate": 0.754,
+          "championship_rate": 0.11,
+          "managed_points": 1280.0,
+          "simulations": 500
+        },
+        {
+          "season": 2024,
+          "evidence": "Primary",
+          "strategy": "Adp",
+          "average_rank": 6.52,
+          "top3_rate": 0.276,
+          "playoff_rate": 0.488,
+          "championship_rate": 0.114,
+          "managed_points": 1199.9,
+          "simulations": 500
+        },
+        {
+          "season": 2024,
+          "evidence": "Primary",
+          "strategy": "Model Only",
+          "average_rank": 3.42,
+          "top3_rate": 0.592,
+          "playoff_rate": 0.892,
+          "championship_rate": 0.026,
+          "managed_points": 1352.4,
+          "simulations": 500
+        },
+        {
+          "season": 2024,
+          "evidence": "Primary",
+          "strategy": "Target Intel",
+          "average_rank": 4.43,
+          "top3_rate": 0.456,
+          "playoff_rate": 0.762,
+          "championship_rate": 0.052,
+          "managed_points": 1282.1,
+          "simulations": 500
+        },
+        {
+          "season": 2025,
+          "evidence": "Proxy sensitivity",
+          "strategy": "Adp",
+          "average_rank": 5.56,
+          "top3_rate": 0.342,
+          "playoff_rate": 0.606,
+          "championship_rate": 0.108,
+          "managed_points": 1220.3,
+          "simulations": 500
+        },
+        {
+          "season": 2025,
+          "evidence": "Proxy sensitivity",
+          "strategy": "Model Only",
+          "average_rank": 6.33,
+          "top3_rate": 0.24,
+          "playoff_rate": 0.516,
+          "championship_rate": 0.048,
+          "managed_points": 1176.8,
+          "simulations": 500
+        },
+        {
+          "season": 2025,
+          "evidence": "Proxy sensitivity",
+          "strategy": "Target Intel",
+          "average_rank": 5.55,
+          "top3_rate": 0.314,
+          "playoff_rate": 0.634,
+          "championship_rate": 0.076,
+          "managed_points": 1207.8,
+          "simulations": 500
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "historical-simulation",
+      "label": "OverADP historical managed-league simulation",
+      "path": "analysis/draft-simulation/results/simulation_raw.csv",
+      "query": {
+        "description": "Paired historical 12-team snake-draft simulations scored with real weekly half-PPR outcomes.",
+        "engine": "DuckDB",
+        "language": "sql",
+        "sql": "WITH raw AS (SELECT * FROM read_csv_auto('analysis/draft-simulation/results/simulation_raw.csv')), by_strategy AS (SELECT season, adp_source, true_adp, strategy, COUNT(*) AS simulations, AVG(regular_rank) AS avg_regular_rank, AVG(CASE WHEN regular_rank = 1 THEN 1 ELSE 0 END) AS first_place_rate, AVG(CASE WHEN regular_rank <= 3 THEN 1 ELSE 0 END) AS top3_rate, AVG(CAST(made_playoffs AS INTEGER)) AS playoff_rate, AVG(CAST(champion AS INTEGER)) AS championship_rate, AVG(managed_points) AS managed_points FROM raw GROUP BY ALL) SELECT * FROM by_strategy ORDER BY season, strategy",
+        "executed_at": "2026-08-16T21:26:10.321880+00:00",
+        "tables_used": [
+          "snake_draft_boards.parquet",
+          "weekly_stats.parquet",
+          "simulation_raw.csv"
+        ],
+        "filters": [
+          "Primary claim set: 2023 and 2024 true-ADP seasons",
+          "Sensitivity only: 2025 ESPN preseason-rank proxy",
+          "12 teams, 15 rounds, half-PPR, weeks 1-17",
+          "500 paired leagues per strategy-season"
+        ],
+        "metric_definitions": [
+          "Top-three rate: share of simulated teams ranked 1-3 after weeks 1-14 by head-to-head wins, with points as tiebreaker.",
+          "Championship rate: share winning a six-team playoff in weeks 15-17.",
+          "Managed points: half-PPR points from lineups selected using preseason projection and only prior weekly results."
+        ]
+      }
+    }
+  ]
+}

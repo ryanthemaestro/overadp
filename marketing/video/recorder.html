@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OverADP Voiceover Recorder</title>
+  <style>
+    :root{--bg:#05090c;--panel:#0b1217;--line:#21313a;--text:#f2f7f8;--muted:#91a1aa;--green:#00ef7b;--red:#ff4d5f}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#10231b 0,var(--bg) 35%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;min-height:100vh}
+    main{width:min(1040px,calc(100% - 32px));margin:0 auto;padding:28px 0 60px}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:18px}.logo{font:800 18px ui-monospace,monospace;letter-spacing:.18em}.logo span{color:var(--green)}.progress{color:var(--muted);font:700 13px ui-monospace,monospace;letter-spacing:.08em}
+    .setup,.card,.controls{border:1px solid var(--line);background:rgba(11,18,23,.94);border-radius:14px}.setup{margin-top:22px;padding:18px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end}.setup label{display:grid;gap:8px;color:var(--muted);font-size:13px}.setup select{width:100%;background:#071015;border:1px solid #36505d;color:var(--text);border-radius:8px;padding:12px;font-size:15px}.small{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0}.card{margin-top:22px;padding:clamp(24px,6vw,70px);min-height:440px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}.card:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 49.8%,rgba(0,239,123,.04) 50%,transparent 50.2%);pointer-events:none}.eyebrow{color:var(--green);font:800 13px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}.script{font-size:clamp(30px,4.5vw,56px);line-height:1.22;letter-spacing:-.035em;margin:26px 0}.direction{color:var(--muted);font-size:15px}.controls{margin-top:18px;padding:18px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.controls button,.setup button{border:1px solid #38515e;background:#0b171e;color:var(--text);border-radius:8px;padding:12px 17px;font-weight:800;cursor:pointer}.controls button:hover,.setup button:hover{border-color:var(--green)}button.primary{background:var(--green);border-color:var(--green);color:#04100a}button.danger{background:var(--red);border-color:var(--red);color:white}button:disabled{opacity:.35;cursor:not-allowed}.timer{margin-left:auto;font:800 25px ui-monospace,monospace;color:var(--green)}audio{width:100%;margin-top:14px}.status{padding:12px 0;color:var(--muted);font-size:14px}.recording .timer{color:var(--red);animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.5}}.claim{margin-top:18px;border-left:3px solid var(--green);padding:12px 16px;color:var(--muted);background:rgba(0,239,123,.04);font-size:14px;line-height:1.55}.claim strong{color:var(--text)}
+    @media(max-width:640px){main{width:min(100% - 20px,1040px);padding-top:14px}.setup{grid-template-columns:1fr}.card{min-height:440px}.script{font-size:32px}.timer{width:100%;margin:4px 0 0}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="top"><div class="logo">OVER<span>ADP</span> VOICEOVER</div><div id="progress" class="progress"></div></div>
+
+  <section class="setup">
+    <div><label for="mic">Microphone<select id="mic"><option value="">Press Enable microphone first</option></select></label><p class="small">Connect your AirPods and select them here. Record naturally; the video will be timed to your voice.</p></div>
+    <button id="enable" class="primary">Enable microphone</button>
+  </section>
+
+  <section class="card" id="card">
+    <div id="eyebrow" class="eyebrow"></div>
+    <div id="script" class="script"></div>
+    <div id="direction" class="direction"></div>
+  </section>
+
+  <section class="controls">
+    <button id="prev">← Previous</button>
+    <button id="record" class="primary" disabled>● Record</button>
+    <button id="stop" class="danger" disabled>■ Stop</button>
+    <button id="download" disabled>Download this take</button>
+    <button id="next">Next →</button>
+    <span id="timer" class="timer">00:00.0</span>
+    <audio id="playback" controls hidden></audio>
+  </section>
+  <div id="status" class="status">Enable the microphone, then record the room-tone card first.</div>
+  <div class="claim"><strong>Study language:</strong> Target Intel's top-three rate was 50.6% versus 25.7% for ADP first—a 24.9 percentage-point lift and approximately 97% relative improvement. “Nearly double” is the strongest clear wording. The frozen Week 1 lineup excluded waivers, trades, start/sit changes and other in-season management to isolate draft quality.</div>
+</main>
+<script>
+const segments=[
+  {file:'00-room-tone',label:'Room tone · 5 seconds',text:'Stay completely silent for five seconds.',note:'This gives us clean background sound for the audio edit.'},
+  {file:'01-intro',label:'Scene 1 · Intro',text:'ADP tells you what the room usually does. OverADP tells you who your roster should draft right now.',note:'Confident, conversational. Pause briefly after the first sentence.'},
+  {file:'02-mechanism',label:'Scene 2 · How it works',text:'OverADP combines projections, ADP price, value above replacement, uncertainty, and roster fit—then recalculates as every pick changes the board.',note:'Keep this smooth; do not rush the list.'},
+  {file:'03-target-intel',label:'Scene 3 · Target Intel',text:'Target Intel identifies the best available target, explains why he fits, and flags when a player probably won’t make it back.',note:'Put a little emphasis on “won’t make it back.”'},
+  {file:'04-live-update',label:'Scene 4 · Live update',text:'Make your pick, and the recommendation changes with your starter needs, positional scarcity, flex path, and next-turn availability.',note:'Slight emphasis on “the recommendation changes.”'},
+  {file:'05-study-scope',label:'Scene 5 · What the study isolated',text:'Our study intentionally excluded waivers, trades, lineup changes, and other in-season management. We froze the Week One lineup to isolate the quality of the draft itself.',note:'Clear and factual—this is an important credibility line.'},
+  {file:'06-result',label:'Scene 6 · Historical result',text:'Across one thousand paired historical drafts, Target Intel produced a 50.6 percent top-three regular-season rate, versus 25.7 percent for ADP-first teams—nearly double.',note:'Say “fifty point six” and “twenty-five point seven.” Land firmly on “nearly double.”'},
+  {file:'07-offer',label:'Scene 7 · Offer',text:'That’s historical evidence, not a guarantee. Try five roster-aware picks free, then unlock your complete draft for just $6.99 at OverADP dot com.',note:'Warm, direct sales close. Say “six ninety-nine.”'}
+];
+let index=0,stream=null,recorder=null,chunks=[],blob=null,timerHandle=null,startedAt=0;
+const $=id=>document.getElementById(id),mic=$('mic'),enable=$('enable'),record=$('record'),stop=$('stop'),download=$('download'),playback=$('playback'),status=$('status'),timer=$('timer'),card=$('card');
+function show(){const s=segments[index];$('progress').textContent=`${index+1} / ${segments.length}`;$('eyebrow').textContent=s.label;$('script').textContent=s.text;$('direction').textContent=s.note;$('prev').disabled=index===0;$('next').disabled=index===segments.length-1;blob=null;download.disabled=true;playback.hidden=true;playback.removeAttribute('src');status.textContent=stream?'Ready to record this card.':'Enable the microphone, then record the room-tone card first.';}
+function format(ms){const total=ms/1000,min=Math.floor(total/60),sec=Math.floor(total%60),tenths=Math.floor((ms%1000)/100);return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${tenths}`;}
+async function listMics(selected=''){const devices=await navigator.mediaDevices.enumerateDevices();const inputs=devices.filter(d=>d.kind==='audioinput');mic.innerHTML=inputs.map((d,i)=>`<option value="${d.deviceId}">${d.label||`Microphone ${i+1}`}</option>`).join('');if(selected&&inputs.some(d=>d.deviceId===selected))mic.value=selected;}
+async function getStream(){
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone recording is unavailable on this page. Open it in Chrome, Vivaldi, Edge, or Firefox on this computer.');
+  const requestedDevice=mic.value;
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  const audioConstraints={echoCancellation:false,noiseSuppression:false,autoGainControl:false};
+  if(requestedDevice)audioConstraints.deviceId={exact:requestedDevice};
+  stream=await navigator.mediaDevices.getUserMedia({audio:audioConstraints});
+  await listMics(requestedDevice);
+  record.disabled=false;
+  status.textContent='Microphone ready. Make sure AirPods are selected, then press Record.';
+}
+enable.onclick=async()=>{enable.disabled=true;status.textContent='Requesting microphone permission…';try{await getStream();enable.textContent='Microphone enabled';}catch(err){enable.disabled=false;status.textContent=`Microphone access failed: ${err.name||'Error'} — ${err.message}`;console.error(err);}};
+mic.onchange=async()=>{if(stream)await getStream();};
+record.onclick=()=>{chunks=[];blob=null;const options=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?{mimeType:'audio/webm;codecs=opus',audioBitsPerSecond:128000}:{};recorder=new MediaRecorder(stream,options);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});playback.src=URL.createObjectURL(blob);playback.hidden=false;download.disabled=false;status.textContent='Take captured. Listen back, download it, or record again.';};recorder.start();startedAt=performance.now();timer.textContent='00:00.0';timerHandle=setInterval(()=>timer.textContent=format(performance.now()-startedAt),100);record.disabled=true;stop.disabled=false;card.classList.add('recording');status.textContent='Recording…';};
+stop.onclick=()=>{recorder.stop();clearInterval(timerHandle);record.disabled=false;stop.disabled=true;card.classList.remove('recording');};
+download.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${segments[index].file}.webm`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+$('prev').onclick=()=>{if(index>0){index--;show();}};$('next').onclick=()=>{if(index<segments.length-1){index++;show();}};
+show();
+window.addEventListener('error',event=>{status.textContent=`Recorder error: ${event.message}`;});
+</script>
+</body>
+</html>
