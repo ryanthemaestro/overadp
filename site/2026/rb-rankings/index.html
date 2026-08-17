@@ -12,17 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 Fantasy Football RB Rankings — Walk-Forward Validated Projections | OverADP</title>
-<meta name="description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 38.77; R²: 0.61. Updated July 2026.">
+<meta name="description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 42.97; R²: 0.51. Updated August 2026.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/2026/rb-rankings/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="2026 Fantasy Football RB Rankings — Walk-Forward Validated Projections | OverADP">
-<meta property="og:description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 38.77; R²: 0.61. Updated July 2026.">
+<meta property="og:description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 42.97; R²: 0.51. Updated August 2026.">
 <meta property="og:url" content="https://overadp.com/2026/rb-rankings/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="2026 Fantasy Football RB Rankings — Walk-Forward Validated Projections | OverADP">
-<meta name="twitter:description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 38.77; R²: 0.61. Updated July 2026.">
+<meta name="twitter:description" content="Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 42.97; R²: 0.51. Updated August 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -98,6 +98,48 @@ table.rank td.warn{color:var(--amber);}
 .related-hubs{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
 .related-hubs a{display:inline-block;padding:8px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg2);text-decoration:none;transition:all 0.2s;}
 .related-hubs a:hover{border-color:var(--green);color:var(--green);}
+.answer-block{padding:22px 24px;margin:28px 0;background:linear-gradient(160deg,rgba(0,255,106,.075),var(--bg3));border:1px solid rgba(0,255,106,.25);border-left:4px solid var(--green);border-radius:3px;max-width:900px;}
+.answer-block .answer-label{display:block;margin-bottom:8px;color:var(--green);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;}
+.answer-block p{margin:0;color:var(--fg);font-size:17px;}
+.byline{display:flex;flex-wrap:wrap;gap:8px 18px;margin:18px 0 28px;color:var(--fg3);font-family:var(--mono);font-size:11px;}
+.compare-tool{margin:34px 0;padding:28px;background:var(--bg3);border:1px solid rgba(0,255,106,.22);border-radius:4px;}
+.compare-selects{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:end;}
+.compare-selects label{display:block;color:var(--fg2);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.compare-selects select{width:100%;min-height:48px;margin-top:7px;padding:0 12px;background:var(--bg);border:1px solid var(--fg3);border-radius:3px;color:var(--fg);font:14px var(--body);}
+.compare-vs{padding-bottom:14px;color:var(--green);font:700 12px var(--mono);}
+.compare-result{display:none;margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);}
+.compare-result.active{display:block;}
+.verdict-line{font-family:var(--display);font-size:clamp(24px,4vw,38px);font-weight:700;line-height:1.15;color:var(--fg);}
+.verdict-line span{color:var(--green);}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;}
+.player-panel{padding:20px;background:var(--bg);border:1px solid rgba(255,255,255,.08);border-radius:3px;}
+.player-panel.winner{border-color:var(--green);box-shadow:0 0 24px rgba(0,255,106,.08);}
+.player-panel h3{margin:0 0 4px;}
+.player-meta{color:var(--fg3);font:11px var(--mono);}
+.metric-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:14px;}
+.metric-row strong{font-family:var(--mono);}
+.evidence-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0;}
+.evidence-card{padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);border-radius:3px;}
+.evidence-card.primary{border-color:rgba(0,255,106,.35);background:linear-gradient(160deg,rgba(0,255,106,.07),var(--bg3));}
+.evidence-number{color:var(--green);font:700 clamp(30px,4vw,46px) var(--display);line-height:1;}
+.evidence-label{margin-top:10px;color:var(--fg2);font-size:14px;line-height:1.45;}
+.bar-compare{margin:30px 0;padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);}
+.bar-row{display:grid;grid-template-columns:130px 1fr 58px;gap:12px;align-items:center;margin:16px 0;}
+.bar-label{color:var(--fg2);font:12px var(--mono);}
+.bar-track{height:18px;background:var(--bg);border-radius:999px;overflow:hidden;}
+.bar-fill{display:block;height:100%;background:#66737d;border-radius:inherit;}
+.bar-fill.green{background:var(--green);}
+.bar-value{font:700 14px var(--mono);text-align:right;}
+.research-table{width:100%;border-collapse:collapse;margin:26px 0;font-size:14px;}
+.research-table th,.research-table td{padding:13px 12px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;}
+.research-table th{color:var(--fg3);font:10px var(--mono);letter-spacing:1px;text-transform:uppercase;background:var(--bg3);}
+.research-table td{color:var(--fg2);}
+.research-table td strong{color:var(--green);}
+.fine-print{color:var(--fg3);font-size:12px;line-height:1.6;}
+.faq-list details{padding:18px 0;border-top:1px solid rgba(255,255,255,.08);}
+.faq-list details:last-child{border-bottom:1px solid rgba(255,255,255,.08);}
+.faq-list summary{cursor:pointer;color:var(--fg);font-weight:600;}
+.faq-list details p{margin:10px 0 0;}
 footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
 footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
 footer a:hover{color:var(--green);}
@@ -112,6 +154,8 @@ footer a:hover{color:var(--green);}
   nav .links a:last-child{color:var(--green);}
   main{padding-top:36px;}
   table.rank{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
+  .compare-selects{grid-template-columns:1fr;}.compare-vs{padding:0;text-align:center;}.comparison-grid,.evidence-grid{grid-template-columns:1fr;}.compare-tool{padding:20px 16px;}.bar-row{grid-template-columns:92px 1fr 48px;gap:8px;}
+  .research-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
 </style>
 <script type="application/ld+json">
@@ -119,11 +163,11 @@ footer a:hover{color:var(--green);}
   "@context":"https://schema.org",
   "@type":"Article",
   "headline":"2026 Fantasy Football RB Rankings — Walk-Forward Validated Projections | OverADP",
-  "description":"Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 38.77; R²: 0.61. Updated July 2026.",
+  "description":"Top 50 2026 fantasy football RB rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 42.97; R²: 0.51. Updated August 2026.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
   "datePublished":"2026-07-20",
-  "dateModified":"2026-07-20",
+  "dateModified":"2026-08-17",
   "mainEntityOfPage":"https://overadp.com/2026/rb-rankings/"
 }
 </script>
@@ -135,6 +179,8 @@ footer a:hover{color:var(--green);}
   <div class="links" id="hub-nav-links">
     <a href="/2026/top-sleepers/">Sleepers</a>
     <a href="/2026/top-busts/">Busts</a>
+    <a href="/2026/who-should-i-draft/">Who to Draft</a>
+    <a href="/2026/adp-vs-model/">ADP Study</a>
     <a href="/2026/qb-rankings/">QB</a>
     <a href="/2026/rb-rankings/">RB</a>
     <a href="/2026/wr-rankings/">WR</a>
@@ -156,15 +202,17 @@ function toggleHubNav(button){
 <div class="section-tag">2026 RB Rankings</div>
 <h1>2026 Fantasy <span class="accent">RB Rankings</span></h1>
 <p class="lead">The top 50 RBs for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
+<div class="answer-block"><span class="answer-label">Quick answer</span><p>These rankings order 2026 RBs by OverADP's position-specific point model, then show current ADP and uncertainty beside every player. Use the projection as an independent estimate, the range as risk context, and ADP as market price—not as three interchangeable rankings.</p></div>
+<div class="byline"><span>By OverADP Research</span><span>Updated August 17, 2026</span><span>Half-PPR</span></div>
 
 <div class="meta-strip">
   <span>📊 Model: <strong>position-specific CatBoost + split CQR</strong></span>
   <span>🎯 Point-model tests: <strong>2024 and 2025</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🔄 Updated: <strong>July 20, 2026</strong></span>
+  <span>🔄 Updated: <strong>August 17, 2026</strong></span>
 </div>
 
-<p>Running-back projections account for committee usage, prior workload, current depth context, injury history, and teammate competition. Across the 2024-2025 test folds, RB posted <strong>38.77 MAE</strong> and <strong>0.61 R²</strong> over 269 player-season predictions.</p>
+<p>Running-back projections account for committee usage, prior workload, current depth context, injury history, and teammate competition. Across the 2024-2025 test folds, RB posted <strong>42.97 MAE</strong> and <strong>0.51 R²</strong> over 269 player-season predictions.</p>
 
 
 <table class="rank">
@@ -184,449 +232,449 @@ function toggleHubNav(button){
   <td class="rank">RB1</td>
   <td class="name">Bijan Robinson</td>
   <td>ATL</td>
-  <td>317.7</td>
-  <td style="color:var(--fg3);">259–376</td>
+  <td>282.3</td>
+  <td style="color:var(--fg3);">228–337</td>
   <td>2</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB2</td>
-  <td class="name">James Cook</td>
-  <td>BUF</td>
-  <td>297.3</td>
-  <td style="color:var(--fg3);">224–370</td>
-  <td>10</td>
+  <td class="name">De'Von Achane</td>
+  <td>MIA</td>
+  <td>260.8</td>
+  <td style="color:var(--fg3);">191–331</td>
+  <td>12</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB3</td>
-  <td class="name">De'Von Achane</td>
-  <td>MIA</td>
-  <td>277.8</td>
-  <td style="color:var(--fg3);">223–333</td>
-  <td>10</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">RB4</td>
   <td class="name">Jahmyr Gibbs</td>
   <td>DET</td>
-  <td>272.3</td>
-  <td style="color:var(--fg3);">220–325</td>
+  <td>259.0</td>
+  <td style="color:var(--fg3);">185–333</td>
   <td>2</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
+  <td class="rank">RB4</td>
+  <td class="name">James Cook</td>
+  <td>BUF</td>
+  <td>254.6</td>
+  <td style="color:var(--fg3);">174–336</td>
+  <td>9</td>
+  <td><span class="verdict safe">LOW</span></td>
+</tr>
+<tr>
   <td class="rank">RB5</td>
-  <td class="name">Jonathan Taylor</td>
-  <td>IND</td>
-  <td>254.4</td>
-  <td style="color:var(--fg3);">166–342</td>
-  <td>6</td>
+  <td class="name">Kyren Williams</td>
+  <td>LA</td>
+  <td>239.8</td>
+  <td style="color:var(--fg3);">140–340</td>
+  <td>27</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB6</td>
-  <td class="name">Derrick Henry</td>
-  <td>BAL</td>
-  <td>238.5</td>
-  <td style="color:var(--fg3);">123–354</td>
-  <td>10</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Josh Jacobs</td>
+  <td>GB</td>
+  <td>227.5</td>
+  <td style="color:var(--fg3);">95–360</td>
+  <td>27</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB7</td>
-  <td class="name">Kyren Williams</td>
-  <td>LA</td>
-  <td>228.6</td>
-  <td style="color:var(--fg3);">152–305</td>
-  <td>31</td>
+  <td class="name">Jonathan Taylor</td>
+  <td>IND</td>
+  <td>224.7</td>
+  <td style="color:var(--fg3);">115–334</td>
+  <td>6</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB8</td>
-  <td class="name">Ashton Jeanty</td>
-  <td>LV</td>
-  <td>221.4</td>
-  <td style="color:var(--fg3);">127–316</td>
-  <td>14</td>
+  <td class="name">Derrick Henry</td>
+  <td>BAL</td>
+  <td>218.8</td>
+  <td style="color:var(--fg3);">86–352</td>
+  <td>10</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB9</td>
-  <td class="name">Kenneth Walker III</td>
-  <td>KC</td>
-  <td>221.0</td>
-  <td style="color:var(--fg3);">135–307</td>
-  <td>19</td>
+  <td class="name">Ashton Jeanty</td>
+  <td>LV</td>
+  <td>215.3</td>
+  <td style="color:var(--fg3);">117–314</td>
+  <td>16</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB10</td>
   <td class="name">Christian McCaffrey</td>
   <td>SF</td>
-  <td>215.5</td>
-  <td style="color:var(--fg3);">122–309</td>
-  <td>5</td>
+  <td>205.3</td>
+  <td style="color:var(--fg3);">75–335</td>
+  <td>7</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB11</td>
   <td class="name">Chase Brown</td>
   <td>CIN</td>
-  <td>215.5</td>
-  <td style="color:var(--fg3);">146–286</td>
-  <td>20</td>
+  <td>201.3</td>
+  <td style="color:var(--fg3);">112–290</td>
+  <td>15</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB12</td>
-  <td class="name">Omarion Hampton</td>
-  <td>LAC</td>
-  <td>213.3</td>
-  <td style="color:var(--fg3);">115–311</td>
-  <td>17</td>
+  <td class="name">Javonte Williams</td>
+  <td>DAL</td>
+  <td>188.0</td>
+  <td style="color:var(--fg3);">96–280</td>
+  <td>35</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB13</td>
   <td class="name">Saquon Barkley</td>
   <td>PHI</td>
-  <td>208.5</td>
-  <td style="color:var(--fg3);">118–299</td>
-  <td>16</td>
+  <td>179.6</td>
+  <td style="color:var(--fg3);">61–298</td>
+  <td>18</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB14</td>
-  <td class="name">Breece Hall</td>
-  <td>NYJ</td>
-  <td>203.6</td>
-  <td style="color:var(--fg3);">124–283</td>
-  <td>31</td>
+  <td class="name">Travis Etienne</td>
+  <td>NO</td>
+  <td>179.4</td>
+  <td style="color:var(--fg3);">82–277</td>
+  <td>43</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB15</td>
-  <td class="name">Josh Jacobs</td>
-  <td>GB</td>
-  <td>197.2</td>
-  <td style="color:var(--fg3);">112–282</td>
-  <td>26</td>
+  <td class="name">Kenneth Walker III</td>
+  <td>KC</td>
+  <td>171.9</td>
+  <td style="color:var(--fg3);">83–261</td>
+  <td>22</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB16</td>
-  <td class="name">Javonte Williams</td>
-  <td>DAL</td>
-  <td>192.9</td>
-  <td style="color:var(--fg3);">120–265</td>
-  <td>34</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td class="name">D'Andre Swift</td>
+  <td>CHI</td>
+  <td>155.2</td>
+  <td style="color:var(--fg3);">44–266</td>
+  <td>43</td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB17</td>
-  <td class="name">Travis Etienne</td>
-  <td>NO</td>
-  <td>185.3</td>
-  <td style="color:var(--fg3);">107–264</td>
-  <td>40</td>
+  <td class="name">Breece Hall</td>
+  <td>NYJ</td>
+  <td>153.0</td>
+  <td style="color:var(--fg3);">72–235</td>
+  <td>29</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB18</td>
-  <td class="name">Chuba Hubbard</td>
-  <td>CAR</td>
-  <td>174.6</td>
-  <td style="color:var(--fg3);">112–238</td>
-  <td>82</td>
-  <td><span class="verdict safe">LOW</span></td>
+  <td class="name">Cam Skattebo</td>
+  <td>NYG</td>
+  <td>152.8</td>
+  <td style="color:var(--fg3);">31–274</td>
+  <td>35</td>
+  <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB19</td>
-  <td class="name">Bucky Irving</td>
-  <td>TB</td>
-  <td>169.3</td>
-  <td style="color:var(--fg3);">98–241</td>
-  <td>46</td>
+  <td class="name">Omarion Hampton</td>
+  <td>LAC</td>
+  <td>151.4</td>
+  <td style="color:var(--fg3);">49–254</td>
+  <td>22</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB20</td>
-  <td class="name">Cam Skattebo</td>
-  <td>NYG</td>
-  <td>154.2</td>
-  <td style="color:var(--fg3);">36–272</td>
-  <td>36</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Bucky Irving</td>
+  <td>TB</td>
+  <td>149.8</td>
+  <td style="color:var(--fg3);">81–219</td>
+  <td>48</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB21</td>
-  <td class="name">Rhamondre Stevenson</td>
-  <td>NE</td>
-  <td>153.9</td>
-  <td style="color:var(--fg3);">80–228</td>
-  <td>74</td>
+  <td class="name">Zach Charbonnet</td>
+  <td>SEA</td>
+  <td>148.7</td>
+  <td style="color:var(--fg3);">65–232</td>
+  <td>133</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB22</td>
-  <td class="name">Rachaad White</td>
-  <td>WAS</td>
-  <td>147.9</td>
-  <td style="color:var(--fg3);">78–218</td>
-  <td>108</td>
+  <td class="name">Chuba Hubbard</td>
+  <td>CAR</td>
+  <td>147.6</td>
+  <td style="color:var(--fg3);">84–211</td>
+  <td>72</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB23</td>
   <td class="name">Kenneth Gainwell</td>
   <td>TB</td>
-  <td>144.0</td>
-  <td style="color:var(--fg3);">93–195</td>
-  <td>109</td>
+  <td>142.2</td>
+  <td style="color:var(--fg3);">72–212</td>
+  <td>102</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB24</td>
-  <td class="name">Jeremiyah Love</td>
-  <td>ARI</td>
-  <td>138.3</td>
-  <td style="color:var(--fg3);">46–231</td>
-  <td>27</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Jaylen Warren</td>
+  <td>PIT</td>
+  <td>139.8</td>
+  <td style="color:var(--fg3);">50–229</td>
+  <td>64</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB25</td>
-  <td class="name">Jaylen Warren</td>
-  <td>PIT</td>
-  <td>138.0</td>
-  <td style="color:var(--fg3);">67–209</td>
-  <td>62</td>
+  <td class="name">Quinshon Judkins</td>
+  <td>CLE</td>
+  <td>133.7</td>
+  <td style="color:var(--fg3);">35–232</td>
+  <td>52</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB26</td>
-  <td class="name">D'Andre Swift</td>
-  <td>CHI</td>
-  <td>136.1</td>
-  <td style="color:var(--fg3);">50–222</td>
-  <td>47</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Rico Dowdle</td>
+  <td>PIT</td>
+  <td>133.4</td>
+  <td style="color:var(--fg3);">45–222</td>
+  <td>78</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB27</td>
-  <td class="name">TreVeyon Henderson</td>
-  <td>NE</td>
-  <td>132.3</td>
-  <td style="color:var(--fg3);">30–235</td>
-  <td>59</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Tony Pollard</td>
+  <td>TEN</td>
+  <td>130.3</td>
+  <td style="color:var(--fg3);">46–215</td>
+  <td>65</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB28</td>
-  <td class="name">David Montgomery</td>
-  <td>HOU</td>
-  <td>124.9</td>
-  <td style="color:var(--fg3);">51–199</td>
-  <td>57</td>
+  <td class="name">TreVeyon Henderson</td>
+  <td>NE</td>
+  <td>121.0</td>
+  <td style="color:var(--fg3);">14–228</td>
+  <td>58</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB29</td>
-  <td class="name">Quinshon Judkins</td>
-  <td>CLE</td>
-  <td>124.5</td>
-  <td style="color:var(--fg3);">25–224</td>
-  <td>51</td>
+  <td class="name">RJ Harvey</td>
+  <td>DEN</td>
+  <td>117.0</td>
+  <td style="color:var(--fg3);">4–230</td>
+  <td>88</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB30</td>
-  <td class="name">Rico Dowdle</td>
-  <td>PIT</td>
-  <td>120.6</td>
-  <td style="color:var(--fg3);">46–195</td>
-  <td>80</td>
+  <td class="name">Rhamondre Stevenson</td>
+  <td>NE</td>
+  <td>109.3</td>
+  <td style="color:var(--fg3);">12–206</td>
+  <td>70</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB31</td>
-  <td class="name">Tony Pollard</td>
-  <td>TEN</td>
-  <td>120.1</td>
-  <td style="color:var(--fg3);">53–187</td>
-  <td>73</td>
+  <td class="name">Rachaad White</td>
+  <td>WAS</td>
+  <td>108.6</td>
+  <td style="color:var(--fg3);">27–190</td>
+  <td>112</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB32</td>
-  <td class="name">RJ Harvey</td>
-  <td>DEN</td>
-  <td>117.7</td>
-  <td style="color:var(--fg3);">19–216</td>
-  <td>90</td>
+  <td class="name">Tyrone Tracy Jr.</td>
+  <td>NYG</td>
+  <td>102.8</td>
+  <td style="color:var(--fg3);">16–190</td>
+  <td>148</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB33</td>
-  <td class="name">J.K. Dobbins</td>
-  <td>DEN</td>
-  <td>114.6</td>
-  <td style="color:var(--fg3);">37–192</td>
-  <td>85</td>
+  <td class="name">David Montgomery</td>
+  <td>HOU</td>
+  <td>100.4</td>
+  <td style="color:var(--fg3);">12–188</td>
+  <td>56</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB34</td>
-  <td class="name">Jordan Mason</td>
-  <td>MIN</td>
-  <td>113.9</td>
-  <td style="color:var(--fg3);">39–189</td>
-  <td>122</td>
+  <td class="name">J.K. Dobbins</td>
+  <td>DEN</td>
+  <td>95.4</td>
+  <td style="color:var(--fg3);">1–190</td>
+  <td>89</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB35</td>
-  <td class="name">Tyjae Spears</td>
-  <td>TEN</td>
-  <td>111.3</td>
-  <td style="color:var(--fg3);">44–179</td>
-  <td>140</td>
+  <td class="name">Tyler Allgeier</td>
+  <td>ARI</td>
+  <td>94.4</td>
+  <td style="color:var(--fg3);">17–172</td>
+  <td>160</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB36</td>
-  <td class="name">Isiah Pacheco</td>
-  <td>DET</td>
-  <td>111.0</td>
-  <td style="color:var(--fg3);">46–176</td>
-  <td>145</td>
+  <td class="name">Jacory Croskey-Merritt</td>
+  <td>WAS</td>
+  <td>88.5</td>
+  <td style="color:var(--fg3);">0–209</td>
+  <td>110</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB37</td>
-  <td class="name">Jacory Croskey-Merritt</td>
-  <td>WAS</td>
-  <td>110.1</td>
-  <td style="color:var(--fg3);">1–219</td>
-  <td>116</td>
+  <td class="name">Jeremiyah Love</td>
+  <td>ARI</td>
+  <td>83.5</td>
+  <td style="color:var(--fg3);">0–207</td>
+  <td>32</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB38</td>
-  <td class="name">Zach Charbonnet</td>
-  <td>SEA</td>
-  <td>107.5</td>
-  <td style="color:var(--fg3);">17–198</td>
-  <td>158</td>
+  <td class="name">Tyjae Spears</td>
+  <td>TEN</td>
+  <td>83.3</td>
+  <td style="color:var(--fg3);">18–149</td>
+  <td>150</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB39</td>
-  <td class="name">Jadarian Price</td>
-  <td>SEA</td>
-  <td>105.4</td>
-  <td style="color:var(--fg3);">24–186</td>
-  <td>68</td>
+  <td class="name">Kyle Monangai</td>
+  <td>CHI</td>
+  <td>82.9</td>
+  <td style="color:var(--fg3);">0–190</td>
+  <td>114</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB40</td>
-  <td class="name">Kyle Monangai</td>
-  <td>CHI</td>
-  <td>104.5</td>
-  <td style="color:var(--fg3);">0–215</td>
-  <td>98</td>
+  <td class="name">Blake Corum</td>
+  <td>LA</td>
+  <td>82.0</td>
+  <td style="color:var(--fg3);">6–157</td>
+  <td>123</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB41</td>
-  <td class="name">Blake Corum</td>
-  <td>LA</td>
-  <td>102.6</td>
-  <td style="color:var(--fg3);">33–172</td>
-  <td>116</td>
+  <td class="name">Woody Marks</td>
+  <td>HOU</td>
+  <td>80.4</td>
+  <td style="color:var(--fg3);">0–184</td>
+  <td>145</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB42</td>
-  <td class="name">Aaron Jones</td>
-  <td>MIN</td>
-  <td>100.6</td>
-  <td style="color:var(--fg3);">36–165</td>
-  <td>92</td>
+  <td class="name">Isiah Pacheco</td>
+  <td>DET</td>
+  <td>79.6</td>
+  <td style="color:var(--fg3);">9–150</td>
+  <td>151</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB43</td>
-  <td class="name">Bhayshul Tuten</td>
-  <td>JAX</td>
-  <td>98.2</td>
-  <td style="color:var(--fg3);">4–192</td>
-  <td>57</td>
+  <td class="name">Jordan Mason</td>
+  <td>MIN</td>
+  <td>78.4</td>
+  <td style="color:var(--fg3);">0–164</td>
+  <td>115</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB44</td>
-  <td class="name">Woody Marks</td>
-  <td>HOU</td>
-  <td>89.8</td>
-  <td style="color:var(--fg3);">0–185</td>
-  <td>132</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Kimani Vidal</td>
+  <td>LAC</td>
+  <td>77.4</td>
+  <td style="color:var(--fg3);">24–131</td>
+  <td>—</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB45</td>
-  <td class="name">Brian Robinson</td>
-  <td>ATL</td>
-  <td>83.1</td>
-  <td style="color:var(--fg3);">33–134</td>
+  <td class="name">Frank Gore Jr.</td>
+  <td>BUF</td>
+  <td>72.9</td>
+  <td style="color:var(--fg3);">1–145</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB46</td>
-  <td class="name">Chris Rodriguez Jr.</td>
-  <td>JAX</td>
-  <td>82.1</td>
-  <td style="color:var(--fg3);">16–148</td>
-  <td>148</td>
-  <td><span class="verdict medium">MED</span></td>
-</tr>
-<tr>
-  <td class="rank">RB47</td>
-  <td class="name">Tyler Allgeier</td>
-  <td>ARI</td>
-  <td>81.3</td>
-  <td style="color:var(--fg3);">19–144</td>
+  <td class="name">Michael Carter</td>
+  <td>TEN</td>
+  <td>70.4</td>
+  <td style="color:var(--fg3);">0–143</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
+  <td class="rank">RB47</td>
+  <td class="name">Brian Robinson</td>
+  <td>ATL</td>
+  <td>70.4</td>
+  <td style="color:var(--fg3);">13–128</td>
+  <td>174</td>
+  <td><span class="verdict medium">MED</span></td>
+</tr>
+<tr>
   <td class="rank">RB48</td>
-  <td class="name">Tyrone Tracy Jr.</td>
-  <td>NYG</td>
-  <td>73.9</td>
-  <td style="color:var(--fg3);">13–135</td>
+  <td class="name">Sean Tucker</td>
+  <td>TB</td>
+  <td>69.7</td>
+  <td style="color:var(--fg3);">0–144</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">RB49</td>
-  <td class="name">Sean Tucker</td>
-  <td>TB</td>
-  <td>71.7</td>
-  <td style="color:var(--fg3);">6–138</td>
+  <td class="name">Trey Benson</td>
+  <td>ARI</td>
+  <td>69.3</td>
+  <td style="color:var(--fg3);">33–106</td>
   <td>—</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">RB50</td>
-  <td class="name">Kimani Vidal</td>
-  <td>LAC</td>
-  <td>67.1</td>
-  <td style="color:var(--fg3);">31–103</td>
+  <td class="name">James Conner</td>
+  <td>ARI</td>
+  <td>66.9</td>
+  <td style="color:var(--fg3);">2–132</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr></tbody>
@@ -642,7 +690,7 @@ function toggleHubNav(button){
 <p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 
-    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/methodology/">Methodology</a></div>
+    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/2026/who-should-i-draft/">Who Should I Draft?</a><a href="/2026/adp-vs-model/">ADP vs Model Study</a><a href="/methodology/">Methodology</a></div>
     
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
@@ -653,7 +701,7 @@ function toggleHubNav(button){
     
   </div></main>
 <footer>
-  <div>Updated July 20, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated August 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>

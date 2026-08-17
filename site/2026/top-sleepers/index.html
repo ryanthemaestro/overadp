@@ -98,6 +98,48 @@ table.rank td.warn{color:var(--amber);}
 .related-hubs{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
 .related-hubs a{display:inline-block;padding:8px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg2);text-decoration:none;transition:all 0.2s;}
 .related-hubs a:hover{border-color:var(--green);color:var(--green);}
+.answer-block{padding:22px 24px;margin:28px 0;background:linear-gradient(160deg,rgba(0,255,106,.075),var(--bg3));border:1px solid rgba(0,255,106,.25);border-left:4px solid var(--green);border-radius:3px;max-width:900px;}
+.answer-block .answer-label{display:block;margin-bottom:8px;color:var(--green);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;}
+.answer-block p{margin:0;color:var(--fg);font-size:17px;}
+.byline{display:flex;flex-wrap:wrap;gap:8px 18px;margin:18px 0 28px;color:var(--fg3);font-family:var(--mono);font-size:11px;}
+.compare-tool{margin:34px 0;padding:28px;background:var(--bg3);border:1px solid rgba(0,255,106,.22);border-radius:4px;}
+.compare-selects{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:end;}
+.compare-selects label{display:block;color:var(--fg2);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.compare-selects select{width:100%;min-height:48px;margin-top:7px;padding:0 12px;background:var(--bg);border:1px solid var(--fg3);border-radius:3px;color:var(--fg);font:14px var(--body);}
+.compare-vs{padding-bottom:14px;color:var(--green);font:700 12px var(--mono);}
+.compare-result{display:none;margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);}
+.compare-result.active{display:block;}
+.verdict-line{font-family:var(--display);font-size:clamp(24px,4vw,38px);font-weight:700;line-height:1.15;color:var(--fg);}
+.verdict-line span{color:var(--green);}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;}
+.player-panel{padding:20px;background:var(--bg);border:1px solid rgba(255,255,255,.08);border-radius:3px;}
+.player-panel.winner{border-color:var(--green);box-shadow:0 0 24px rgba(0,255,106,.08);}
+.player-panel h3{margin:0 0 4px;}
+.player-meta{color:var(--fg3);font:11px var(--mono);}
+.metric-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:14px;}
+.metric-row strong{font-family:var(--mono);}
+.evidence-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0;}
+.evidence-card{padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);border-radius:3px;}
+.evidence-card.primary{border-color:rgba(0,255,106,.35);background:linear-gradient(160deg,rgba(0,255,106,.07),var(--bg3));}
+.evidence-number{color:var(--green);font:700 clamp(30px,4vw,46px) var(--display);line-height:1;}
+.evidence-label{margin-top:10px;color:var(--fg2);font-size:14px;line-height:1.45;}
+.bar-compare{margin:30px 0;padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);}
+.bar-row{display:grid;grid-template-columns:130px 1fr 58px;gap:12px;align-items:center;margin:16px 0;}
+.bar-label{color:var(--fg2);font:12px var(--mono);}
+.bar-track{height:18px;background:var(--bg);border-radius:999px;overflow:hidden;}
+.bar-fill{display:block;height:100%;background:#66737d;border-radius:inherit;}
+.bar-fill.green{background:var(--green);}
+.bar-value{font:700 14px var(--mono);text-align:right;}
+.research-table{width:100%;border-collapse:collapse;margin:26px 0;font-size:14px;}
+.research-table th,.research-table td{padding:13px 12px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;}
+.research-table th{color:var(--fg3);font:10px var(--mono);letter-spacing:1px;text-transform:uppercase;background:var(--bg3);}
+.research-table td{color:var(--fg2);}
+.research-table td strong{color:var(--green);}
+.fine-print{color:var(--fg3);font-size:12px;line-height:1.6;}
+.faq-list details{padding:18px 0;border-top:1px solid rgba(255,255,255,.08);}
+.faq-list details:last-child{border-bottom:1px solid rgba(255,255,255,.08);}
+.faq-list summary{cursor:pointer;color:var(--fg);font-weight:600;}
+.faq-list details p{margin:10px 0 0;}
 footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
 footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
 footer a:hover{color:var(--green);}
@@ -112,6 +154,8 @@ footer a:hover{color:var(--green);}
   nav .links a:last-child{color:var(--green);}
   main{padding-top:36px;}
   table.rank{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
+  .compare-selects{grid-template-columns:1fr;}.compare-vs{padding:0;text-align:center;}.comparison-grid,.evidence-grid{grid-template-columns:1fr;}.compare-tool{padding:20px 16px;}.bar-row{grid-template-columns:92px 1fr 48px;gap:8px;}
+  .research-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
 </style>
 <script type="application/ld+json">
@@ -123,7 +167,7 @@ footer a:hover{color:var(--green);}
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
   "datePublished":"2026-07-20",
-  "dateModified":"2026-07-20",
+  "dateModified":"2026-08-17",
   "mainEntityOfPage":"https://overadp.com/2026/top-sleepers/"
 }
 </script>
@@ -135,6 +179,8 @@ footer a:hover{color:var(--green);}
   <div class="links" id="hub-nav-links">
     <a href="/2026/top-sleepers/">Sleepers</a>
     <a href="/2026/top-busts/">Busts</a>
+    <a href="/2026/who-should-i-draft/">Who to Draft</a>
+    <a href="/2026/adp-vs-model/">ADP Study</a>
     <a href="/2026/qb-rankings/">QB</a>
     <a href="/2026/rb-rankings/">RB</a>
     <a href="/2026/wr-rankings/">WR</a>
@@ -156,12 +202,14 @@ function toggleHubNav(button){
 <div class="section-tag">▲ 2026 Sleepers</div>
 <h1>2026 Fantasy <span class="accent">Sleepers</span> — Model vs ADP</h1>
 <p class="lead">The 2026 players our model ranks <strong>above current ADP</strong>. These are model-vs-market disagreements to investigate, not promises that a player will outperform.</p>
+<div class="answer-block"><span class="answer-label">Quick answer</span><p>A 2026 sleeper is a player the current OverADP model ranks materially above the draft market. The gap can reveal an inexpensive path to production, but it is a research signal—not a hit guarantee. Check the player range, current news, roster fit, and the cost of waiting.</p></div>
+<div class="byline"><span>By OverADP Research</span><span>Updated August 17, 2026</span><span>Half-PPR</span></div>
 
 <div class="meta-strip">
   <span>📊 Source: <strong>walk-forward ML projections</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
   <span>🎯 Signal: <strong>current model rank vs current ADP</strong></span>
-  <span>🔄 Updated: <strong>July 20, 2026</strong></span>
+  <span>🔄 Updated: <strong>August 17, 2026</strong></span>
 </div>
 
 <h2>The Top 15</h2>
@@ -169,137 +217,137 @@ function toggleHubNav(button){
 <div class="card">
   <h4>Wan'Dale Robinson</h4>
   <div class="sub">WR · TEN · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR23</strong></div>
-  <div class="stat">ADP rank: <strong>WR50</strong></div>
-  <div class="stat">Projected pts: <strong>146.3</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+27 spots</strong></div>
-  <div class="reason">Model WR23 · ADP WR50 (undervalued by 27 spots)</div>
+  <div class="stat">Model rank: <strong>WR22</strong></div>
+  <div class="stat">ADP rank: <strong>WR45</strong></div>
+  <div class="stat">Projected pts: <strong>131.5</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+23 spots</strong></div>
+  <div class="reason">Model WR22 · ADP WR45 (undervalued by 23 spots)</div>
+</div>
+<div class="card">
+  <h4>Tre Tucker</h4>
+  <div class="sub">WR · LV · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR35</strong></div>
+  <div class="stat">ADP rank: <strong>WR58</strong></div>
+  <div class="stat">Projected pts: <strong>110.1</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+23 spots</strong></div>
+  <div class="reason">Model WR35 · ADP WR58 (undervalued by 23 spots)</div>
 </div>
 <div class="card">
   <h4>Jordan Addison</h4>
   <div class="sub">WR · MIN · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR20</strong></div>
+  <div class="stat">Model rank: <strong>WR23</strong></div>
   <div class="stat">ADP rank: <strong>WR44</strong></div>
-  <div class="stat">Projected pts: <strong>150.4</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+24 spots</strong></div>
-  <div class="reason">Model WR20 · ADP WR44 (undervalued by 24 spots)</div>
+  <div class="stat">Projected pts: <strong>127.2</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+21 spots</strong></div>
+  <div class="reason">Model WR23 · ADP WR44 (undervalued by 21 spots)</div>
 </div>
 <div class="card">
-  <h4>Rashod Bateman</h4>
-  <div class="sub">WR · BAL · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <h4>Zach Charbonnet</h4>
+  <div class="sub">RB · SEA · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>RB21</strong></div>
+  <div class="stat">ADP rank: <strong>RB41</strong></div>
+  <div class="stat">Projected pts: <strong>148.7</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+20 spots</strong></div>
+  <div class="reason">Model RB21 · ADP RB41 (undervalued by 20 spots)</div>
+</div>
+<div class="card">
+  <h4>Romeo Doubs</h4>
+  <div class="sub">WR · NE · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR31</strong></div>
+  <div class="stat">ADP rank: <strong>WR50</strong></div>
+  <div class="stat">Projected pts: <strong>114.2</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+19 spots</strong></div>
+  <div class="reason">Model WR31 · ADP WR50 (undervalued by 19 spots)</div>
+</div>
+<div class="card">
+  <h4>Dontayvion Wicks</h4>
+  <div class="sub">WR · PHI · <span class="verdict sleeper">▲ SLEEPER</span></div>
   <div class="stat">Model rank: <strong>WR49</strong></div>
   <div class="stat">ADP rank: <strong>WR67</strong></div>
-  <div class="stat">Projected pts: <strong>100.2</strong></div>
+  <div class="stat">Projected pts: <strong>85.8</strong></div>
   <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+18 spots</strong></div>
   <div class="reason">Model WR49 · ADP WR67 (undervalued by 18 spots)</div>
 </div>
 <div class="card">
-  <h4>Josh Downs</h4>
-  <div class="sub">WR · IND · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR26</strong></div>
-  <div class="stat">ADP rank: <strong>WR43</strong></div>
-  <div class="stat">Projected pts: <strong>145.1</strong></div>
+  <h4>Tank Dell</h4>
+  <div class="sub">WR · HOU · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR47</strong></div>
+  <div class="stat">ADP rank: <strong>WR64</strong></div>
+  <div class="stat">Projected pts: <strong>88.5</strong></div>
   <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+17 spots</strong></div>
-  <div class="reason">Model WR26 · ADP WR43 (undervalued by 17 spots)</div>
+  <div class="reason">Model WR47 · ADP WR64 (undervalued by 17 spots)</div>
 </div>
 <div class="card">
-  <h4>Rachaad White</h4>
-  <div class="sub">RB · WAS · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>RB22</strong></div>
-  <div class="stat">ADP rank: <strong>RB36</strong></div>
-  <div class="stat">Projected pts: <strong>147.9</strong></div>
+  <h4>Baker Mayfield</h4>
+  <div class="sub">QB · TB · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>QB2</strong></div>
+  <div class="stat">ADP rank: <strong>QB18</strong></div>
+  <div class="stat">Projected pts: <strong>279.2</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+16 spots</strong></div>
+  <div class="reason">Model QB2 · ADP QB18 (undervalued by 16 spots)</div>
+</div>
+<div class="card">
+  <h4>Sam Darnold</h4>
+  <div class="sub">QB · SEA · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>QB4</strong></div>
+  <div class="stat">ADP rank: <strong>QB20</strong></div>
+  <div class="stat">Projected pts: <strong>264.0</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+16 spots</strong></div>
+  <div class="reason">Model QB4 · ADP QB20 (undervalued by 16 spots)</div>
+</div>
+<div class="card">
+  <h4>Michael Wilson</h4>
+  <div class="sub">WR · ARI · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR21</strong></div>
+  <div class="stat">ADP rank: <strong>WR37</strong></div>
+  <div class="stat">Projected pts: <strong>134.2</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+16 spots</strong></div>
+  <div class="reason">Model WR21 · ADP WR37 (undervalued by 16 spots)</div>
+</div>
+<div class="card">
+  <h4>Juwan Johnson</h4>
+  <div class="sub">TE · NO · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>TE6</strong></div>
+  <div class="stat">ADP rank: <strong>TE21</strong></div>
+  <div class="stat">Projected pts: <strong>124.1</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+15 spots</strong></div>
+  <div class="reason">Model TE6 · ADP TE21 (undervalued by 15 spots)</div>
+</div>
+<div class="card">
+  <h4>Tyler Allgeier</h4>
+  <div class="sub">RB · ARI · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>RB35</strong></div>
+  <div class="stat">ADP rank: <strong>RB49</strong></div>
+  <div class="stat">Projected pts: <strong>94.4</strong></div>
   <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+14 spots</strong></div>
-  <div class="reason">Model RB22 · ADP RB36 (undervalued by 14 spots)</div>
+  <div class="reason">Model RB35 · ADP RB49 (undervalued by 14 spots)</div>
+</div>
+<div class="card">
+  <h4>Jaylen Waddle</h4>
+  <div class="sub">WR · DEN · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR11</strong></div>
+  <div class="stat">ADP rank: <strong>WR25</strong></div>
+  <div class="stat">Projected pts: <strong>164.4</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+14 spots</strong></div>
+  <div class="reason">Model WR11 · ADP WR25 (undervalued by 14 spots)</div>
+</div>
+<div class="card">
+  <h4>Theo Wease Jr.</h4>
+  <div class="sub">WR · MIA · <span class="verdict sleeper">▲ SLEEPER</span></div>
+  <div class="stat">Model rank: <strong>WR43</strong></div>
+  <div class="stat">ADP rank: <strong>WR56</strong></div>
+  <div class="stat">Projected pts: <strong>95.2</strong></div>
+  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+13 spots</strong></div>
+  <div class="reason">Model WR43 · ADP WR56 (undervalued by 13 spots)</div>
 </div>
 <div class="card">
   <h4>Kenneth Gainwell</h4>
   <div class="sub">RB · TB · <span class="verdict sleeper">▲ SLEEPER</span></div>
   <div class="stat">Model rank: <strong>RB23</strong></div>
-  <div class="stat">ADP rank: <strong>RB37</strong></div>
-  <div class="stat">Projected pts: <strong>144.0</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+14 spots</strong></div>
-  <div class="reason">Model RB23 · ADP RB37 (undervalued by 14 spots)</div>
-</div>
-<div class="card">
-  <h4>Chuba Hubbard</h4>
-  <div class="sub">RB · CAR · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>RB18</strong></div>
-  <div class="stat">ADP rank: <strong>RB31</strong></div>
-  <div class="stat">Projected pts: <strong>174.6</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+13 spots</strong></div>
-  <div class="reason">Model RB18 · ADP RB31 (undervalued by 13 spots)</div>
-</div>
-<div class="card">
-  <h4>Tre Tucker</h4>
-  <div class="sub">WR · LV · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR47</strong></div>
-  <div class="stat">ADP rank: <strong>WR60</strong></div>
-  <div class="stat">Projected pts: <strong>116.1</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+13 spots</strong></div>
-  <div class="reason">Model WR47 · ADP WR60 (undervalued by 13 spots)</div>
-</div>
-<div class="card">
-  <h4>Jalen Nailor</h4>
-  <div class="sub">WR · LV · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR51</strong></div>
-  <div class="stat">ADP rank: <strong>WR64</strong></div>
-  <div class="stat">Projected pts: <strong>97.7</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+13 spots</strong></div>
-  <div class="reason">Model WR51 · ADP WR64 (undervalued by 13 spots)</div>
-</div>
-<div class="card">
-  <h4>Michael Wilson</h4>
-  <div class="sub">WR · ARI · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR25</strong></div>
-  <div class="stat">ADP rank: <strong>WR37</strong></div>
-  <div class="stat">Projected pts: <strong>145.6</strong></div>
+  <div class="stat">ADP rank: <strong>RB35</strong></div>
+  <div class="stat">Projected pts: <strong>142.2</strong></div>
   <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+12 spots</strong></div>
-  <div class="reason">Model WR25 · ADP WR37 (undervalued by 12 spots)</div>
-</div>
-<div class="card">
-  <h4>Sam Darnold</h4>
-  <div class="sub">QB · SEA · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>QB8</strong></div>
-  <div class="stat">ADP rank: <strong>QB20</strong></div>
-  <div class="stat">Projected pts: <strong>251.8</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+12 spots</strong></div>
-  <div class="reason">Model QB8 · ADP QB20 (undervalued by 12 spots)</div>
-</div>
-<div class="card">
-  <h4>Romeo Doubs</h4>
-  <div class="sub">WR · NE · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR36</strong></div>
-  <div class="stat">ADP rank: <strong>WR47</strong></div>
-  <div class="stat">Projected pts: <strong>123.8</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+11 spots</strong></div>
-  <div class="reason">Model WR36 · ADP WR47 (undervalued by 11 spots)</div>
-</div>
-<div class="card">
-  <h4>Dallas Goedert</h4>
-  <div class="sub">TE · PHI · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>TE2</strong></div>
-  <div class="stat">ADP rank: <strong>TE13</strong></div>
-  <div class="stat">Projected pts: <strong>128.6</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+11 spots</strong></div>
-  <div class="reason">Model TE2 · ADP TE13 (undervalued by 11 spots)</div>
-</div>
-<div class="card">
-  <h4>Baker Mayfield</h4>
-  <div class="sub">QB · TB · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>QB6</strong></div>
-  <div class="stat">ADP rank: <strong>QB17</strong></div>
-  <div class="stat">Projected pts: <strong>259.2</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+11 spots</strong></div>
-  <div class="reason">Model QB6 · ADP QB17 (undervalued by 11 spots)</div>
-</div>
-<div class="card">
-  <h4>Jerry Jeudy</h4>
-  <div class="sub">WR · CLE · <span class="verdict sleeper">▲ SLEEPER</span></div>
-  <div class="stat">Model rank: <strong>WR53</strong></div>
-  <div class="stat">ADP rank: <strong>WR64</strong></div>
-  <div class="stat">Projected pts: <strong>96.2</strong></div>
-  <div class="stat" style="color:var(--green);">Gap vs ADP: <strong style="color:var(--green);">+11 spots</strong></div>
-  <div class="reason">Model WR53 · ADP WR64 (undervalued by 11 spots)</div>
+  <div class="reason">Model RB23 · ADP RB35 (undervalued by 12 spots)</div>
 </div></div>
 
 <h2>What this signal means</h2>
@@ -311,7 +359,7 @@ function toggleHubNav(button){
   <p>A <strong>sleeper</strong> is a player whose model rank is meaningfully higher than ADP rank — they're being drafted later than we think they should be. A <strong>bust</strong> is the opposite: drafted earlier than the model thinks is justified. We rank by the absolute size of the gap. Players with no ADP (undrafted) are excluded.</p>
 </div>
 
-    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/top-busts/">Top Busts</a><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/methodology/">Methodology</a></div>
+    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/top-busts/">Top Busts</a><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/te-rankings/">TE Rankings</a><a href="/2026/who-should-i-draft/">Who Should I Draft?</a><a href="/2026/adp-vs-model/">ADP vs Model Study</a><a href="/methodology/">Methodology</a></div>
     
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
@@ -322,7 +370,7 @@ function toggleHubNav(button){
     
   </div></main>
 <footer>
-  <div>Updated July 20, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated August 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>

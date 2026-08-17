@@ -1,0 +1,8 @@
+ffconcat version 1.0
+file '.render/01-intro.mp4'
+file '.render/02-landing.mp4'
+file '.render/03-start.mp4'
+file '.render/04-one-pick.mp4'
+file '.render/05-live.mp4'
+file '.render/06-evidence.mp4'
+file '.render/07-cta.mp4'

@@ -1,0 +1,30 @@
+1
+00:00:00,000 --> 00:00:06,000
+ADP tells you the room.
+OverADP tells you who to draft now.
+
+2
+00:00:06,000 --> 00:00:15,000
+Projection + ADP price + VBD + uncertainty
+
+3
+00:00:15,000 --> 00:00:26,000
+Target Intel explains the best available fit.
+
+4
+00:00:26,000 --> 00:00:37,000
+Make a pick. The recommendation changes.
+
+5
+00:00:37,000 --> 00:00:48,000
+Roster needs, scarcity and next-turn availability—live.
+
+6
+00:00:48,000 --> 00:00:58,000
+1,000 paired historical drafts
+50.6% top-three rate vs 25.7% for ADP first
+
+7
+00:00:58,000 --> 00:01:06,000
+Retrospective evidence, not a guarantee.
+Try 5 picks free at overadp.com

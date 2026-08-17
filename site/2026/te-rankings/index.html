@@ -12,17 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP</title>
-<meta name="description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.64; R²: 0.55. Updated July 2026.">
+<meta name="description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.78; R²: 0.56. Updated August 2026.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/2026/te-rankings/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP">
-<meta property="og:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.64; R²: 0.55. Updated July 2026.">
+<meta property="og:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.78; R²: 0.56. Updated August 2026.">
 <meta property="og:url" content="https://overadp.com/2026/te-rankings/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP">
-<meta name="twitter:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.64; R²: 0.55. Updated July 2026.">
+<meta name="twitter:description" content="Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.78; R²: 0.56. Updated August 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -98,6 +98,48 @@ table.rank td.warn{color:var(--amber);}
 .related-hubs{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;}
 .related-hubs a{display:inline-block;padding:8px 14px;background:var(--bg3);border:1px solid rgba(255,255,255,0.08);border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--fg2);text-decoration:none;transition:all 0.2s;}
 .related-hubs a:hover{border-color:var(--green);color:var(--green);}
+.answer-block{padding:22px 24px;margin:28px 0;background:linear-gradient(160deg,rgba(0,255,106,.075),var(--bg3));border:1px solid rgba(0,255,106,.25);border-left:4px solid var(--green);border-radius:3px;max-width:900px;}
+.answer-block .answer-label{display:block;margin-bottom:8px;color:var(--green);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;}
+.answer-block p{margin:0;color:var(--fg);font-size:17px;}
+.byline{display:flex;flex-wrap:wrap;gap:8px 18px;margin:18px 0 28px;color:var(--fg3);font-family:var(--mono);font-size:11px;}
+.compare-tool{margin:34px 0;padding:28px;background:var(--bg3);border:1px solid rgba(0,255,106,.22);border-radius:4px;}
+.compare-selects{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:end;}
+.compare-selects label{display:block;color:var(--fg2);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.compare-selects select{width:100%;min-height:48px;margin-top:7px;padding:0 12px;background:var(--bg);border:1px solid var(--fg3);border-radius:3px;color:var(--fg);font:14px var(--body);}
+.compare-vs{padding-bottom:14px;color:var(--green);font:700 12px var(--mono);}
+.compare-result{display:none;margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,.08);}
+.compare-result.active{display:block;}
+.verdict-line{font-family:var(--display);font-size:clamp(24px,4vw,38px);font-weight:700;line-height:1.15;color:var(--fg);}
+.verdict-line span{color:var(--green);}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;}
+.player-panel{padding:20px;background:var(--bg);border:1px solid rgba(255,255,255,.08);border-radius:3px;}
+.player-panel.winner{border-color:var(--green);box-shadow:0 0 24px rgba(0,255,106,.08);}
+.player-panel h3{margin:0 0 4px;}
+.player-meta{color:var(--fg3);font:11px var(--mono);}
+.metric-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);color:var(--fg2);font-size:14px;}
+.metric-row strong{font-family:var(--mono);}
+.evidence-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0;}
+.evidence-card{padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);border-radius:3px;}
+.evidence-card.primary{border-color:rgba(0,255,106,.35);background:linear-gradient(160deg,rgba(0,255,106,.07),var(--bg3));}
+.evidence-number{color:var(--green);font:700 clamp(30px,4vw,46px) var(--display);line-height:1;}
+.evidence-label{margin-top:10px;color:var(--fg2);font-size:14px;line-height:1.45;}
+.bar-compare{margin:30px 0;padding:24px;background:var(--bg3);border:1px solid rgba(255,255,255,.07);}
+.bar-row{display:grid;grid-template-columns:130px 1fr 58px;gap:12px;align-items:center;margin:16px 0;}
+.bar-label{color:var(--fg2);font:12px var(--mono);}
+.bar-track{height:18px;background:var(--bg);border-radius:999px;overflow:hidden;}
+.bar-fill{display:block;height:100%;background:#66737d;border-radius:inherit;}
+.bar-fill.green{background:var(--green);}
+.bar-value{font:700 14px var(--mono);text-align:right;}
+.research-table{width:100%;border-collapse:collapse;margin:26px 0;font-size:14px;}
+.research-table th,.research-table td{padding:13px 12px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;}
+.research-table th{color:var(--fg3);font:10px var(--mono);letter-spacing:1px;text-transform:uppercase;background:var(--bg3);}
+.research-table td{color:var(--fg2);}
+.research-table td strong{color:var(--green);}
+.fine-print{color:var(--fg3);font-size:12px;line-height:1.6;}
+.faq-list details{padding:18px 0;border-top:1px solid rgba(255,255,255,.08);}
+.faq-list details:last-child{border-bottom:1px solid rgba(255,255,255,.08);}
+.faq-list summary{cursor:pointer;color:var(--fg);font-weight:600;}
+.faq-list details p{margin:10px 0 0;}
 footer{padding:40px 0;border-top:1px solid rgba(255,255,255,0.05);font-family:var(--mono);font-size:11px;color:var(--fg3);text-align:center;}
 footer a{color:var(--fg3);text-decoration:none;margin:0 8px;}
 footer a:hover{color:var(--green);}
@@ -112,6 +154,8 @@ footer a:hover{color:var(--green);}
   nav .links a:last-child{color:var(--green);}
   main{padding-top:36px;}
   table.rank{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
+  .compare-selects{grid-template-columns:1fr;}.compare-vs{padding:0;text-align:center;}.comparison-grid,.evidence-grid{grid-template-columns:1fr;}.compare-tool{padding:20px 16px;}.bar-row{grid-template-columns:92px 1fr 48px;gap:8px;}
+  .research-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
 </style>
 <script type="application/ld+json">
@@ -119,11 +163,11 @@ footer a:hover{color:var(--green);}
   "@context":"https://schema.org",
   "@type":"Article",
   "headline":"2026 Fantasy Football TE Rankings — Walk-Forward Validated Projections | OverADP",
-  "description":"Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.64; R²: 0.55. Updated July 2026.",
+  "description":"Top 24 2026 fantasy football TE rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: 23.78; R²: 0.56. Updated August 2026.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
   "datePublished":"2026-07-20",
-  "dateModified":"2026-07-20",
+  "dateModified":"2026-08-17",
   "mainEntityOfPage":"https://overadp.com/2026/te-rankings/"
 }
 </script>
@@ -135,6 +179,8 @@ footer a:hover{color:var(--green);}
   <div class="links" id="hub-nav-links">
     <a href="/2026/top-sleepers/">Sleepers</a>
     <a href="/2026/top-busts/">Busts</a>
+    <a href="/2026/who-should-i-draft/">Who to Draft</a>
+    <a href="/2026/adp-vs-model/">ADP Study</a>
     <a href="/2026/qb-rankings/">QB</a>
     <a href="/2026/rb-rankings/">RB</a>
     <a href="/2026/wr-rankings/">WR</a>
@@ -156,15 +202,17 @@ function toggleHubNav(button){
 <div class="section-tag">2026 TE Rankings</div>
 <h1>2026 Fantasy <span class="accent">TE Rankings</span></h1>
 <p class="lead">The top 24 TEs for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
+<div class="answer-block"><span class="answer-label">Quick answer</span><p>These rankings order 2026 TEs by OverADP's position-specific point model, then show current ADP and uncertainty beside every player. Use the projection as an independent estimate, the range as risk context, and ADP as market price—not as three interchangeable rankings.</p></div>
+<div class="byline"><span>By OverADP Research</span><span>Updated August 17, 2026</span><span>Half-PPR</span></div>
 
 <div class="meta-strip">
   <span>📊 Model: <strong>position-specific CatBoost + split CQR</strong></span>
   <span>🎯 Point-model tests: <strong>2024 and 2025</strong></span>
   <span>📅 Scoring: <strong>half-PPR</strong></span>
-  <span>🔄 Updated: <strong>July 20, 2026</strong></span>
+  <span>🔄 Updated: <strong>August 17, 2026</strong></span>
 </div>
 
-<p>Tight-end production is sparse and role-sensitive, so TE uses its own feature set and error profile. Across the 2024-2025 test folds, TE posted <strong>23.64 MAE</strong> and <strong>0.55 R²</strong> over 223 player-season predictions.</p>
+<p>Tight-end production is sparse and role-sensitive, so TE uses its own feature set and error profile. Across the 2024-2025 test folds, TE posted <strong>23.78 MAE</strong> and <strong>0.56 R²</strong> over 223 player-season predictions.</p>
 
 
 <table class="rank">
@@ -184,217 +232,217 @@ function toggleHubNav(button){
   <td class="rank">TE1</td>
   <td class="name">Trey McBride</td>
   <td>ARI</td>
-  <td>164.1</td>
-  <td style="color:var(--fg3);">119–210</td>
-  <td>36</td>
+  <td>194.4</td>
+  <td style="color:var(--fg3);">148–240</td>
+  <td>38</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE2</td>
-  <td class="name">Dallas Goedert</td>
-  <td>PHI</td>
-  <td>128.6</td>
-  <td style="color:var(--fg3);">79–178</td>
-  <td>131</td>
+  <td class="name">Kyle Pitts</td>
+  <td>ATL</td>
+  <td>138.9</td>
+  <td style="color:var(--fg3);">101–176</td>
+  <td>82</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE3</td>
   <td class="name">Travis Kelce</td>
   <td>KC</td>
-  <td>128.1</td>
-  <td style="color:var(--fg3);">66–190</td>
-  <td>104</td>
+  <td>138.0</td>
+  <td style="color:var(--fg3);">85–191</td>
+  <td>122</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE4</td>
-  <td class="name">Kyle Pitts</td>
-  <td>ATL</td>
-  <td>127.7</td>
-  <td style="color:var(--fg3);">81–174</td>
-  <td>95</td>
+  <td class="name">Brock Bowers</td>
+  <td>LV</td>
+  <td>134.6</td>
+  <td style="color:var(--fg3);">98–172</td>
+  <td>42</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE5</td>
-  <td class="name">Brock Bowers</td>
-  <td>LV</td>
-  <td>125.6</td>
-  <td style="color:var(--fg3);">81–170</td>
-  <td>43</td>
+  <td class="name">George Kittle</td>
+  <td>SF</td>
+  <td>130.3</td>
+  <td style="color:var(--fg3);">70–191</td>
+  <td>117</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE6</td>
-  <td class="name">Jake Ferguson</td>
-  <td>DAL</td>
-  <td>121.6</td>
-  <td style="color:var(--fg3);">74–170</td>
-  <td>129</td>
+  <td class="name">Juwan Johnson</td>
+  <td>NO</td>
+  <td>124.1</td>
+  <td style="color:var(--fg3);">74–174</td>
+  <td>169</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE7</td>
-  <td class="name">Tyler Warren</td>
-  <td>IND</td>
-  <td>117.9</td>
-  <td style="color:var(--fg3);">35–200</td>
-  <td>60</td>
-  <td><span class="verdict medium">MED</span></td>
-</tr>
-<tr>
-  <td class="rank">TE8</td>
   <td class="name">Tucker Kraft</td>
   <td>GB</td>
-  <td>117.3</td>
-  <td style="color:var(--fg3);">52–182</td>
-  <td>76</td>
+  <td>123.3</td>
+  <td style="color:var(--fg3);">70–176</td>
+  <td>94</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
+  <td class="rank">TE8</td>
+  <td class="name">Kenyon Sadiq</td>
+  <td>NYJ</td>
+  <td>123.1</td>
+  <td style="color:var(--fg3);">46–200</td>
+  <td>—</td>
+  <td><span class="verdict medium">MED</span></td>
+</tr>
+<tr>
   <td class="rank">TE9</td>
-  <td class="name">Sam LaPorta</td>
-  <td>DET</td>
-  <td>115.1</td>
-  <td style="color:var(--fg3);">62–168</td>
-  <td>79</td>
+  <td class="name">Hunter Henry</td>
+  <td>NE</td>
+  <td>120.4</td>
+  <td style="color:var(--fg3);">74–167</td>
+  <td>148</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE10</td>
-  <td class="name">Colston Loveland</td>
-  <td>CHI</td>
-  <td>110.7</td>
-  <td style="color:var(--fg3);">27–195</td>
-  <td>55</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td class="name">Harold Fannin Jr.</td>
+  <td>CLE</td>
+  <td>117.4</td>
+  <td style="color:var(--fg3);">61–174</td>
+  <td>81</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE11</td>
-  <td class="name">Juwan Johnson</td>
-  <td>NO</td>
-  <td>109.9</td>
-  <td style="color:var(--fg3);">56–164</td>
-  <td>—</td>
-  <td><span class="verdict safe">LOW</span></td>
-</tr>
-<tr>
-  <td class="rank">TE12</td>
-  <td class="name">Harold Fannin Jr.</td>
-  <td>CLE</td>
-  <td>109.8</td>
-  <td style="color:var(--fg3);">34–186</td>
-  <td>79</td>
+  <td class="name">Dallas Goedert</td>
+  <td>PHI</td>
+  <td>115.0</td>
+  <td style="color:var(--fg3);">56–174</td>
+  <td>113</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
-  <td class="rank">TE13</td>
-  <td class="name">George Kittle</td>
-  <td>SF</td>
-  <td>109.0</td>
-  <td style="color:var(--fg3);">58–160</td>
-  <td>110</td>
+  <td class="rank">TE12</td>
+  <td class="name">Dalton Schultz</td>
+  <td>HOU</td>
+  <td>113.4</td>
+  <td style="color:var(--fg3);">64–162</td>
+  <td>155</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
+  <td class="rank">TE13</td>
+  <td class="name">Tyler Warren</td>
+  <td>IND</td>
+  <td>113.0</td>
+  <td style="color:var(--fg3);">53–173</td>
+  <td>70</td>
+  <td><span class="verdict medium">MED</span></td>
+</tr>
+<tr>
   <td class="rank">TE14</td>
-  <td class="name">Isaiah Likely</td>
-  <td>NYG</td>
-  <td>106.0</td>
-  <td style="color:var(--fg3);">43–169</td>
-  <td>147</td>
+  <td class="name">Jake Ferguson</td>
+  <td>DAL</td>
+  <td>109.6</td>
+  <td style="color:var(--fg3);">60–159</td>
+  <td>149</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE15</td>
-  <td class="name">Dalton Kincaid</td>
-  <td>BUF</td>
-  <td>105.1</td>
-  <td style="color:var(--fg3);">52–158</td>
-  <td>143</td>
+  <td class="name">Colston Loveland</td>
+  <td>CHI</td>
+  <td>105.6</td>
+  <td style="color:var(--fg3);">55–156</td>
+  <td>60</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE16</td>
-  <td class="name">Hunter Henry</td>
-  <td>NE</td>
-  <td>102.6</td>
-  <td style="color:var(--fg3);">52–153</td>
+  <td class="name">Cade Otton</td>
+  <td>TB</td>
+  <td>104.6</td>
+  <td style="color:var(--fg3);">66–143</td>
   <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE17</td>
-  <td class="name">Mark Andrews</td>
-  <td>BAL</td>
-  <td>93.1</td>
-  <td style="color:var(--fg3);">40–146</td>
-  <td>123</td>
+  <td class="name">Sam LaPorta</td>
+  <td>DET</td>
+  <td>102.1</td>
+  <td style="color:var(--fg3);">67–138</td>
+  <td>90</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE18</td>
-  <td class="name">Cade Otton</td>
-  <td>TB</td>
-  <td>90.0</td>
-  <td style="color:var(--fg3);">40–140</td>
-  <td>—</td>
+  <td class="name">Dalton Kincaid</td>
+  <td>BUF</td>
+  <td>101.3</td>
+  <td style="color:var(--fg3);">63–140</td>
+  <td>142</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE19</td>
   <td class="name">Chig Okonkwo</td>
   <td>WAS</td>
-  <td>89.7</td>
-  <td style="color:var(--fg3);">34–145</td>
-  <td>—</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td>99.0</td>
+  <td style="color:var(--fg3);">56–142</td>
+  <td>168</td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE20</td>
-  <td class="name">Dalton Schultz</td>
-  <td>HOU</td>
-  <td>88.6</td>
-  <td style="color:var(--fg3);">38–140</td>
+  <td class="name">Pat Freiermuth</td>
+  <td>PIT</td>
+  <td>98.9</td>
+  <td style="color:var(--fg3);">63–135</td>
   <td>—</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE21</td>
-  <td class="name">Pat Freiermuth</td>
-  <td>PIT</td>
-  <td>85.5</td>
-  <td style="color:var(--fg3);">41–130</td>
-  <td>—</td>
+  <td class="name">Isaiah Likely</td>
+  <td>NYG</td>
+  <td>93.7</td>
+  <td style="color:var(--fg3);">50–137</td>
+  <td>137</td>
   <td><span class="verdict safe">LOW</span></td>
 </tr>
 <tr>
   <td class="rank">TE22</td>
-  <td class="name">T.J. Hockenson</td>
-  <td>MIN</td>
-  <td>77.8</td>
-  <td style="color:var(--fg3);">22–133</td>
-  <td>—</td>
+  <td class="name">Mark Andrews</td>
+  <td>BAL</td>
+  <td>93.4</td>
+  <td style="color:var(--fg3);">47–140</td>
+  <td>128</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE23</td>
   <td class="name">Oronde Gadsden II</td>
   <td>LAC</td>
-  <td>76.0</td>
-  <td style="color:var(--fg3);">9–143</td>
+  <td>90.9</td>
+  <td style="color:var(--fg3);">40–142</td>
   <td>—</td>
   <td><span class="verdict medium">MED</span></td>
 </tr>
 <tr>
   <td class="rank">TE24</td>
-  <td class="name">Brenton Strange</td>
-  <td>JAX</td>
-  <td>75.6</td>
-  <td style="color:var(--fg3);">26–125</td>
+  <td class="name">AJ Barner</td>
+  <td>SEA</td>
+  <td>90.0</td>
+  <td style="color:var(--fg3);">58–122</td>
   <td>—</td>
-  <td><span class="verdict medium">MED</span></td>
+  <td><span class="verdict safe">LOW</span></td>
 </tr></tbody>
 </table>
 
@@ -408,7 +456,7 @@ function toggleHubNav(button){
 <p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 
-    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/methodology/">Methodology</a></div>
+    <h3 style="margin-top:48px;">Related Rankings</h3><div class="related-hubs"><a href="/2026/qb-rankings/">QB Rankings</a><a href="/2026/rb-rankings/">RB Rankings</a><a href="/2026/wr-rankings/">WR Rankings</a><a href="/2026/top-sleepers/">Top Sleepers</a><a href="/2026/top-busts/">Top Busts</a><a href="/2026/who-should-i-draft/">Who Should I Draft?</a><a href="/2026/adp-vs-model/">ADP vs Model Study</a><a href="/methodology/">Methodology</a></div>
     
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
@@ -419,7 +467,7 @@ function toggleHubNav(button){
     
   </div></main>
 <footer>
-  <div>Updated July 20, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a></div>
+  <div>Updated August 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>
