@@ -1416,7 +1416,7 @@
     <h3>Right Sidebar Panels</h3>
     <table>
       <tr><th>Panel</th><th>What It Shows</th></tr>
-      <tr><td><strong>Target Intel</strong></td><td>Top recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, Value vs. ADP, sleeper/bust flags, and draft risk. It schedules DEF and K late, adapts their timing when multiple slots are required, and activates Roster Lock before any pick could make the configured lineup impossible to complete.</td></tr>
+      <tr><td><strong>Target Intel</strong></td><td>Top recommendations from opportunity-cost draft math, blended with VBD, live roster holes, flex needs, positional scarcity, next-turn availability, and intrinsic player uncertainty. Sleeper/bust and Value vs. ADP labels remain visible as context without being counted again. It schedules DEF and K late, adapts their timing when multiple slots are required, and activates Roster Lock before any pick could make the configured lineup impossible to complete.</td></tr>
       <tr><td><strong>Positional Scarcity</strong></td><td>Drop-off from elite to replacement level per position. Higher dropoff = position is scarce = draft early.</td></tr>
       <tr><td><strong>Bye Conflicts</strong></td><td>Warns when multiple starters share a bye week. Critical = no bench coverage. Warning = bench available.</td></tr>
       <tr><td><strong>Sleepers &amp; Busts</strong></td><td>Compares model rank vs ADP. Sleepers = model ranks higher than market. Busts = market overvalues.</td></tr>
@@ -2050,7 +2050,7 @@ function normalizeRiskTier(tier){
 
 function computeDraftRisk(p){
   if(!p || p.position==='K' || p.position==='DEF'){
-    return {tier:'low', score:0, reasons:[]};
+    return {tier:'low', score:0, intrinsicScore:0, reasons:[]};
   }
   const reasons=[];
   const uncertainty=normalizeRiskTier(p.risk || p.uncertainty);
@@ -2079,6 +2079,11 @@ function computeDraftRisk(p){
     score+=1;
     reasons.push('2nd-year range');
   }
+
+  // Keep player uncertainty separate from price-based draft risk. Target Intel
+  // already models ADP, reach, and next-pick availability, so using the full
+  // draft-risk score there would count market price more than once.
+  const intrinsicScore=score;
 
   const adpEdge=Number(p.adp_edge);
   const adpRank=Number(p.adp_rank);
@@ -2114,7 +2119,7 @@ function computeDraftRisk(p){
   let tier='low';
   if(score>=4) tier='high';
   else if(score>=2) tier='medium';
-  return {tier, score, reasons:[...new Set(reasons)].slice(0,3)};
+  return {tier, score, intrinsicScore, reasons:[...new Set(reasons)].slice(0,3)};
 }
 
 function annotateDraftRisks(){
@@ -2122,6 +2127,7 @@ function annotateDraftRisks(){
     const risk=computeDraftRisk(p);
     p.draft_risk=risk.tier;
     p.draft_risk_score=risk.score;
+    p.draft_risk_intrinsic_score=risk.intrinsicScore;
     p.draft_risk_reasons=risk.reasons;
   });
 }
@@ -2159,8 +2165,6 @@ function buildDraftIntel(){
     if(intel){
       p.intel_label = intel.label;
       p.intel_reason = intel.reason;
-      p.model_rank = intel.model_rank || p.model_rank;
-      p.model_pos_rank = intel.model_pos_rank || p.model_pos_rank;
       p.adp_gap = intel.adp_gap;
       p.adp_pos_rank = intel.adp_pos_rank;
     }
@@ -2511,6 +2515,15 @@ function sigmoid(x){
   return 1/(1+Math.exp(-Math.max(-30,Math.min(30,x))));
 }
 
+function boundedRecommendationSignal(rawScore){
+  // Preserve ordering after large opportunity-cost scores instead of giving
+  // every candidate above a hard threshold the same +54. The slope near zero
+  // remains 0.5, matching the prior weighting, with smooth asymmetric bounds.
+  const linear=Number(rawScore||0)*0.50;
+  const limit=linear>=0?54:36;
+  return limit*Math.tanh(linear/limit);
+}
+
 function snakeSlotForPick(pickNum,numTeams){
   const inRound=((pickNum-1)%numTeams)+1;
   const round=Math.floor((pickNum-1)/numTeams)+1;
@@ -2646,11 +2659,11 @@ function getRecommendations(){
     const coverageNeed=!kd?coverage.needs[p.position]||0:0;
     const atOrOverCap=!kd&&(myPosCount[p.position]||0)>=((plan.maxByPos||{})[p.position]||99);
     const ownList=availableByPos[p.position]||[];
-    const nextSame=ownList.find(x=>x.player_id!==p.player_id);
-    const liveCliff=Math.max(0,(p.projected_points||0)-(nextSame?.projected_points||0));
+    const ownIndex=ownList.findIndex(x=>x.player_id===p.player_id);
+    const nextSame=ownIndex>=0?ownList[ownIndex+1]:null;
+    const liveCliff=nextSame?Math.max(0,(p.projected_points||0)-(nextSame.projected_points||0)):0;
     const scarcity=scarcityByPos[p.position]||{};
     const scarcityWeight=(Number(scarcity.tier_gap)||0)/maxTierGap;
-    const adpEdge=Number.isFinite(p.adp_edge)?p.adp_edge:0;
     const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,draftNeeds,plan,round);
 
     let score=(p.vbd||0);
@@ -2659,8 +2672,9 @@ function getRecommendations(){
       if(p.stream_rank)reasons.push(`opening ${p.position}${p.stream_rank}`);
     }
     if(!kd){
-      score+=Math.max(-36,Math.min(54,guarded.score*0.50));
-      if(guarded.urgency>=12)reasons.push("won't come back");
+      score+=boundedRecommendationSignal(guarded.score);
+      if(guarded.pGone>=0.70)reasons.push('unlikely to return');
+      else if(guarded.urgency>=12)reasons.push('costly to wait');
       if(p.position==='RB')reasons.push('RB scarcity');
     }
 
@@ -2692,24 +2706,16 @@ function getRecommendations(){
       if(scarcityBonus>=8)reasons.push('scarcity cliff');
     }
 
-    if(adpEdge>0){
-      const valueBonus=Math.min(24,adpEdge*0.45);
-      score+=valueBonus;
-      if(adpEdge>=12)reasons.push('ADP value');
-    }else if(adpEdge<0){
-      score+=Math.max(-24,adpEdge*0.35);
-    }
+    // Sleeper/bust labels and ADP edge are derived from the same projection
+    // and market inputs already represented by VBD and adpGuardedScore. Keep
+    // them as context, not additional points, to avoid double-counting.
+    if(p.intel_label==='SLEEPER')reasons.push('model vs ADP value');
+    if(p.intel_label==='BUST')reasons.push('market ahead of model');
 
-    if(p.intel_label==='SLEEPER'){score+=14;reasons.push('sleeper');}
-    if(p.intel_label==='BUST'){score-=18;reasons.push('bust risk');}
-    if(p.risk==='low')score+=3;
-    if(p.risk==='high')score-=5;
-    if(p.draft_risk==='low')score+=2;
-    if(p.draft_risk==='medium')score-=3;
-    if(p.draft_risk==='high'){
-      score-=8;
-      reasons.push('draft risk');
-    }
+    const intrinsicRiskScore=Math.max(0,Number(p.draft_risk_intrinsic_score||0));
+    const intrinsicRiskPenalty=Math.min(12,intrinsicRiskScore*3);
+    score-=intrinsicRiskPenalty;
+    if(intrinsicRiskScore>=2)reasons.push('player uncertainty');
 
     if(kd){
       const needCount=Math.max(1,directNeed);
@@ -3441,6 +3447,7 @@ function setTeams(n, btn){
 function applySettings(){
   // Update scoring
   adjustScoring();
+  buildDraftIntel();
   // Update roster config from inputs
   const slotValue=(id,fallback)=>{
     const value=parseInt(document.getElementById(id).value);
@@ -3501,6 +3508,7 @@ function restoreSettings(){
     document.getElementById('slotBench').value=s.bench!=null?s.bench:(s.slots.bench!=null?s.slots.bench:6);
   }
   adjustScoring();
+  buildDraftIntel();
 }
 
 function toggleVBD(){

@@ -63,6 +63,40 @@ def main() -> None:
             if "Jahmyr Gibbs" not in first_ten or "Puka Nacua" not in first_ten:
                 raise AssertionError(f"Top-ten sanity failed: {first_ten}")
 
+            first_pick_recommendations = driver.execute_script(
+                """
+                scoringFormat='ppr';
+                adjustScoring();
+                buildDraftIntel();
+                rosterConfig.draft_slot=1;
+                myTeamIds=[];
+                opponentIds=[];
+                computeClientVBD();
+                getRecommendations();
+                const names=[...recommendedIds].map(id=>playerMap[id].player_name);
+                scoringFormat='half_ppr';
+                adjustScoring();
+                buildDraftIntel();
+                rosterConfig.draft_slot=6;
+                computeClientVBD();
+                getRecommendations();
+                renderPlayerPool();
+                return names;
+                """
+            )
+            if "Jahmyr Gibbs" not in first_pick_recommendations:
+                raise AssertionError(
+                    f"Gibbs missing from PPR 1.01 recommendations: {first_pick_recommendations}"
+                )
+            if (
+                "Kyren Williams" in first_pick_recommendations
+                and first_pick_recommendations.index("Kyren Williams")
+                < first_pick_recommendations.index("Jahmyr Gibbs")
+            ):
+                raise AssertionError(
+                    f"Kyren incorrectly ranked above Gibbs at PPR 1.01: {first_pick_recommendations}"
+                )
+
             driver.execute_script("currentFilter='K'; searchQuery=''; renderPlayerPool()")
             wait.until(
                 lambda d: len(d.find_elements("css selector", "#playerPool tbody tr")) >= 33
@@ -121,7 +155,7 @@ def main() -> None:
             )
             if any(pos in {"K", "DEF"} for pos in recommendation_timing["early"]):
                 raise AssertionError(f"K/DEF recommended early: {recommendation_timing}")
-            if "DEF" not in recommendation_timing["round14"] or "K" in recommendation_timing["round14"]:
+            if not {"DEF", "K"}.issubset(recommendation_timing["round14"]):
                 raise AssertionError(f"Defense timing policy failed: {recommendation_timing}")
             if "K" not in recommendation_timing["round15"]:
                 raise AssertionError(f"Kicker timing policy failed: {recommendation_timing}")
@@ -177,6 +211,7 @@ def main() -> None:
                 "data_status": status_text,
                 "data_status_color": status_color,
                 "top_ten": first_ten,
+                "ppr_1_01_recommendations": first_pick_recommendations,
                 "opening_kicker_1": first_kicker,
                 "opening_defense_1": first_defense,
                 "recommendation_timing": recommendation_timing,
