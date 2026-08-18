@@ -1869,26 +1869,50 @@ async function startCheckout(planType){
       body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season',attribution:marketingAttribution})
     });
     const data = await res.json();
-    if(data.url){window.location.href=data.url;}
-  }catch(e){gaEvent('checkout_error',{plan_type:planType||'season'});alert('Checkout error — try again');}
+    if(!res.ok||!data.url)throw new Error(data.error||'Checkout session was not created');
+    window.location.href=data.url;
+  }catch(e){
+    gaEvent('checkout_error',{plan_type:planType||'season',error_message:String(e?.message||'unknown').slice(0,120)});
+    alert('Checkout could not start. Please try again or contact support.');
+  }
 }
 
 // Check payment success on return
-function checkPaymentReturn(){
+async function checkPaymentReturn(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('payment')==='success'){
-    const purchasedPlan=params.get('plan')||'season';
-    const purchaseValue=purchasedPlan==='draft'?6.99:24.99;
-    const transactionId=params.get('session_id')||undefined;
-    gaEvent('purchase_complete',{source:'stripe_redirect',plan_type:purchasedPlan,value:purchaseValue,currency:'USD',transaction_id:transactionId});
-    gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency:'USD',items:[{item_id:`overadp_${purchasedPlan}`,item_name:purchasedPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:purchaseValue,quantity:1}]});
-    // Refresh session to get updated plan
-    restoreSession().then(()=>{
-      if(userPlan==='paid'&&allPlayers.length){
-        refreshAll();
+    const sessionId=params.get('session_id');
+    if(!sessionId||!currentUser?.id){
+      gaEvent('purchase_verification_failed',{reason:!sessionId?'missing_session_id':'missing_user'});
+      return;
+    }
+    try{
+      const res=await fetch(API_BASE+'/stripe-verify',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({session_id:sessionId,user_id:currentUser.id})
+      });
+      const verified=await res.json();
+      if(!res.ok||!verified.verified)throw new Error(verified.error||'Payment could not be verified');
+
+      const purchasedPlan=verified.plan_type==='draft'?'draft':'season';
+      const purchaseValue=Number(verified.value)||(purchasedPlan==='draft'?6.99:24.99);
+      const currency=verified.currency||'USD';
+      const transactionId=verified.transaction_id||sessionId;
+      gaEvent('purchase_complete',{source:'stripe_verified',plan_type:purchasedPlan,value:purchaseValue,currency,transaction_id:transactionId});
+      gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency,items:[{item_id:`overadp_${purchasedPlan}`,item_name:purchasedPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:purchaseValue,quantity:1}]});
+      window.history.replaceState({},'',window.location.pathname);
+
+      // The signed webhook grants access. Retry briefly in case its database update
+      // completes just after Stripe redirects the customer back to the app.
+      for(let attempt=0;attempt<3&&userPlan!=='paid';attempt++){
+        await restoreSession();
+        if(userPlan!=='paid')await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
       }
-    });
-    window.history.replaceState({},'',window.location.pathname);
+      if(userPlan==='paid'&&allPlayers.length)refreshAll();
+    }catch(e){
+      gaEvent('purchase_verification_failed',{reason:'verification_error',error_message:String(e?.message||'unknown').slice(0,120)});
+      alert('Your payment return could not be verified yet. Reload this page in a moment or contact support.');
+    }
   }
 }
 
