@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from scripts.refresh_market_data import apply_nflverse_injury_fields, fetch_optional_csv
+from scripts.refresh_market_data import (
+    apply_nflverse_injury_fields,
+    apply_preseason_injury_note,
+    fetch_optional_csv,
+)
 
 
 class InjuryOverlayTests(unittest.TestCase):
@@ -55,6 +59,74 @@ class InjuryOverlayTests(unittest.TestCase):
         self.assertEqual(player["injury_status"], "Injured Reserve")
         self.assertEqual(player["roster_status"], "RES")
         self.assertNotIn("injury_body_part", player)
+
+    def test_current_preseason_reserve_codes_are_exposed(self):
+        cases = {
+            "R34": "Injured Reserve",
+            "R36": "Injured Reserve",
+            "R37": "PUP",
+            "R41": "PUP",
+            "R46": "NFI",
+        }
+
+        for roster_code, expected in cases.items():
+            with self.subTest(roster_code=roster_code):
+                player = {"player_name": "Preseason Reserve Player"}
+                status = apply_nflverse_injury_fields(
+                    player,
+                    None,
+                    {"status": "RES", "status_description_abbr": roster_code},
+                    "2026-08-20T12:00:00Z",
+                )
+
+                self.assertEqual(status, expected)
+                self.assertEqual(player["injury_status"], expected)
+
+    def test_practice_report_without_game_designation_is_informational(self):
+        player = {"player_name": "Camp Injury Player"}
+
+        status = apply_nflverse_injury_fields(
+            player,
+            {
+                "report_status": "",
+                "practice_primary_injury": "Hamstring",
+                "practice_status": "Did Not Participate in Practice",
+            },
+            {"status": "ACT"},
+            "2026-09-08T12:00:00Z",
+        )
+
+        self.assertEqual(status, "INJ")
+        self.assertEqual(player["injury_status"], "INJ")
+        self.assertEqual(player["injury_body_part"], "Hamstring")
+
+    def test_reviewed_preseason_note_is_informational_and_expires(self):
+        note = {
+            "injury_body_part": "Calf",
+            "injury_notes": "Held out as a precaution.",
+            "source_label": "NFL.com player news",
+            "source_url": "https://example.com/player",
+            "source_updated_at": "2026-08-20T14:52:00Z",
+            "expires_on": "2026-08-26",
+        }
+        player = {"player_name": "Camp Injury Player"}
+
+        status = apply_preseason_injury_note(
+            player,
+            note,
+            "2026-08-20T16:00:00Z",
+        )
+
+        self.assertEqual(status, "INJ")
+        self.assertEqual(player["injury_status"], "INJ")
+        self.assertEqual(player["injury_source_label"], "NFL.com player news")
+        self.assertIsNone(
+            apply_preseason_injury_note(
+                {},
+                note,
+                "2026-08-27T12:00:00Z",
+            )
+        )
 
     def test_unknown_reserve_code_does_not_invent_an_injury(self):
         player = {"player_name": "Unsigned Draft Choice"}

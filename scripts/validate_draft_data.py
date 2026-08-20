@@ -112,6 +112,17 @@ def validate(max_age_hours: float) -> list[str]:
     report_week = injuries_meta.get("latest_injury_report_week")
     if not isinstance(report_available, bool) or report_available != (report_week is not None):
         errors.append("metadata.json: injury report availability/week is inconsistent")
+    expected_reporting_mode = (
+        "official_game_status" if report_available else "preseason_availability"
+    )
+    if injuries_meta.get("reporting_mode") != expected_reporting_mode:
+        errors.append("metadata.json: injury reporting mode is inconsistent")
+    try:
+        preseason_notes_applied = int(injuries_meta.get("preseason_notes_applied", -1))
+    except (TypeError, ValueError):
+        preseason_notes_applied = -1
+    if preseason_notes_applied < 0 or preseason_notes_applied > len(injury_rows):
+        errors.append("metadata.json: preseason note count is inconsistent")
     if int(injuries_meta.get("latest_roster_week", 0)) < 1:
         errors.append("metadata.json: nflverse roster week is missing")
     if int(injuries_meta.get("skill_players_flagged", -1)) != len(injury_rows):
@@ -128,6 +139,7 @@ def validate(max_age_hours: float) -> list[str]:
         for field in (
             "injury_body_part", "injury_notes", "injury_start_date",
             "practice_participation", "practice_description", "roster_status",
+            "injury_source_url", "injury_source_label",
         ):
             value = row.get(field)
             if value is not None and (not isinstance(value, str) or len(value) > 240):

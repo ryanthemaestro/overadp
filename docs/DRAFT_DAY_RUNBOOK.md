@@ -13,9 +13,15 @@
 - Injury availability never comes from Sleeper. nflverse's daily weekly-roster
   release supplies explicitly coded injured-reserve, PUP, and NFI status; its
   official weekly injury report supplies Q/D/O, injury area, and practice
-  participation once the season's report file is available. Unknown generic
-  reserve codes are not treated as injuries. nflverse data is attributed under
-  CC BY 4.0.
+  participation once the season's report file is available. Before then,
+  reported practice injuries use a neutral `INJ` label and do not change draft
+  value; only official reserve-list statuses lower recommendation scores.
+  Unknown generic reserve codes are not treated as injuries. The refresh
+  switches reporting modes automatically when the weekly report file appears.
+  nflverse data is attributed under CC BY 4.0.
+- `preseason_injuries.json` contains individually reviewed public reports for
+  active players who remain on the roster. Each note links its source and has
+  an expiration date so an old camp report cannot linger indefinitely.
 - The job stops without publishing if the source is stale, player volume
   drops, any active Sleeper depth-chart player lacks a projection, a top-24
   market player is missing, join coverage falls, team/bye coverage breaks,

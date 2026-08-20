@@ -16,4 +16,16 @@ https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md
 OverADP modifies the source data by selecting current-season/current-week
 records, joining them to its fantasy-player board, mapping only documented
 injury/PUP/NFI roster codes, normalizing weekly report labels, and publishing
-only the availability fields used by the application.
+only the availability fields used by the application. In preseason, reserve
+codes are shown as IR/PUP/NFI and can affect recommendations; practice-only
+reports are shown as informational `INJ` notes. Q/D/O labels are used only when
+the official weekly report release is available.
+
+## Reviewed preseason notes
+
+`preseason_injuries.json` contains a small, repository-reviewed overlay for
+active-player camp injuries that are absent from official weekly reports. Each
+entry links to its public source, records the source timestamp, expires
+automatically, and is displayed as informational `INJ` without changing draft
+value. The overlay is ignored once nflverse's official weekly report is
+available.

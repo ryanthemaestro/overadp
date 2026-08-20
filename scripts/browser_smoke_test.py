@@ -106,6 +106,23 @@ def main() -> None:
             )
             if injury_code_map != ["Q", "D", "O"]:
                 raise AssertionError(f"Injury status mapping failed: {injury_code_map}")
+            preseason_injury_policy = driver.execute_script(
+                """
+                const prior=dataMetadata.injuries.reporting_mode;
+                dataMetadata.injuries.reporting_mode='preseason_availability';
+                const result={
+                  neutral:injuryAvailabilityAdjustment({injury_status:'INJ'}).penalty,
+                  reserve:injuryAvailabilityAdjustment({injury_status:'Injured Reserve'}).penalty,
+                  code:injuryStatusInfo({injury_status:'INJ'}).code,
+                };
+                dataMetadata.injuries.reporting_mode=prior;
+                return result;
+                """
+            )
+            if preseason_injury_policy != {"neutral": 0, "reserve": 220, "code": "INJ"}:
+                raise AssertionError(
+                    f"Preseason injury policy failed: {preseason_injury_policy}"
+                )
 
             first_pick_recommendations = driver.execute_script(
                 """

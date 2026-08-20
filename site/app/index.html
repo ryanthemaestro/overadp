@@ -2667,7 +2667,8 @@ function draftBoardScore(p,ownList){
   const coverageNeed=coverage.needs[p.position]||0;
   const capPenalty=posCount>=max?70:0;
   const coverageBonus=Math.min(34,coverageNeed*(p.position==='QB'||p.position==='TE'?18:12));
-  return guarded+coverageBonus-capPenalty;
+  const availabilityPenalty=injuryAvailabilityAdjustment(p).penalty;
+  return guarded+coverageBonus-capPenalty-availabilityPenalty;
 }
 
 function getRecommendations(){
@@ -2776,6 +2777,10 @@ function getRecommendations(){
     const intrinsicRiskPenalty=Math.min(12,intrinsicRiskScore*3);
     score-=intrinsicRiskPenalty;
     if(intrinsicRiskScore>=2)reasons.push('player uncertainty');
+
+    const availability=injuryAvailabilityAdjustment(p);
+    score-=availability.penalty;
+    if(availability.reason)reasons.push(availability.reason);
 
     if(kd){
       const needCount=Math.max(1,directNeed);
@@ -2908,6 +2913,7 @@ function injuryStatusInfo(player){
   const raw=String(player?.injury_status||'').trim();
   if(!raw)return null;
   const key=raw.toLowerCase();
+  if(key==='inj'||key==='injury'||key==='injured')return {code:'INJ',tier:'other',label:'Reported Injury'};
   if(key.startsWith('question'))return {code:'Q',tier:'q',label:'Questionable'};
   if(key.startsWith('doubt'))return {code:'D',tier:'d',label:'Doubtful'};
   if(key==='out')return {code:'O',tier:'o',label:'Out'};
@@ -2950,15 +2956,34 @@ function injuryBadgeHtml(player){
   const updated=injuryUpdatedInfo(player.injury_source_updated_at);
   const stale=updated.stale?'<span class="injury-stale"> · older source update</span>':'';
   const label=escapeHtmlAttr(info.label);
+  const sourceUrl=escapeHtmlAttr(player.injury_source_url||'https://github.com/nflverse/nflverse-data');
+  const sourceLabel=escapeHtmlAttr(player.injury_source_label||'nflverse');
+  const sourceLicense=player.injury_source_url?'':' · CC BY 4.0';
   return `<details class="injury-details injury-${info.tier}">
     <summary aria-label="${label} injury details" title="Open ${label} injury details">${escapeHtmlAttr(info.code)}</summary>
-    <div class="injury-popover"><strong>${label}</strong>${details.length?` · ${details.join(' · ')}`:''}<div class="injury-source"><a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener">nflverse</a> · refreshed ${escapeHtmlAttr(updated.label)} · CC BY 4.0${stale}</div></div>
+    <div class="injury-popover"><strong>${label}</strong>${details.length?` · ${details.join(' · ')}`:''}<div class="injury-source"><a href="${sourceUrl}" target="_blank" rel="noopener">${sourceLabel}</a> · refreshed ${escapeHtmlAttr(updated.label)}${sourceLicense}${stale}</div></div>
   </details>`;
 }
 
 function injuryRowClass(player){
   const tier=injuryStatusInfo(player)?.tier;
   return ['o','ir','res','pup','sus'].includes(tier)?'injury-row-severe':'';
+}
+
+function injuryAvailabilityAdjustment(player){
+  const info=injuryStatusInfo(player);
+  if(!info)return {penalty:0,reason:''};
+  const preseason=dataMetadata?.injuries?.reporting_mode==='preseason_availability';
+  const officialReserve={ir:220,res:220,pup:140,sus:160};
+  if(Object.prototype.hasOwnProperty.call(officialReserve,info.tier)){
+    return {penalty:officialReserve[info.tier],reason:'official reserve status'};
+  }
+  // Preseason injury notes are context only. Once official weekly reports are
+  // available, game-status designations receive explicit availability costs.
+  if(preseason)return {penalty:0,reason:''};
+  const weeklyStatus={o:220,d:90,q:24};
+  const penalty=weeklyStatus[info.tier]||0;
+  return {penalty,reason:penalty?'weekly injury status':''};
 }
 
 function getBoardOrder(availablePlayers){

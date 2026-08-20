@@ -46,6 +46,7 @@ NFLVERSE_INJURY_RELEASE_URL = (
 NFLVERSE_LICENSE_URL = (
     "https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md"
 )
+PRESEASON_INJURY_FILE = PROJECT_ROOT / "preseason_injuries.json"
 OPENING_WEEK_WEIGHTS = {1: 0.55, 2: 0.30, 3: 0.15}
 # Fit on 2021-2024 regular-season data, then checked out of sample on 2025.
 KICKER_MODEL = {
@@ -85,6 +86,8 @@ INJURY_EXPORT_FIELDS = {
     "injury_start_date",
     "injury_news_updated",
     "injury_source_updated_at",
+    "injury_source_url",
+    "injury_source_label",
     "practice_participation",
     "practice_description",
     "roster_status",
@@ -95,6 +98,14 @@ NFLVERSE_INJURY_ROSTER_CODES = {
     "R04": "PUP",
     "R05": "NFI",
     "R27": "NFI",
+    # Current 2026 Shield roster codes. These are intentionally limited to
+    # statuses confirmed against club transaction/roster pages; generic
+    # reserve codes (for example unsigned draft choices) remain unclassified.
+    "R34": "Injured Reserve",
+    "R36": "Injured Reserve",
+    "R37": "PUP",
+    "R41": "PUP",
+    "R46": "NFI",
     "R47": "NFI",
     "R48": "Injured Reserve",
 }
@@ -251,6 +262,20 @@ def apply_nflverse_injury_fields(
         player["roster_status"] = roster_status
 
     injury_status = clean_feed_text((injury_report or {}).get("report_status"), 32)
+    if not injury_status and injury_report and any(
+        clean_feed_text(injury_report.get(field))
+        for field in (
+            "report_primary_injury",
+            "report_secondary_injury",
+            "practice_primary_injury",
+            "practice_secondary_injury",
+            "practice_status",
+        )
+    ):
+        # Practice participation can be published before the official weekly
+        # Q/D/O game designation. Keep it informational rather than inventing
+        # a game-status probability.
+        injury_status = "INJ"
     if not injury_status:
         roster_code = clean_feed_text(
             (roster or {}).get("status_description_abbr"),
@@ -281,11 +306,46 @@ def apply_nflverse_injury_fields(
     return injury_status
 
 
+def apply_preseason_injury_note(
+    player: dict[str, Any],
+    note: dict[str, Any] | None,
+    refreshed_at: str,
+) -> str | None:
+    """Apply a reviewed, informational preseason note from this repository."""
+    if not note:
+        return None
+    expires_on = clean_feed_text(note.get("expires_on"), 10)
+    try:
+        if expires_on and date.fromisoformat(expires_on) < date.fromisoformat(refreshed_at[:10]):
+            return None
+    except ValueError:
+        return None
+
+    player["injury_status"] = "INJ"
+    body_part = clean_feed_text(note.get("injury_body_part"))
+    notes = clean_feed_text(note.get("injury_notes"))
+    if body_part:
+        player["injury_body_part"] = body_part
+    if notes:
+        player["injury_notes"] = notes
+    player["injury_source_updated_at"] = (
+        clean_feed_text(note.get("source_updated_at"), 32) or refreshed_at
+    )
+    source_url = clean_feed_text(note.get("source_url"))
+    source_label = clean_feed_text(note.get("source_label"), 64)
+    if source_url:
+        player["injury_source_url"] = source_url
+    if source_label:
+        player["injury_source_label"] = source_label
+    return "INJ"
+
+
 def apply_injury_overlay(
     players: list[dict[str, Any]],
     roster_rows: list[dict[str, Any]],
     injury_report_rows: list[dict[str, Any]],
     source_updated_at: str,
+    preseason_injury_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     current_rosters, roster_week = latest_nflverse_week(roster_rows)
     current_injuries, injury_week = latest_nflverse_week(injury_report_rows)
@@ -301,7 +361,9 @@ def apply_injury_overlay(
         )
     roster_indexes = nflverse_player_indexes(current_rosters)
     injury_indexes = nflverse_player_indexes(current_injuries)
+    preseason_indexes = nflverse_player_indexes(preseason_injury_rows or [])
     matches = 0
+    preseason_notes_applied = 0
     status_counts: Counter[str] = Counter()
     for player in players:
         clear_injury_fields(player)
@@ -316,6 +378,15 @@ def apply_injury_overlay(
             roster,
             source_updated_at,
         )
+        if not injury_status and not current_injuries:
+            preseason_note = find_nflverse_player(player, preseason_indexes)
+            injury_status = apply_preseason_injury_note(
+                player,
+                preseason_note,
+                source_updated_at,
+            )
+            if injury_status:
+                preseason_notes_applied += 1
         if injury_status:
             status_counts[injury_status] += 1
     if matches < 650:
@@ -328,6 +399,7 @@ def apply_injury_overlay(
         "latest_roster_week": roster_week,
         "latest_injury_report_week": injury_week,
         "injury_report_rows": len(current_injuries),
+        "preseason_notes_applied": preseason_notes_applied,
     }
 
 
@@ -349,6 +421,17 @@ def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
         "latest_roster_week": overlay["latest_roster_week"],
         "latest_injury_report_week": overlay["latest_injury_report_week"],
         "injury_report_available": overlay["injury_report_rows"] > 0,
+        "preseason_notes_applied": overlay["preseason_notes_applied"],
+        "preseason_notes_source": "repository-reviewed public reports",
+        "reporting_mode": (
+            "official_game_status"
+            if overlay["injury_report_rows"] > 0
+            else "preseason_availability"
+        ),
+        "draft_adjustment_policy": (
+            "preseason notes are informational; only official reserve-list "
+            "statuses affect recommendations until weekly game reports begin"
+        ),
     }
 
 
@@ -356,6 +439,7 @@ def refresh_injuries_only(
     roster_rows: list[dict[str, Any]],
     injury_report_rows: list[dict[str, Any]],
     now: datetime,
+    preseason_injury_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Update volatile injury fields without weakening the full release gates."""
     players = load_json(SITE_DATA_DIR / "players.json")
@@ -371,6 +455,7 @@ def refresh_injuries_only(
         roster_rows,
         injury_report_rows,
         fetched_at,
+        preseason_injury_rows,
     )
     status_counts: Counter[str] = overlay["status_counts"]
     metadata["injuries"] = injury_metadata(now, overlay)
@@ -424,6 +509,34 @@ def fetch_optional_csv(url: str) -> list[dict[str, str]]:
 def load_json(path: Path) -> Any:
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def load_preseason_injury_file(path: Path) -> list[dict[str, Any]]:
+    payload = load_json(path)
+    if not isinstance(payload, dict) or payload.get("season") != PROJECTION_SEASON:
+        raise ValueError("Preseason injury file has the wrong season or schema")
+    rows = payload.get("players")
+    if not isinstance(rows, list):
+        raise ValueError("Preseason injury file must contain a players list")
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Preseason injury rows must be objects")
+        if normalize_position(row.get("position")) not in SKILL_POSITIONS:
+            raise ValueError(f"Invalid preseason injury position: {row!r}")
+        if not clean_feed_text(row.get("full_name")):
+            raise ValueError(f"Preseason injury row is missing full_name: {row!r}")
+        if not str(row.get("source_url") or "").startswith("https://"):
+            raise ValueError(f"Preseason injury row is missing an HTTPS source: {row!r}")
+        try:
+            date.fromisoformat(str(row["expires_on"]))
+            updated = datetime.fromisoformat(
+                str(row["source_updated_at"]).replace("Z", "+00:00")
+            )
+            if updated.tzinfo is None:
+                raise ValueError
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid preseason injury dates: {row!r}") from exc
+    return rows
 
 
 def load_csv(path: Path) -> list[dict[str, str]]:
@@ -998,6 +1111,7 @@ def refresh(
     injury_roster_rows: list[dict[str, Any]],
     injury_report_rows: list[dict[str, Any]],
     now: datetime,
+    preseason_injury_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     players = load_json(SITE_DATA_DIR / "players.json")
     k_def = load_json(SITE_DATA_DIR / "k_def.json")
@@ -1026,6 +1140,7 @@ def refresh(
         injury_roster_rows,
         injury_report_rows,
         generated_at,
+        preseason_injury_rows,
     )
     injury_status_counts: Counter[str] = injury_overlay["status_counts"]
     sleeper_matches = 0
@@ -1301,6 +1416,12 @@ def main() -> None:
         help="Use a saved nflverse weekly injury report CSV",
     )
     parser.add_argument(
+        "--preseason-injury-file",
+        type=Path,
+        default=PRESEASON_INJURY_FILE,
+        help="Use reviewed preseason injury notes from a local JSON file",
+    )
+    parser.add_argument(
         "--injury-only",
         action="store_true",
         help="Refresh only the cached nflverse availability overlay and its metadata",
@@ -1318,8 +1439,14 @@ def main() -> None:
         if args.injury_report_file
         else fetch_optional_csv(NFLVERSE_INJURY_URL)
     )
+    preseason_injury_rows = load_preseason_injury_file(args.preseason_injury_file)
     if args.injury_only:
-        metadata = refresh_injuries_only(injury_roster_rows, injury_report_rows, now)
+        metadata = refresh_injuries_only(
+            injury_roster_rows,
+            injury_report_rows,
+            now,
+            preseason_injury_rows,
+        )
         injuries = metadata["injuries"]
         print(
             "Injury refresh passed: "
@@ -1337,6 +1464,7 @@ def main() -> None:
         injury_roster_rows,
         injury_report_rows,
         now,
+        preseason_injury_rows,
     )
     counts = metadata["counts"]
     quality = metadata["quality"]

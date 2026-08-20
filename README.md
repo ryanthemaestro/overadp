@@ -32,7 +32,10 @@ and they do not invalidate a saved in-progress draft.
 
 Availability status is adapted from nflverse's daily weekly-roster release and
 official weekly injury reports under CC BY 4.0. Sleeper remains a roster and
-depth-chart input, but is not used as an injury source.
+depth-chart input, but is not used as an injury source. During preseason,
+official IR/PUP/NFI/reserve statuses can affect recommendations while neutral
+`INJ` notes are informational only. The refresh switches automatically to
+official Q/D/O game statuses when the season injury-report file is published.
 
 ### Full projection refresh
 

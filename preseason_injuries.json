@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "season": 2026,
+  "updated_at": "2026-08-20T14:52:00Z",
+  "players": [
+    {
+      "gsis_id": "00-0039040",
+      "full_name": "De'Von Achane",
+      "position": "RB",
+      "team": "MIA",
+      "injury_body_part": "Calf",
+      "injury_notes": "Expected to be available for Week 1; Miami is holding him from practice as a precaution.",
+      "source_label": "NFL.com player news",
+      "source_url": "https://fantasy.nfl.com/players/card?leagueId=996638&playerId=2570062",
+      "source_updated_at": "2026-08-20T14:52:00Z",
+      "expires_on": "2026-08-26"
+    }
+  ]
+}
