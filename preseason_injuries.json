@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "season": 2026,
-  "updated_at": "2026-08-20T14:52:00Z",
+  "updated_at": "2026-08-20T16:10:00Z",
   "players": [
     {
       "gsis_id": "00-0039040",
@@ -14,6 +14,162 @@
       "source_url": "https://fantasy.nfl.com/players/card?leagueId=996638&playerId=2570062",
       "source_updated_at": "2026-08-20T14:52:00Z",
       "expires_on": "2026-08-26"
+    },
+    {
+      "gsis_id": "00-0041027",
+      "full_name": "Jeremiyah Love",
+      "position": "RB",
+      "team": "ARI",
+      "injury_body_part": "Ankle",
+      "injury_notes": "High ankle sprain; unlikely to play again this preseason, with Arizona hopeful he can return for Week 1.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-09-13"
+    },
+    {
+      "gsis_id": "00-0039901",
+      "full_name": "Keon Coleman",
+      "position": "WR",
+      "team": "BUF",
+      "injury_body_part": "Foot / Toe",
+      "injury_notes": "Missed practice and was in a walking boot after spraining his foot or toe in the preseason opener.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-08-25"
+    },
+    {
+      "gsis_id": "00-0040586",
+      "full_name": "Jaydon Blue",
+      "position": "RB",
+      "team": "DAL",
+      "injury_body_part": "Shoulder",
+      "injury_notes": "Missed a second consecutive practice with a shoulder injury.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-08-24"
+    },
+    {
+      "gsis_id": "00-0038120",
+      "full_name": "Breece Hall",
+      "position": "RB",
+      "team": "NYJ",
+      "injury_body_part": "Groin",
+      "injury_notes": "Expected to miss two to three weeks; the Jets expect him to be ready for the regular-season opener.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-09-13"
+    },
+    {
+      "gsis_id": "00-0033280",
+      "full_name": "Christian McCaffrey",
+      "position": "RB",
+      "team": "SF",
+      "injury_body_part": "Tightness",
+      "injury_notes": "Missed about a week of practice, though Kyle Shanahan said he would have practiced Tuesday outside the joint session.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-08-24"
+    },
+    {
+      "gsis_id": "00-0031408",
+      "full_name": "Mike Evans",
+      "position": "WR",
+      "team": "SF",
+      "injury_body_part": "Quadriceps",
+      "injury_notes": "Left the 49ers' joint practice early because of quad tightness.",
+      "source_label": "NFL.com Aug. 18 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-tuesday-aug-18",
+      "source_updated_at": "2026-08-18T16:00:00Z",
+      "expires_on": "2026-08-24"
+    },
+    {
+      "gsis_id": "00-0034775",
+      "full_name": "Christian Kirk",
+      "position": "WR",
+      "team": "SF",
+      "injury_body_part": "Calf",
+      "injury_notes": "Remained sidelined from the 49ers' Aug. 18 joint practice with a calf injury.",
+      "source_label": "49ers training camp report",
+      "source_url": "https://www.49ers.com/news/day-14-of-2026-training-camp-kaelon-black-returns-for-joint-practice-with-chargers",
+      "source_updated_at": "2026-08-18T22:00:00Z",
+      "expires_on": "2026-08-25"
+    },
+    {
+      "gsis_id": "00-0040130",
+      "full_name": "Jayden Higgins",
+      "position": "WR",
+      "team": "HOU",
+      "injury_body_part": "Knee / ACL",
+      "injury_notes": "Reported torn ACL; expected to miss the entire 2026 season.",
+      "source_label": "NFL.com Aug. 19 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-wednesday-aug-19",
+      "source_updated_at": "2026-08-19T16:00:00Z",
+      "expires_on": "2027-01-15"
+    },
+    {
+      "gsis_id": "00-0033906",
+      "full_name": "Alvin Kamara",
+      "position": "RB",
+      "team": "NO",
+      "injury_body_part": "Knee / MCL",
+      "injury_notes": "Expected to miss at least a month after suffering a sprained MCL in practice.",
+      "source_label": "NFL.com Aug. 19 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-wednesday-aug-19",
+      "source_updated_at": "2026-08-19T16:00:00Z",
+      "expires_on": "2026-09-20"
+    },
+    {
+      "gsis_id": "00-0041029",
+      "full_name": "Jordyn Tyson",
+      "position": "WR",
+      "team": "NO",
+      "injury_body_part": "Hamstring",
+      "injury_notes": "Expected to miss roughly two months after suffering a hamstring injury in practice.",
+      "source_label": "NFL.com Aug. 17 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-monday-aug-17",
+      "source_updated_at": "2026-08-17T16:00:00Z",
+      "expires_on": "2026-10-18"
+    },
+    {
+      "gsis_id": "00-0040128",
+      "full_name": "Tyler Warren",
+      "position": "TE",
+      "team": "IND",
+      "injury_body_part": "Groin",
+      "injury_notes": "Expected to miss about one week with a minor groin injury; no Week 1 availability concern was reported.",
+      "source_label": "NFL.com Aug. 20 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-thursday-aug-20",
+      "source_updated_at": "2026-08-20T16:00:00Z",
+      "expires_on": "2026-08-27"
+    },
+    {
+      "gsis_id": "00-0037256",
+      "full_name": "Rachaad White",
+      "position": "RB",
+      "team": "WAS",
+      "injury_body_part": "Hamstring",
+      "injury_notes": "Will not play in the second preseason game, but Washington expects the injury to be short term.",
+      "source_label": "NFL.com Aug. 20 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-thursday-aug-20",
+      "source_updated_at": "2026-08-20T16:00:00Z",
+      "expires_on": "2026-08-26"
+    },
+    {
+      "gsis_id": "00-0041438",
+      "full_name": "Carnell Tate",
+      "position": "WR",
+      "team": "TEN",
+      "injury_body_part": "Stiffness",
+      "injury_notes": "Did not practice Wednesday because of stiffness; no longer-term diagnosis was reported.",
+      "source_label": "NFL.com Aug. 19 injury roundup",
+      "source_url": "https://www.nfl.com/news/nfl-news-roundup-latest-league-updates-from-wednesday-aug-19",
+      "source_updated_at": "2026-08-19T16:00:00Z",
+      "expires_on": "2026-08-24"
     }
   ]
 }
