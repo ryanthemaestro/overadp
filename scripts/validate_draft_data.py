@@ -8,7 +8,7 @@ import json
 import math
 import unicodedata
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +155,24 @@ def validate(max_age_hours: float) -> list[str]:
                 raise ValueError
         except (KeyError, TypeError, ValueError):
             errors.append(f"players.json: {name} has invalid injury_source_updated_at")
+        season_outlook = row.get("season_outlook")
+        if season_outlook is not None:
+            if season_outlook not in {
+                "expected_week_1", "monitor_week_1", "expected_absence", "season_out",
+            }:
+                errors.append(f"players.json: {name} has invalid season_outlook")
+            try:
+                expected_games_missed = float(row["expected_games_missed"])
+                if not math.isfinite(expected_games_missed) or not 0 <= expected_games_missed <= 17:
+                    raise ValueError
+            except (KeyError, TypeError, ValueError):
+                errors.append(f"players.json: {name} has invalid expected_games_missed")
+            expected_return_date = row.get("expected_return_date")
+            if expected_return_date:
+                try:
+                    date.fromisoformat(str(expected_return_date))
+                except ValueError:
+                    errors.append(f"players.json: {name} has invalid expected_return_date")
 
     position_counts = Counter(str(row.get("position") or "").upper() for row in players)
     minimums = {"QB": 100, "RB": 175, "WR": 325, "TE": 175}

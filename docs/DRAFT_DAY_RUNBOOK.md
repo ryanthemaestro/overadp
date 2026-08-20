@@ -14,14 +14,17 @@
   release supplies explicitly coded injured-reserve, PUP, and NFI status; its
   official weekly injury report supplies Q/D/O, injury area, and practice
   participation once the season's report file is available. Before then,
-  reported practice injuries use a neutral `INJ` label and do not change draft
-  value; only official reserve-list statuses lower recommendation scores.
+  reviewed camp reports use W1/W1?/MISS/SZN season-outlook labels. Target Intel
+  discounts expected missed games, leaves reported Week 1-ready players
+  unchanged, and removes season-ending cases from recommendations. Official
+  reserve-list statuses continue to receive hard penalties.
   Unknown generic reserve codes are not treated as injuries. The refresh
   switches reporting modes automatically when the weekly report file appears.
   nflverse data is attributed under CC BY 4.0.
 - `preseason_injuries.json` contains individually reviewed public reports for
-  active players who remain on the roster. Each note links its source and has
-  an expiration date so an old camp report cannot linger indefinitely.
+  fantasy-relevant active players. Each entry links its source, records a
+  labeled season outlook and expected-games-missed estimate, and expires so an
+  old camp report cannot linger indefinitely.
 - The job stops without publishing if the source is stale, player volume
   drops, any active Sleeper depth-chart player lacks a projection, a top-24
   market player is missing, join coverage falls, team/bye coverage breaks,

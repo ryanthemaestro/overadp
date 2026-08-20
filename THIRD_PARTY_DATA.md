@@ -24,8 +24,11 @@ the official weekly report release is available.
 ## Reviewed preseason notes
 
 `preseason_injuries.json` contains a small, repository-reviewed overlay for
-active-player camp injuries that are absent from official weekly reports. Each
-entry links to its public source, records the source timestamp, expires
-automatically, and is displayed as informational `INJ` without changing draft
-value. The overlay is ignored once nflverse's official weekly report is
-available.
+fantasy-relevant camp injuries that are absent from official weekly reports.
+Each entry links to its public source, records the source timestamp, expires
+automatically, and separates the reported facts from a labeled return outlook.
+Expected games missed reduce Target Intel value using the same projection/VBD
+score weights as the draft model; players reported ready for Week 1 receive no
+deduction, and season-ending reports are removed from recommendations. These
+outlooks are draft estimates, not medical diagnoses. The overlay is ignored
+once nflverse's official weekly report is available.

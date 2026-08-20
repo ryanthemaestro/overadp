@@ -592,6 +592,7 @@
   }
   .injury-details[open] .injury-badge-caret { transform: rotate(180deg); }
   .injury-details.injury-q { --injury-accent: #f8c24e; --injury-glow: rgba(248,194,78,0.22); }
+  .injury-details.injury-ready { --injury-accent: #32d583; --injury-glow: rgba(50,213,131,0.22); }
   .injury-details.injury-d { --injury-accent: #ff9f43; --injury-glow: rgba(255,159,67,0.24); }
   .injury-details.injury-o,
   .injury-details.injury-ir,
@@ -1567,7 +1568,7 @@
       <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus the live board's estimated draft slot</strong>, measured in picks. Estimated slot = current overall pick + BOARD rank − 1. At pick 1, an ADP of 35.7 and BOARD rank #38 equals −2.3 picks. Positive/green means the board would take the player earlier than the market; negative/red means later. It updates with league settings, roster needs, positional scarcity, and live picks.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
-      <tr><td><span class="tag tag-yellow">Q / D / O</span></td><td>Availability from nflverse's GitHub data releases. Daily roster data supplies explicit injured-reserve, PUP, and NFI status; official weekly reports supply Q/D/O, body part, and practice participation once those reports begin for the season. Select a badge to expand its details. Data is adapted from nflverse under CC BY 4.0.</td></tr>
+      <tr><td><span class="tag tag-yellow">W1 / MISS / Q / O</span></td><td>Preseason badges summarize reported season-opening outlook: W1 means expected ready for Week 1, W1? means monitor, MISS means regular-season time is expected to be missed, and SZN means expected out for the season. Once official weekly reports begin, badges switch to Q/D/O. Select a badge for the source, return estimate, expected games missed, and draft-value adjustment. No badge means no current report in the covered sources—not guaranteed health. nflverse roster/report data is adapted under CC BY 4.0.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
       <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high, based on RANGE width relative to PROJ within the player's position. Low means a tighter range. High means a wider range or a player near replacement level.</td></tr>
       <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>Low / medium / high — a draft-value warning that combines RANGE uncertainty, recent injury history, rookie/second-year unknowns, possible ADP overpay, and low VBD at the player's cost. It is not a medical projection.</td></tr>
@@ -1660,7 +1661,7 @@
     <h3>Key Features (July 2026)</h3>
     <ul>
       <li><strong>Current roster overlay</strong> — Sleeper roster/depth data keeps teams, bye weeks, and post-draft movement aligned with the board.</li>
-      <li><strong>Current availability overlay</strong> — nflverse's daily GitHub roster release plus official weekly Q/D/O, body-part, and practice-report data when available.</li>
+      <li><strong>Current availability overlay</strong> — nflverse's daily GitHub roster release, reviewed preseason return outlooks for fantasy-relevant injuries, and official weekly Q/D/O data when available.</li>
       <li><strong>Target / carry competition</strong> — Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
       <li><strong>College &amp; draft pipeline</strong> — Draft capital, draft-pick value, combine athleticism, college per-game production, Power 5 flags, and rookie interaction features.</li>
       <li><strong>Injury-adjusted regression</strong> — Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
@@ -3030,6 +3031,14 @@ function escapeHtmlAttr(value){
 }
 
 function injuryStatusInfo(player){
+  const outlook=String(player?.season_outlook||'').trim().toLowerCase();
+  const outlookMap={
+    expected_week_1:{code:'W1',tier:'ready',label:'Expected Ready for Week 1'},
+    monitor_week_1:{code:'W1?',tier:'q',label:'Week 1 Status Uncertain'},
+    expected_absence:{code:'MISS',tier:'o',label:'Expected to Miss Regular-Season Time'},
+    season_out:{code:'SZN',tier:'ir',label:'Expected Out for the Season'},
+  };
+  if(outlookMap[outlook])return {...outlookMap[outlook],seasonOutlook:true};
   const raw=String(player?.injury_status||'').trim();
   if(!raw)return null;
   const key=raw.toLowerCase();
@@ -3071,16 +3080,29 @@ function injuryBadgeHtml(player){
   if(practice)meta.push(`<span><strong>Practice</strong> · ${escapeHtmlAttr(practice)}</span>`);
   if(player.injury_start_date)meta.push(`<span><strong>Since</strong> · ${escapeHtmlAttr(player.injury_start_date)}</span>`);
   if(player.roster_status&&String(player.roster_status).toLowerCase()!=='active')meta.push(`<span><strong>Roster</strong> · ${escapeHtmlAttr(player.roster_status)}</span>`);
+  if(info.seasonOutlook){
+    const missed=Math.max(0,Math.min(17,Number(player.expected_games_missed||0)));
+    const missedLabel=missed===0?'none currently expected':`${missed.toFixed(Number.isInteger(missed)?0:1)} expected`;
+    meta.push(`<span><strong>Games missed</strong> · ${missedLabel}</span>`);
+    if(player.expected_return_date)meta.push(`<span><strong>Estimated return</strong> · ${escapeHtmlAttr(player.expected_return_date)}</span>`);
+    if(player.outlook_confidence)meta.push(`<span><strong>Outlook</strong> · ${escapeHtmlAttr(player.outlook_confidence)}</span>`);
+    const impact=injuryAvailabilityAdjustment(player);
+    if(Number(player.projected_points||0)>0){
+      meta.push(`<span><strong>Draft projection</strong> · ${impact.adjustedProjection.toFixed(1)} availability-adjusted vs ${Number(player.projected_points).toFixed(1)} healthy-model pts</span>`);
+    }
+    meta.push(`<span><strong>Target Intel</strong> · ${impact.penalty?`−${impact.penalty.toFixed(1)} score`: 'no current deduction'}</span>`);
+  }
   const updated=injuryUpdatedInfo(player.injury_source_updated_at);
   const stale=updated.stale?'<span class="injury-stale"> · older source update</span>':'';
   const label=escapeHtmlAttr(info.label);
   const sourceUrl=escapeHtmlAttr(player.injury_source_url||'https://github.com/nflverse/nflverse-data');
   const sourceLabel=escapeHtmlAttr(player.injury_source_label||'nflverse');
   const sourceLicense=player.injury_source_url?'':' · CC BY 4.0';
+  const kicker=info.seasonOutlook?'Season availability':'Player status';
   return `<details class="injury-details injury-${info.tier}">
     <summary aria-label="${label}. Hover or press Enter for player status details"><span class="injury-badge-dot" aria-hidden="true"></span><span>${escapeHtmlAttr(info.code)}</span><span class="injury-badge-caret" aria-hidden="true"></span></summary>
     <div class="injury-popover" role="tooltip">
-      <div class="injury-popover-head"><div><div class="injury-popover-kicker">Player status</div><div class="injury-popover-title">${label}</div></div><span class="injury-popover-code">${escapeHtmlAttr(info.code)}</span></div>
+      <div class="injury-popover-head"><div><div class="injury-popover-kicker">${kicker}</div><div class="injury-popover-title">${label}</div></div><span class="injury-popover-code">${escapeHtmlAttr(info.code)}</span></div>
       <div class="injury-popover-body">
         ${player.injury_body_part?`<span class="injury-body-part">${escapeHtmlAttr(player.injury_body_part)}</span>`:''}
         ${player.injury_notes?`<div class="injury-popover-note">${escapeHtmlAttr(player.injury_notes)}</div>`:'<div class="injury-popover-note">No additional availability note is currently reported.</div>'}
@@ -3151,18 +3173,38 @@ function injuryRowClass(player){
 
 function injuryAvailabilityAdjustment(player){
   const info=injuryStatusInfo(player);
-  if(!info)return {penalty:0,reason:''};
+  const projection=Math.max(0,Number(player?.projected_points||0));
+  if(!info)return {penalty:0,reason:'',adjustedProjection:projection};
   const preseason=dataMetadata?.injuries?.reporting_mode==='preseason_availability';
   const officialReserve={ir:220,res:220,pup:140,sus:160};
-  if(Object.prototype.hasOwnProperty.call(officialReserve,info.tier)){
-    return {penalty:officialReserve[info.tier],reason:'official reserve status'};
+  if(!info.seasonOutlook&&Object.prototype.hasOwnProperty.call(officialReserve,info.tier)){
+    return {penalty:officialReserve[info.tier],reason:'official reserve status',adjustedProjection:0};
+  }
+  if(preseason&&info.seasonOutlook){
+    const outlook=String(player.season_outlook||'');
+    const missed=Math.max(0,Math.min(17,Number(player.expected_games_missed||0)));
+    const adjustedProjection=projection*(1-missed/17);
+    if(outlook==='season_out'){
+      return {penalty:500,reason:'expected out for season',adjustedProjection:0};
+    }
+    const uncertainty=outlook==='monitor_week_1'?4:outlook==='expected_absence'?6:0;
+    // Target Intel weights projection at 0.10 and VBD at 0.34. Applying
+    // their combined 0.44 weight to expected lost fantasy points keeps the
+    // availability cost on the same score scale without changing the model.
+    const penalty=Math.round(((projection-adjustedProjection)*0.44+uncertainty)*10)/10;
+    const reason=outlook==='expected_absence'
+      ?`expected ${missed.toFixed(Number.isInteger(missed)?0:1)} games missed`
+      :outlook==='monitor_week_1'
+      ?'Week 1 health uncertainty'
+      :'';
+    return {penalty,reason,adjustedProjection};
   }
   // Preseason injury notes are context only. Once official weekly reports are
   // available, game-status designations receive explicit availability costs.
-  if(preseason)return {penalty:0,reason:''};
+  if(preseason)return {penalty:0,reason:'',adjustedProjection:projection};
   const weeklyStatus={o:220,d:90,q:24};
   const penalty=weeklyStatus[info.tier]||0;
-  return {penalty,reason:penalty?'weekly injury status':''};
+  return {penalty,reason:penalty?'weekly injury status':'',adjustedProjection:projection};
 }
 
 function getBoardOrder(availablePlayers){

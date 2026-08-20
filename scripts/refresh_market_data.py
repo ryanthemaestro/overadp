@@ -91,6 +91,16 @@ INJURY_EXPORT_FIELDS = {
     "practice_participation",
     "practice_description",
     "roster_status",
+    "season_outlook",
+    "expected_games_missed",
+    "expected_return_date",
+    "outlook_confidence",
+}
+PRESEASON_OUTLOOKS = {
+    "expected_week_1",
+    "monitor_week_1",
+    "expected_absence",
+    "season_out",
 }
 NFLVERSE_INJURY_ROSTER_CODES = {
     "P02": "Practice Squad Injured",
@@ -328,6 +338,20 @@ def apply_preseason_injury_note(
         player["injury_body_part"] = body_part
     if notes:
         player["injury_notes"] = notes
+    season_outlook = clean_feed_text(note.get("season_outlook"), 32)
+    if season_outlook in PRESEASON_OUTLOOKS:
+        player["season_outlook"] = season_outlook
+    try:
+        expected_games_missed = float(note.get("expected_games_missed"))
+    except (TypeError, ValueError):
+        expected_games_missed = 0.0
+    player["expected_games_missed"] = expected_games_missed
+    expected_return_date = clean_feed_text(note.get("expected_return_date"), 10)
+    if expected_return_date:
+        player["expected_return_date"] = expected_return_date
+    outlook_confidence = clean_feed_text(note.get("outlook_confidence"), 16)
+    if outlook_confidence:
+        player["outlook_confidence"] = outlook_confidence
     player["injury_source_updated_at"] = (
         clean_feed_text(note.get("source_updated_at"), 32) or refreshed_at
     )
@@ -423,14 +447,17 @@ def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
         "injury_report_available": overlay["injury_report_rows"] > 0,
         "preseason_notes_applied": overlay["preseason_notes_applied"],
         "preseason_notes_source": "repository-reviewed public reports",
+        "preseason_coverage_scope": (
+            "reviewed fantasy-relevant reports; no badge is not a health guarantee"
+        ),
         "reporting_mode": (
             "official_game_status"
             if overlay["injury_report_rows"] > 0
             else "preseason_availability"
         ),
         "draft_adjustment_policy": (
-            "preseason notes are informational; only official reserve-list "
-            "statuses affect recommendations until weekly game reports begin"
+            "reviewed preseason return outlooks adjust recommendations from "
+            "expected games missed; official reserve-list statuses remain hard penalties"
         ),
     }
 
@@ -527,8 +554,20 @@ def load_preseason_injury_file(path: Path) -> list[dict[str, Any]]:
             raise ValueError(f"Preseason injury row is missing full_name: {row!r}")
         if not str(row.get("source_url") or "").startswith("https://"):
             raise ValueError(f"Preseason injury row is missing an HTTPS source: {row!r}")
+        if row.get("season_outlook") not in PRESEASON_OUTLOOKS:
+            raise ValueError(f"Invalid preseason season outlook: {row!r}")
+        try:
+            expected_games_missed = float(row["expected_games_missed"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid expected games missed: {row!r}") from exc
+        if not math.isfinite(expected_games_missed) or not 0 <= expected_games_missed <= 17:
+            raise ValueError(f"Invalid expected games missed: {row!r}")
+        if row.get("outlook_confidence") not in {"reported", "estimated"}:
+            raise ValueError(f"Invalid preseason outlook confidence: {row!r}")
         try:
             date.fromisoformat(str(row["expires_on"]))
+            if row.get("expected_return_date"):
+                date.fromisoformat(str(row["expected_return_date"]))
             updated = datetime.fromisoformat(
                 str(row["source_updated_at"]).replace("Z", "+00:00")
             )

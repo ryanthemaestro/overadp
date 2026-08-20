@@ -34,8 +34,10 @@ Availability status is adapted from nflverse's daily weekly-roster release and
 official weekly injury reports under CC BY 4.0. Sleeper remains a roster and
 depth-chart input, but is not used as an injury source. During preseason,
 official IR/PUP/NFI/reserve statuses can affect recommendations while neutral
-`INJ` notes are informational only. The refresh switches automatically to
-official Q/D/O game statuses when the season injury-report file is published.
+`INJ` reports carry a reviewed season-opening outlook. Target Intel converts
+expected games missed into lost projected value while leaving players expected
+back for Week 1 undiscounted. The refresh switches automatically to official
+Q/D/O game statuses when the season injury-report file is published.
 
 ### Full projection refresh
 

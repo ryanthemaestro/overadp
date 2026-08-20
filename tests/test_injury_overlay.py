@@ -6,6 +6,8 @@ from scripts.refresh_market_data import (
     apply_nflverse_injury_fields,
     apply_preseason_injury_note,
     fetch_optional_csv,
+    load_preseason_injury_file,
+    PRESEASON_INJURY_FILE,
 )
 
 
@@ -104,6 +106,9 @@ class InjuryOverlayTests(unittest.TestCase):
         note = {
             "injury_body_part": "Calf",
             "injury_notes": "Held out as a precaution.",
+            "season_outlook": "expected_week_1",
+            "expected_games_missed": 0,
+            "outlook_confidence": "reported",
             "source_label": "NFL.com player news",
             "source_url": "https://example.com/player",
             "source_updated_at": "2026-08-20T14:52:00Z",
@@ -120,6 +125,8 @@ class InjuryOverlayTests(unittest.TestCase):
         self.assertEqual(status, "INJ")
         self.assertEqual(player["injury_status"], "INJ")
         self.assertEqual(player["injury_source_label"], "NFL.com player news")
+        self.assertEqual(player["season_outlook"], "expected_week_1")
+        self.assertEqual(player["expected_games_missed"], 0)
         self.assertIsNone(
             apply_preseason_injury_note(
                 {},
@@ -148,6 +155,10 @@ class InjuryOverlayTests(unittest.TestCase):
             "injury_body_part": "Hamstring",
             "injury_notes": "Strain",
             "injury_news_updated": 1787000000000,
+            "season_outlook": "expected_absence",
+            "expected_games_missed": 3,
+            "expected_return_date": "2026-09-27",
+            "outlook_confidence": "estimated",
         }
 
         status = apply_nflverse_injury_fields(
@@ -162,6 +173,19 @@ class InjuryOverlayTests(unittest.TestCase):
         self.assertNotIn("injury_body_part", player)
         self.assertNotIn("injury_notes", player)
         self.assertNotIn("injury_news_updated", player)
+        self.assertNotIn("season_outlook", player)
+        self.assertNotIn("expected_games_missed", player)
+        self.assertNotIn("expected_return_date", player)
+        self.assertNotIn("outlook_confidence", player)
+
+    def test_reviewed_preseason_file_has_structured_draft_outlooks(self):
+        rows = load_preseason_injury_file(PRESEASON_INJURY_FILE)
+
+        self.assertGreaterEqual(len(rows), 10)
+        self.assertTrue(all("season_outlook" in row for row in rows))
+        self.assertTrue(all("expected_games_missed" in row for row in rows))
+        self.assertTrue(any(row["season_outlook"] == "season_out" for row in rows))
+        self.assertTrue(any(float(row["expected_games_missed"]) > 0 for row in rows))
 
 
 if __name__ == "__main__":

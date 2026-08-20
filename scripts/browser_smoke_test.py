@@ -138,6 +138,32 @@ def main() -> None:
                 raise AssertionError(
                     f"Preseason injury policy failed: {preseason_injury_policy}"
                 )
+            preseason_outlook_policy = driver.execute_script(
+                """
+                const prior=dataMetadata.injuries.reporting_mode;
+                dataMetadata.injuries.reporting_mode='preseason_availability';
+                const projection=170;
+                const result={
+                  ready:injuryAvailabilityAdjustment({injury_status:'INJ',season_outlook:'expected_week_1',expected_games_missed:0,projected_points:projection}).penalty,
+                  monitor:injuryAvailabilityAdjustment({injury_status:'INJ',season_outlook:'monitor_week_1',expected_games_missed:0.5,projected_points:projection}).penalty,
+                  missed:injuryAvailabilityAdjustment({injury_status:'INJ',season_outlook:'expected_absence',expected_games_missed:2,projected_points:projection}).penalty,
+                  season:injuryAvailabilityAdjustment({injury_status:'INJ',season_outlook:'season_out',expected_games_missed:17,projected_points:projection}).penalty,
+                  codes:['expected_week_1','monitor_week_1','expected_absence','season_out'].map(season_outlook => injuryStatusInfo({injury_status:'INJ',season_outlook}).code),
+                };
+                dataMetadata.injuries.reporting_mode=prior;
+                return result;
+                """
+            )
+            if preseason_outlook_policy != {
+                "ready": 0,
+                "monitor": 6.2,
+                "missed": 14.8,
+                "season": 500,
+                "codes": ["W1", "W1?", "MISS", "SZN"],
+            }:
+                raise AssertionError(
+                    f"Preseason season-outlook policy failed: {preseason_outlook_policy}"
+                )
 
             first_pick_recommendations = driver.execute_script(
                 """
