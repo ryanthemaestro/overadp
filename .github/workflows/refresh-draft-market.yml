@@ -48,7 +48,9 @@ jobs:
         working-directory: production
         run: python scripts/import_model_export.py ../model/src/api/static/data
 
-      - name: Refresh ADP, rosters, schedule, and K/DEF streaming ranks
+      # refresh_market_data fetches Sleeper once and reuses that cached response
+      # for rosters, depth charts, and the injury overlay.
+      - name: Refresh ADP, rosters, injuries, schedule, and K/DEF streaming ranks
         working-directory: production
         run: python scripts/refresh_market_data.py
 

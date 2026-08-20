@@ -17,7 +17,7 @@ import math
 import statistics
 import unicodedata
 import urllib.request
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -63,6 +63,16 @@ RETRACTABLE_ROOF_HOME_TEAMS = {"ARI", "DAL", "HOU", "IND"}
 NAME_ALIASES = {
     ("kenny gainwell", "RB"): ("kenneth gainwell", "RB"),
 }
+INJURY_EXPORT_FIELDS = {
+    "injury_status",
+    "injury_body_part",
+    "injury_notes",
+    "injury_start_date",
+    "injury_news_updated",
+    "practice_participation",
+    "practice_description",
+    "roster_status",
+}
 
 
 def utc_now() -> datetime:
@@ -104,6 +114,104 @@ def normalize_provider_id(value: Any) -> str:
         return ""
     result = str(value).strip()
     return result[:-2] if result.endswith(".0") and result[:-2].isdigit() else result
+
+
+def clean_feed_text(value: Any, max_length: int = 240) -> str | None:
+    text = " ".join(str(value or "").split()).strip()
+    return text[:max_length] if text else None
+
+
+def apply_sleeper_injury_fields(player: dict[str, Any], sleeper: Any) -> str | None:
+    """Replace volatile injury fields with the current Sleeper snapshot."""
+    for field in INJURY_EXPORT_FIELDS:
+        player.pop(field, None)
+    if not isinstance(sleeper, dict):
+        return None
+
+    injury_status = clean_feed_text(sleeper.get("injury_status"), 32)
+    if not injury_status:
+        return None
+
+    player["injury_status"] = injury_status
+    optional_text_fields = {
+        "injury_body_part": "injury_body_part",
+        "injury_notes": "injury_notes",
+        "injury_start_date": "injury_start_date",
+        "practice_participation": "practice_participation",
+        "practice_description": "practice_description",
+        "roster_status": "status",
+    }
+    for output_field, source_field in optional_text_fields.items():
+        value = clean_feed_text(sleeper.get(source_field))
+        if value:
+            player[output_field] = value
+
+    try:
+        news_updated = int(float(sleeper.get("news_updated") or 0))
+    except (TypeError, ValueError):
+        news_updated = 0
+    if news_updated > 0:
+        player["injury_news_updated"] = news_updated
+    return injury_status
+
+
+def apply_injury_overlay(
+    players: list[dict[str, Any]], sleeper_payload: Any
+) -> tuple[int, Counter[str]]:
+    sleeper_gsis, sleeper_names, sleeper_base_names = sleeper_indexes(sleeper_payload)
+    matches = 0
+    status_counts: Counter[str] = Counter()
+    for player in players:
+        apply_sleeper_injury_fields(player, None)
+        position = normalize_position(player.get("position"))
+        sleeper = sleeper_gsis.get(str(player.get("player_id") or ""))
+        if not sleeper:
+            sleeper = sleeper_names.get(player_key(player.get("player_name"), position))
+        if not sleeper:
+            sleeper = sleeper_base_names.get(
+                (normalize_base_name(player.get("player_name")), position)
+            )
+        if not sleeper or normalize_position(sleeper.get("position")) != position:
+            continue
+        matches += 1
+        injury_status = apply_sleeper_injury_fields(player, sleeper)
+        if injury_status:
+            status_counts[injury_status] += 1
+    if matches < 650:
+        raise ValueError(f"Sleeper injury join failed quality gate: {matches}/{len(players)}")
+    return matches, status_counts
+
+
+def injury_metadata(now: datetime, matches: int, status_counts: Counter[str]) -> dict[str, Any]:
+    return {
+        "fetched_at": now.isoformat().replace("+00:00", "Z"),
+        "source": "Sleeper public NFL player feed",
+        "source_url": SLEEPER_URL,
+        "refresh_cadence": "daily",
+        "matched_skill_players": matches,
+        "skill_players_flagged": sum(status_counts.values()),
+        "status_counts": dict(sorted(status_counts.items())),
+    }
+
+
+def refresh_injuries_only(sleeper_payload: Any, now: datetime) -> dict[str, Any]:
+    """Update volatile injury fields without weakening the full release gates."""
+    players = load_json(SITE_DATA_DIR / "players.json")
+    metadata = load_json(SITE_DATA_DIR / "metadata.json")
+    if not isinstance(players, list) or len(players) < 800:
+        raise ValueError("Current skill-player board is missing or unexpectedly small")
+    if not isinstance(metadata, dict):
+        raise ValueError("Current metadata is missing or invalid")
+
+    matches, status_counts = apply_injury_overlay(players, sleeper_payload)
+    metadata["injuries"] = injury_metadata(now, matches, status_counts)
+    metadata.setdefault("counts", {})["current_injury_designations"] = sum(
+        status_counts.values()
+    )
+    for directory in (SITE_DATA_DIR, MODEL_DATA_DIR):
+        dump_json(directory / "players.json", players)
+        dump_json(directory / "metadata.json", metadata)
+    return metadata
 
 
 def fetch_json(url: str) -> Any:
@@ -732,6 +840,7 @@ def refresh(
         )
     schedule_contexts = opening_schedule_contexts(schedule_rows)
 
+    injury_matches, injury_status_counts = apply_injury_overlay(players, sleeper_payload)
     sleeper_matches = 0
     for player in players:
         player["adp"] = 200.0
@@ -920,6 +1029,7 @@ def refresh(
             "source_url": SLEEPER_URL,
             "matched_skill_players": sleeper_matches,
         },
+        "injuries": injury_metadata(now, injury_matches, injury_status_counts),
         "special_teams": {
             "fetched_at": generated_at,
             "schedule_source": "nflverse games and schedules",
@@ -947,6 +1057,7 @@ def refresh(
             "actionable_skill_adp": sum(1 for row in players if 0 < positive_number(row.get("adp")) < 200),
             "actionable_k_def_adp": sum(1 for row in k_def if 0 < positive_number(row.get("adp")) < 200),
             "sleepers_busts": len(sleepers_busts),
+            "current_injury_designations": sum(injury_status_counts.values()),
         },
         "quality": {
             "status": "passed",
@@ -993,11 +1104,25 @@ def main() -> None:
     parser.add_argument("--ffc-file", type=Path, help="Use a saved FFC response instead of the network")
     parser.add_argument("--sleeper-file", type=Path, help="Use a saved Sleeper response instead of the network")
     parser.add_argument("--schedule-file", type=Path, help="Use a saved nflverse games CSV instead of the network")
+    parser.add_argument(
+        "--injury-only",
+        action="store_true",
+        help="Refresh only the cached Sleeper injury overlay and its metadata",
+    )
     args = parser.parse_args()
 
     now = utc_now()
-    ffc_payload = load_json(args.ffc_file) if args.ffc_file else fetch_json(FFC_URL)
     sleeper_payload = load_json(args.sleeper_file) if args.sleeper_file else fetch_json(SLEEPER_URL)
+    if args.injury_only:
+        metadata = refresh_injuries_only(sleeper_payload, now)
+        injuries = metadata["injuries"]
+        print(
+            "Injury refresh passed: "
+            f"{injuries['matched_skill_players']} matched skill players, "
+            f"{injuries['skill_players_flagged']} current designations."
+        )
+        return
+    ffc_payload = load_json(args.ffc_file) if args.ffc_file else fetch_json(FFC_URL)
     schedule_rows = load_csv(args.schedule_file) if args.schedule_file else fetch_csv(SCHEDULE_URL)
     metadata = refresh(ffc_payload, sleeper_payload, schedule_rows, now)
     counts = metadata["counts"]

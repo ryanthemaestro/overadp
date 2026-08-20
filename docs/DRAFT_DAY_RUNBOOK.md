@@ -7,7 +7,8 @@
   current Sleeper player snapshot. It then fetches the latest 12-team half-PPR
   market from Fantasy Football Calculator, plus the nflverse schedule and
   betting lines.
-- The job updates projections, calibrated ranges, ADP, teams, bye weeks, the
+- The job updates projections, calibrated ranges, ADP, teams, bye weeks,
+  current injury designations/details, the
   current kicker depth chart, K/DEF Week 1-3 streaming ranks, sleeper/bust
   labels, and `metadata.json`.
 - The job stops without publishing if the source is stale, player volume

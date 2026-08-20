@@ -63,6 +63,30 @@ def main() -> None:
             if "Jahmyr Gibbs" not in first_ten or "Puka Nacua" not in first_ten:
                 raise AssertionError(f"Top-ten sanity failed: {first_ten}")
 
+            injury_badge_count = len(
+                driver.find_elements("css selector", "#playerPool details.injury-details")
+            )
+            if injury_badge_count < 1:
+                raise AssertionError("Current injury badges are missing from the player board")
+            first_injury = driver.find_element(
+                "css selector", "#playerPool details.injury-details"
+            )
+            first_injury.find_element("css selector", "summary").click()
+            injury_detail_text = first_injury.find_element(
+                "css selector", ".injury-popover"
+            ).text
+            if "Sleeper" not in injury_detail_text or "updated" not in injury_detail_text:
+                raise AssertionError(f"Injury detail provenance is missing: {injury_detail_text}")
+            injury_code_map = driver.execute_script(
+                """
+                return ['Questionable','Doubtful','Out'].map(status =>
+                  injuryStatusInfo({injury_status:status}).code
+                );
+                """
+            )
+            if injury_code_map != ["Q", "D", "O"]:
+                raise AssertionError(f"Injury status mapping failed: {injury_code_map}")
+
             first_pick_recommendations = driver.execute_script(
                 """
                 scoringFormat='ppr';
@@ -191,11 +215,25 @@ def main() -> None:
                 raise AssertionError("CSV backup was not downloaded")
 
             driver.set_window_size(390, 844)
+            mobile_injury = driver.find_element(
+                "css selector", "#playerPool details.injury-details"
+            )
+            if not mobile_injury.get_attribute("open"):
+                mobile_injury.find_element("css selector", "summary").click()
+            injury_rect = driver.execute_script(
+                """
+                const rect=arguments[0].querySelector('.injury-popover').getBoundingClientRect();
+                return {left:rect.left,right:rect.right,width:rect.width};
+                """,
+                mobile_injury,
+            )
             mobile_widths = driver.execute_script(
                 "return {scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}"
             )
             if mobile_widths["scroll"] > mobile_widths["client"]:
                 raise AssertionError(f"Mobile horizontal overflow: {mobile_widths}")
+            if injury_rect["left"] < -1 or injury_rect["right"] > mobile_widths["client"] + 1:
+                raise AssertionError(f"Mobile injury detail overflow: {injury_rect}")
 
             severe_logs = [
                 entry for entry in driver.get_log("browser")
@@ -212,12 +250,16 @@ def main() -> None:
                 "data_status_color": status_color,
                 "top_ten": first_ten,
                 "ppr_1_01_recommendations": first_pick_recommendations,
+                "injury_badges": injury_badge_count,
+                "injury_detail": injury_detail_text,
+                "injury_code_map": injury_code_map,
                 "opening_kicker_1": first_kicker,
                 "opening_defense_1": first_defense,
                 "recommendation_timing": recommendation_timing,
                 "saved_pick_survived_reload": True,
                 "csv_backup_bytes": download_path.stat().st_size,
                 "mobile_widths": mobile_widths,
+                "mobile_injury_rect": injury_rect,
                 "console_errors": 0,
             }, indent=2))
         finally:

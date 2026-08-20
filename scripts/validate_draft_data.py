@@ -83,6 +83,34 @@ def validate(max_age_hours: float) -> list[str]:
         errors.append(f"k_def.json: expected at least 50 rows, got {len(k_def) if isinstance(k_def, list) else 'non-list'}")
         return errors
 
+    injury_rows = [row for row in players if str(row.get("injury_status") or "").strip()]
+    injuries_meta = metadata.get("injuries") or {}
+    if injuries_meta.get("source_url") != "https://api.sleeper.app/v1/players/nfl":
+        errors.append("metadata.json: injury source provenance is missing")
+    if int(injuries_meta.get("skill_players_flagged", -1)) != len(injury_rows):
+        errors.append(
+            "metadata.json: injury designation count does not match players.json "
+            f"({injuries_meta.get('skill_players_flagged')} != {len(injury_rows)})"
+        )
+    if int((metadata.get("counts") or {}).get("current_injury_designations", -1)) != len(injury_rows):
+        errors.append("metadata.json: counts.current_injury_designations is inconsistent")
+    for row in injury_rows:
+        name = row.get("player_name", "<unknown>")
+        if len(str(row.get("injury_status") or "")) > 32:
+            errors.append(f"players.json: {name} has an invalid injury status")
+        for field in (
+            "injury_body_part", "injury_notes", "injury_start_date",
+            "practice_participation", "practice_description", "roster_status",
+        ):
+            value = row.get(field)
+            if value is not None and (not isinstance(value, str) or len(value) > 240):
+                errors.append(f"players.json: {name} has invalid {field}")
+        news_updated = row.get("injury_news_updated")
+        if news_updated is not None and (
+            not finite_number(news_updated) or float(news_updated) <= 0
+        ):
+            errors.append(f"players.json: {name} has invalid injury_news_updated")
+
     position_counts = Counter(str(row.get("position") or "").upper() for row in players)
     minimums = {"QB": 100, "RB": 175, "WR": 325, "TE": 175}
     for position, minimum in minimums.items():
