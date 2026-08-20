@@ -16,9 +16,9 @@ uncertainty ranges, and live opportunity-cost Target Intel.
 
 ### Daily draft-market refresh
 
-Production refreshes current half-PPR ADP, teams, bye weeks, kicker depth
-charts, the K/DEF Week 1-3 schedule model, and sleeper/bust labels every morning
-during draft season:
+Production refreshes current half-PPR ADP, teams, bye weeks, nflverse GitHub
+availability data, kicker depth charts, the K/DEF Week 1-3 schedule model, and
+sleeper/bust labels every morning during draft season:
 
 ```bash
 python scripts/refresh_market_data.py
@@ -29,6 +29,10 @@ The scheduled GitHub workflow runs the same commands and commits only after
 all freshness, player-count, team/bye, duplicate, and source-join gates pass.
 Daily market updates do not retrain or silently change the projection model,
 and they do not invalidate a saved in-progress draft.
+
+Availability status is adapted from nflverse's daily weekly-roster release and
+official weekly injury reports under CC BY 4.0. Sleeper remains a roster and
+depth-chart input, but is not used as an injury source.
 
 ### Full projection refresh
 

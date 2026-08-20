@@ -66,16 +66,36 @@ def main() -> None:
             injury_badge_count = len(
                 driver.find_elements("css selector", "#playerPool details.injury-details")
             )
-            if injury_badge_count < 1:
-                raise AssertionError("Current injury badges are missing from the player board")
-            first_injury = driver.find_element(
-                "css selector", "#playerPool details.injury-details"
+            expected_injury_badges = driver.execute_script(
+                "return Number(dataMetadata.injuries?.skill_players_flagged||0)"
             )
-            first_injury.find_element("css selector", "summary").click()
-            injury_detail_text = first_injury.find_element(
+            if injury_badge_count != expected_injury_badges:
+                raise AssertionError(
+                    "Injury badge count differs from metadata: "
+                    f"{injury_badge_count} != {expected_injury_badges}"
+                )
+            driver.execute_script(
+                """
+                const host=document.createElement('div');
+                host.id='injurySmokeFixture';
+                host.style.cssText='position:fixed;left:8px;top:8px;z-index:99999;display:block';
+                host.innerHTML=injuryBadgeHtml({
+                  injury_status:'Questionable',
+                  injury_body_part:'Knee',
+                  practice_description:'Limited Participation in Practice',
+                  injury_source_updated_at:new Date().toISOString(),
+                });
+                document.body.appendChild(host);
+                """
+            )
+            injury_fixture = driver.find_element(
+                "css selector", "#injurySmokeFixture details.injury-details"
+            )
+            driver.execute_script("arguments[0].open=true", injury_fixture)
+            injury_detail_text = injury_fixture.find_element(
                 "css selector", ".injury-popover"
-            ).text
-            if "Sleeper" not in injury_detail_text or "updated" not in injury_detail_text:
+            ).get_attribute("textContent").strip()
+            if "nflverse" not in injury_detail_text or "refreshed" not in injury_detail_text:
                 raise AssertionError(f"Injury detail provenance is missing: {injury_detail_text}")
             injury_code_map = driver.execute_script(
                 """
@@ -215,11 +235,27 @@ def main() -> None:
                 raise AssertionError("CSV backup was not downloaded")
 
             driver.set_window_size(390, 844)
+            driver.execute_script(
+                """
+                if(!document.getElementById('injurySmokeFixture')){
+                  const host=document.createElement('div');
+                  host.id='injurySmokeFixture';
+                  host.style.cssText='position:fixed;left:8px;top:8px;z-index:99999;display:block';
+                  host.innerHTML=injuryBadgeHtml({
+                    injury_status:'Questionable',
+                    injury_body_part:'Knee',
+                    practice_description:'Limited Participation in Practice',
+                    injury_source_updated_at:new Date().toISOString(),
+                  });
+                  document.body.appendChild(host);
+                }
+                """
+            )
             mobile_injury = driver.find_element(
-                "css selector", "#playerPool details.injury-details"
+                "css selector", "#injurySmokeFixture details.injury-details"
             )
             if not mobile_injury.get_attribute("open"):
-                mobile_injury.find_element("css selector", "summary").click()
+                driver.execute_script("arguments[0].open=true", mobile_injury)
             injury_rect = driver.execute_script(
                 """
                 const rect=arguments[0].querySelector('.injury-popover').getBoundingClientRect();

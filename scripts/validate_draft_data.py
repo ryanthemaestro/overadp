@@ -85,8 +85,35 @@ def validate(max_age_hours: float) -> list[str]:
 
     injury_rows = [row for row in players if str(row.get("injury_status") or "").strip()]
     injuries_meta = metadata.get("injuries") or {}
-    if injuries_meta.get("source_url") != "https://api.sleeper.app/v1/players/nfl":
+    expected_injury_source = (
+        "https://github.com/nflverse/nflverse-data/releases/download/"
+        "weekly_rosters/roster_weekly_2026.csv"
+    )
+    expected_report_source = (
+        "https://github.com/nflverse/nflverse-data/releases/download/"
+        "injuries/injuries_2026.csv"
+    )
+    if injuries_meta.get("source_url") != expected_injury_source:
         errors.append("metadata.json: injury source provenance is missing")
+    if injuries_meta.get("injury_report_source_url") != expected_report_source:
+        errors.append("metadata.json: weekly injury-report provenance is missing")
+    if injuries_meta.get("license") != "CC BY 4.0" or injuries_meta.get("attribution") != "nflverse":
+        errors.append("metadata.json: nflverse injury attribution/license is missing")
+    if int(injuries_meta.get("matched_skill_players", 0)) < 650:
+        errors.append("metadata.json: fewer than 650 skill players matched nflverse availability data")
+    status_counts = injuries_meta.get("status_counts")
+    try:
+        counted_statuses = sum(int(value) for value in status_counts.values())
+    except (AttributeError, TypeError, ValueError):
+        counted_statuses = -1
+    if counted_statuses != len(injury_rows):
+        errors.append("metadata.json: injury status counts are inconsistent")
+    report_available = injuries_meta.get("injury_report_available")
+    report_week = injuries_meta.get("latest_injury_report_week")
+    if not isinstance(report_available, bool) or report_available != (report_week is not None):
+        errors.append("metadata.json: injury report availability/week is inconsistent")
+    if int(injuries_meta.get("latest_roster_week", 0)) < 1:
+        errors.append("metadata.json: nflverse roster week is missing")
     if int(injuries_meta.get("skill_players_flagged", -1)) != len(injury_rows):
         errors.append(
             "metadata.json: injury designation count does not match players.json "
@@ -106,10 +133,16 @@ def validate(max_age_hours: float) -> list[str]:
             if value is not None and (not isinstance(value, str) or len(value) > 240):
                 errors.append(f"players.json: {name} has invalid {field}")
         news_updated = row.get("injury_news_updated")
-        if news_updated is not None and (
-            not finite_number(news_updated) or float(news_updated) <= 0
-        ):
-            errors.append(f"players.json: {name} has invalid injury_news_updated")
+        if news_updated is not None:
+            errors.append(f"players.json: {name} retains a legacy injury source timestamp")
+        try:
+            source_updated = datetime.fromisoformat(
+                str(row["injury_source_updated_at"]).replace("Z", "+00:00")
+            )
+            if source_updated.tzinfo is None:
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            errors.append(f"players.json: {name} has invalid injury_source_updated_at")
 
     position_counts = Counter(str(row.get("position") or "").upper() for row in players)
     minimums = {"QB": 100, "RB": 175, "WR": 325, "TE": 175}
@@ -238,6 +271,20 @@ def validate(max_age_hours: float) -> list[str]:
             errors.append(f"metadata.json: market data age is {age_hours:.1f}h (limit {max_age_hours:.1f}h)")
     except (KeyError, TypeError, ValueError):
         errors.append("metadata.json: market fetched_at is missing or invalid")
+    try:
+        injury_fetched_at = datetime.fromisoformat(
+            injuries_meta["fetched_at"].replace("Z", "+00:00")
+        )
+        injury_age_hours = (
+            datetime.now(timezone.utc) - injury_fetched_at
+        ).total_seconds() / 3600
+        if injury_age_hours < -1 or injury_age_hours > max_age_hours:
+            errors.append(
+                "metadata.json: availability data age is "
+                f"{injury_age_hours:.1f}h (limit {max_age_hours:.1f}h)"
+            )
+    except (KeyError, TypeError, ValueError):
+        errors.append("metadata.json: availability fetched_at is missing or invalid")
     try:
         source_end = datetime.fromisoformat(metadata["market"]["period_end"] + "T23:59:59+00:00")
         source_age_hours = (datetime.now(timezone.utc) - source_end).total_seconds() / 3600

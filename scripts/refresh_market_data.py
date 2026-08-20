@@ -21,6 +21,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +32,20 @@ SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
 SCHEDULE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 MODEL_BASELINE_GENERATED_AT = "2026-07-20T14:49:24Z"
 PROJECTION_SEASON = 2026
+NFLVERSE_WEEKLY_ROSTER_URL = (
+    "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/"
+    f"roster_weekly_{PROJECTION_SEASON}.csv"
+)
+NFLVERSE_INJURY_URL = (
+    "https://github.com/nflverse/nflverse-data/releases/download/injuries/"
+    f"injuries_{PROJECTION_SEASON}.csv"
+)
+NFLVERSE_INJURY_RELEASE_URL = (
+    "https://github.com/nflverse/nflverse-data/releases/tag/injuries"
+)
+NFLVERSE_LICENSE_URL = (
+    "https://github.com/nflverse/nflverse-data/blob/main/LICENSE.md"
+)
 OPENING_WEEK_WEIGHTS = {1: 0.55, 2: 0.30, 3: 0.15}
 # Fit on 2021-2024 regular-season data, then checked out of sample on 2025.
 KICKER_MODEL = {
@@ -69,9 +84,19 @@ INJURY_EXPORT_FIELDS = {
     "injury_notes",
     "injury_start_date",
     "injury_news_updated",
+    "injury_source_updated_at",
     "practice_participation",
     "practice_description",
     "roster_status",
+}
+NFLVERSE_INJURY_ROSTER_CODES = {
+    "P02": "Practice Squad Injured",
+    "R01": "Injured Reserve",
+    "R04": "PUP",
+    "R05": "NFI",
+    "R27": "NFI",
+    "R47": "NFI",
+    "R48": "Injured Reserve",
 }
 
 
@@ -121,80 +146,217 @@ def clean_feed_text(value: Any, max_length: int = 240) -> str | None:
     return text[:max_length] if text else None
 
 
-def apply_sleeper_injury_fields(player: dict[str, Any], sleeper: Any) -> str | None:
-    """Replace volatile injury fields with the current Sleeper snapshot."""
+def clear_injury_fields(player: dict[str, Any]) -> None:
     for field in INJURY_EXPORT_FIELDS:
         player.pop(field, None)
-    if not isinstance(sleeper, dict):
+
+
+def row_integer(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError, OverflowError):
         return None
 
-    injury_status = clean_feed_text(sleeper.get("injury_status"), 32)
+
+def latest_nflverse_week(
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int | None]:
+    season_rows = [
+        row for row in rows
+        if row_integer(row.get("season")) == PROJECTION_SEASON
+        and row_integer(row.get("week")) is not None
+    ]
+    if not season_rows:
+        return [], None
+    latest_week = max(row_integer(row.get("week")) or 0 for row in season_rows)
+    return [
+        row for row in season_rows
+        if row_integer(row.get("week")) == latest_week
+    ], latest_week
+
+
+def nflverse_player_indexes(
+    rows: list[dict[str, Any]],
+) -> tuple[
+    dict[str, dict[str, Any]],
+    dict[tuple[str, str], dict[str, Any]],
+    dict[tuple[str, str], dict[str, Any]],
+]:
+    by_gsis: dict[str, dict[str, Any]] = {}
+    name_candidates: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    base_candidates: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        position = normalize_position(row.get("position"))
+        if position not in SKILL_POSITIONS | {"K"}:
+            continue
+        gsis_id = normalize_provider_id(row.get("gsis_id"))
+        if gsis_id:
+            by_gsis[gsis_id] = row
+        full_name = clean_feed_text(row.get("full_name")) or " ".join(
+            part for part in (
+                clean_feed_text(row.get("first_name")),
+                clean_feed_text(row.get("last_name")),
+            )
+            if part
+        )
+        if not full_name:
+            continue
+        name_candidates[player_key(full_name, position)].append(row)
+        base_candidates[(normalize_base_name(full_name), position)].append(row)
+    unique_names = {
+        key: candidates[0]
+        for key, candidates in name_candidates.items()
+        if len(candidates) == 1
+    }
+    unique_base_names = {
+        key: candidates[0]
+        for key, candidates in base_candidates.items()
+        if len(candidates) == 1
+    }
+    return by_gsis, unique_names, unique_base_names
+
+
+def find_nflverse_player(
+    player: dict[str, Any],
+    indexes: tuple[
+        dict[str, dict[str, Any]],
+        dict[tuple[str, str], dict[str, Any]],
+        dict[tuple[str, str], dict[str, Any]],
+    ],
+) -> dict[str, Any] | None:
+    by_gsis, by_name, by_base_name = indexes
+    position = normalize_position(player.get("position"))
+    match = by_gsis.get(normalize_provider_id(player.get("player_id")))
+    if not match:
+        match = by_name.get(player_key(player.get("player_name"), position))
+    if not match:
+        match = by_base_name.get(
+            (normalize_base_name(player.get("player_name")), position)
+        )
+    if match and normalize_position(match.get("position")) == position:
+        return match
+    return None
+
+
+def apply_nflverse_injury_fields(
+    player: dict[str, Any],
+    injury_report: dict[str, Any] | None,
+    roster: dict[str, Any] | None,
+    source_updated_at: str,
+) -> str | None:
+    """Replace volatile injury fields from nflverse's GitHub releases."""
+    clear_injury_fields(player)
+    roster_status = clean_feed_text((roster or {}).get("status"), 32)
+    if roster_status and roster_status != "ACT":
+        player["roster_status"] = roster_status
+
+    injury_status = clean_feed_text((injury_report or {}).get("report_status"), 32)
+    if not injury_status:
+        roster_code = clean_feed_text(
+            (roster or {}).get("status_description_abbr"),
+            16,
+        )
+        injury_status = NFLVERSE_INJURY_ROSTER_CODES.get(roster_code or "")
     if not injury_status:
         return None
 
     player["injury_status"] = injury_status
-    optional_text_fields = {
-        "injury_body_part": "injury_body_part",
-        "injury_notes": "injury_notes",
-        "injury_start_date": "injury_start_date",
-        "practice_participation": "practice_participation",
-        "practice_description": "practice_description",
-        "roster_status": "status",
-    }
-    for output_field, source_field in optional_text_fields.items():
-        value = clean_feed_text(sleeper.get(source_field))
-        if value:
-            player[output_field] = value
-
-    try:
-        news_updated = int(float(sleeper.get("news_updated") or 0))
-    except (TypeError, ValueError):
-        news_updated = 0
-    if news_updated > 0:
-        player["injury_news_updated"] = news_updated
+    body_parts: list[str] = []
+    for field in (
+        "report_primary_injury",
+        "report_secondary_injury",
+        "practice_primary_injury",
+        "practice_secondary_injury",
+    ):
+        value = clean_feed_text((injury_report or {}).get(field))
+        if value and value not in body_parts:
+            body_parts.append(value)
+    if body_parts:
+        player["injury_body_part"] = " / ".join(body_parts)[:240]
+    practice_status = clean_feed_text((injury_report or {}).get("practice_status"))
+    if practice_status:
+        player["practice_participation"] = practice_status
+        player["practice_description"] = practice_status
+    player["injury_source_updated_at"] = source_updated_at
     return injury_status
 
 
 def apply_injury_overlay(
-    players: list[dict[str, Any]], sleeper_payload: Any
-) -> tuple[int, Counter[str]]:
-    sleeper_gsis, sleeper_names, sleeper_base_names = sleeper_indexes(sleeper_payload)
+    players: list[dict[str, Any]],
+    roster_rows: list[dict[str, Any]],
+    injury_report_rows: list[dict[str, Any]],
+    source_updated_at: str,
+) -> dict[str, Any]:
+    current_rosters, roster_week = latest_nflverse_week(roster_rows)
+    current_injuries, injury_week = latest_nflverse_week(injury_report_rows)
+    if len(current_rosters) < 2000:
+        raise ValueError(
+            "nflverse weekly roster feed is missing or unexpectedly small: "
+            f"{len(current_rosters)} rows"
+        )
+    if injury_week is not None and injury_week <= 18 and len(current_injuries) < 100:
+        raise ValueError(
+            "nflverse weekly injury report appears partial: "
+            f"week {injury_week} has {len(current_injuries)} rows"
+        )
+    roster_indexes = nflverse_player_indexes(current_rosters)
+    injury_indexes = nflverse_player_indexes(current_injuries)
     matches = 0
     status_counts: Counter[str] = Counter()
     for player in players:
-        apply_sleeper_injury_fields(player, None)
-        position = normalize_position(player.get("position"))
-        sleeper = sleeper_gsis.get(str(player.get("player_id") or ""))
-        if not sleeper:
-            sleeper = sleeper_names.get(player_key(player.get("player_name"), position))
-        if not sleeper:
-            sleeper = sleeper_base_names.get(
-                (normalize_base_name(player.get("player_name")), position)
-            )
-        if not sleeper or normalize_position(sleeper.get("position")) != position:
+        clear_injury_fields(player)
+        roster = find_nflverse_player(player, roster_indexes)
+        if not roster:
             continue
         matches += 1
-        injury_status = apply_sleeper_injury_fields(player, sleeper)
+        injury_report = find_nflverse_player(player, injury_indexes)
+        injury_status = apply_nflverse_injury_fields(
+            player,
+            injury_report,
+            roster,
+            source_updated_at,
+        )
         if injury_status:
             status_counts[injury_status] += 1
     if matches < 650:
-        raise ValueError(f"Sleeper injury join failed quality gate: {matches}/{len(players)}")
-    return matches, status_counts
-
-
-def injury_metadata(now: datetime, matches: int, status_counts: Counter[str]) -> dict[str, Any]:
+        raise ValueError(
+            f"nflverse injury roster join failed quality gate: {matches}/{len(players)}"
+        )
     return {
-        "fetched_at": now.isoformat().replace("+00:00", "Z"),
-        "source": "Sleeper public NFL player feed",
-        "source_url": SLEEPER_URL,
-        "refresh_cadence": "daily",
         "matched_skill_players": matches,
-        "skill_players_flagged": sum(status_counts.values()),
-        "status_counts": dict(sorted(status_counts.items())),
+        "status_counts": status_counts,
+        "latest_roster_week": roster_week,
+        "latest_injury_report_week": injury_week,
+        "injury_report_rows": len(current_injuries),
     }
 
 
-def refresh_injuries_only(sleeper_payload: Any, now: datetime) -> dict[str, Any]:
+def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
+    status_counts: Counter[str] = overlay["status_counts"]
+    return {
+        "fetched_at": now.isoformat().replace("+00:00", "Z"),
+        "source": "nflverse GitHub data releases",
+        "source_url": NFLVERSE_WEEKLY_ROSTER_URL,
+        "injury_report_source_url": NFLVERSE_INJURY_URL,
+        "injury_release_url": NFLVERSE_INJURY_RELEASE_URL,
+        "license": "CC BY 4.0",
+        "license_url": NFLVERSE_LICENSE_URL,
+        "attribution": "nflverse",
+        "refresh_cadence": "daily",
+        "matched_skill_players": overlay["matched_skill_players"],
+        "skill_players_flagged": sum(status_counts.values()),
+        "status_counts": dict(sorted(status_counts.items())),
+        "latest_roster_week": overlay["latest_roster_week"],
+        "latest_injury_report_week": overlay["latest_injury_report_week"],
+        "injury_report_available": overlay["injury_report_rows"] > 0,
+    }
+
+
+def refresh_injuries_only(
+    roster_rows: list[dict[str, Any]],
+    injury_report_rows: list[dict[str, Any]],
+    now: datetime,
+) -> dict[str, Any]:
     """Update volatile injury fields without weakening the full release gates."""
     players = load_json(SITE_DATA_DIR / "players.json")
     metadata = load_json(SITE_DATA_DIR / "metadata.json")
@@ -203,8 +365,15 @@ def refresh_injuries_only(sleeper_payload: Any, now: datetime) -> dict[str, Any]
     if not isinstance(metadata, dict):
         raise ValueError("Current metadata is missing or invalid")
 
-    matches, status_counts = apply_injury_overlay(players, sleeper_payload)
-    metadata["injuries"] = injury_metadata(now, matches, status_counts)
+    fetched_at = now.isoformat().replace("+00:00", "Z")
+    overlay = apply_injury_overlay(
+        players,
+        roster_rows,
+        injury_report_rows,
+        fetched_at,
+    )
+    status_counts: Counter[str] = overlay["status_counts"]
+    metadata["injuries"] = injury_metadata(now, overlay)
     metadata.setdefault("counts", {})["current_injury_designations"] = sum(
         status_counts.values()
     )
@@ -241,6 +410,15 @@ def fetch_csv(url: str) -> list[dict[str, str]]:
             raise RuntimeError(f"{url} returned HTTP {response.status}")
         text = response.read().decode("utf-8-sig")
     return list(csv.DictReader(io.StringIO(text)))
+
+
+def fetch_optional_csv(url: str) -> list[dict[str, str]]:
+    try:
+        return fetch_csv(url)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return []
+        raise
 
 
 def load_json(path: Path) -> Any:
@@ -694,6 +872,7 @@ def current_kicker_rows(
             gsis_id = str(source.get("gsis_id") or "").strip()
             row["player_id"] = gsis_id or f"K_{normalize_name(name).replace(' ', '_').upper()}"
             row["model_used"] = "position_median_roster_add"
+        clear_injury_fields(row)
         row.update({
             "player_name": name,
             "position": "K",
@@ -702,7 +881,6 @@ def current_kicker_rows(
             "role_confidence": "HIGH",
             "roster_source": "Sleeper depth chart",
             "sleeper_id": sleeper_id,
-            "injury_status": source.get("injury_status"),
         })
         rebuilt.append(row)
     return rebuilt
@@ -817,6 +995,8 @@ def refresh(
     ffc_payload: Any,
     sleeper_payload: Any,
     schedule_rows: list[dict[str, Any]],
+    injury_roster_rows: list[dict[str, Any]],
+    injury_report_rows: list[dict[str, Any]],
     now: datetime,
 ) -> dict[str, Any]:
     players = load_json(SITE_DATA_DIR / "players.json")
@@ -840,7 +1020,14 @@ def refresh(
         )
     schedule_contexts = opening_schedule_contexts(schedule_rows)
 
-    injury_matches, injury_status_counts = apply_injury_overlay(players, sleeper_payload)
+    generated_at = now.isoformat().replace("+00:00", "Z")
+    injury_overlay = apply_injury_overlay(
+        players,
+        injury_roster_rows,
+        injury_report_rows,
+        generated_at,
+    )
+    injury_status_counts: Counter[str] = injury_overlay["status_counts"]
     sleeper_matches = 0
     for player in players:
         player["adp"] = 200.0
@@ -991,7 +1178,6 @@ def refresh(
     apply_opening_streaming_model(k_def, schedule_contexts)
 
     sleepers_busts = rebuild_sleepers_busts(players)
-    generated_at = now.isoformat().replace("+00:00", "Z")
     prior_model = previous_metadata.get("model") or {}
     metadata = {
         "schema_version": 1,
@@ -1029,7 +1215,7 @@ def refresh(
             "source_url": SLEEPER_URL,
             "matched_skill_players": sleeper_matches,
         },
-        "injuries": injury_metadata(now, injury_matches, injury_status_counts),
+        "injuries": injury_metadata(now, injury_overlay),
         "special_teams": {
             "fetched_at": generated_at,
             "schedule_source": "nflverse games and schedules",
@@ -1105,16 +1291,35 @@ def main() -> None:
     parser.add_argument("--sleeper-file", type=Path, help="Use a saved Sleeper response instead of the network")
     parser.add_argument("--schedule-file", type=Path, help="Use a saved nflverse games CSV instead of the network")
     parser.add_argument(
+        "--injury-roster-file",
+        type=Path,
+        help="Use a saved nflverse weekly roster CSV for availability status",
+    )
+    parser.add_argument(
+        "--injury-report-file",
+        type=Path,
+        help="Use a saved nflverse weekly injury report CSV",
+    )
+    parser.add_argument(
         "--injury-only",
         action="store_true",
-        help="Refresh only the cached Sleeper injury overlay and its metadata",
+        help="Refresh only the cached nflverse availability overlay and its metadata",
     )
     args = parser.parse_args()
 
     now = utc_now()
-    sleeper_payload = load_json(args.sleeper_file) if args.sleeper_file else fetch_json(SLEEPER_URL)
+    injury_roster_rows = (
+        load_csv(args.injury_roster_file)
+        if args.injury_roster_file
+        else fetch_csv(NFLVERSE_WEEKLY_ROSTER_URL)
+    )
+    injury_report_rows = (
+        load_csv(args.injury_report_file)
+        if args.injury_report_file
+        else fetch_optional_csv(NFLVERSE_INJURY_URL)
+    )
     if args.injury_only:
-        metadata = refresh_injuries_only(sleeper_payload, now)
+        metadata = refresh_injuries_only(injury_roster_rows, injury_report_rows, now)
         injuries = metadata["injuries"]
         print(
             "Injury refresh passed: "
@@ -1122,9 +1327,17 @@ def main() -> None:
             f"{injuries['skill_players_flagged']} current designations."
         )
         return
+    sleeper_payload = load_json(args.sleeper_file) if args.sleeper_file else fetch_json(SLEEPER_URL)
     ffc_payload = load_json(args.ffc_file) if args.ffc_file else fetch_json(FFC_URL)
     schedule_rows = load_csv(args.schedule_file) if args.schedule_file else fetch_csv(SCHEDULE_URL)
-    metadata = refresh(ffc_payload, sleeper_payload, schedule_rows, now)
+    metadata = refresh(
+        ffc_payload,
+        sleeper_payload,
+        schedule_rows,
+        injury_roster_rows,
+        injury_report_rows,
+        now,
+    )
     counts = metadata["counts"]
     quality = metadata["quality"]
     print(

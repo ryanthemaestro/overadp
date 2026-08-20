@@ -5,12 +5,17 @@
 - Every day at 10:17 UTC, GitHub Actions rebuilds all QB/RB/WR/TE projections
   from the validated model using the current nflverse roster and a single
   current Sleeper player snapshot. It then fetches the latest 12-team half-PPR
-  market from Fantasy Football Calculator, plus the nflverse schedule and
-  betting lines.
+  market from Fantasy Football Calculator, the nflverse schedule and betting
+  lines, and nflverse's current GitHub roster/injury releases.
 - The job updates projections, calibrated ranges, ADP, teams, bye weeks,
-  current injury designations/details, the
-  current kicker depth chart, K/DEF Week 1-3 streaming ranks, sleeper/bust
-  labels, and `metadata.json`.
+  current availability designations/details, the current kicker depth chart,
+  K/DEF Week 1-3 streaming ranks, sleeper/bust labels, and `metadata.json`.
+- Injury availability never comes from Sleeper. nflverse's daily weekly-roster
+  release supplies explicitly coded injured-reserve, PUP, and NFI status; its
+  official weekly injury report supplies Q/D/O, injury area, and practice
+  participation once the season's report file is available. Unknown generic
+  reserve codes are not treated as injuries. nflverse data is attributed under
+  CC BY 4.0.
 - The job stops without publishing if the source is stale, player volume
   drops, any active Sleeper depth-chart player lacks a projection, a top-24
   market player is missing, join coverage falls, team/bye coverage breaks,
@@ -67,6 +72,8 @@ A healthy release reports:
 - unique 1-32 opening-schedule ranks at both K and DEF;
 - market metadata no older than 72 hours;
 - identical `site/app/data` and `src/api/static/data` files.
+- at least 650 skill-player matches against the current nflverse weekly roster,
+  with nflverse source and CC BY 4.0 attribution in `metadata.json`.
 
 ## Incident behavior
 

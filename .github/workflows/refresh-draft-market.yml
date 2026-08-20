@@ -48,8 +48,8 @@ jobs:
         working-directory: production
         run: python scripts/import_model_export.py ../model/src/api/static/data
 
-      # refresh_market_data fetches Sleeper once and reuses that cached response
-      # for rosters, depth charts, and the injury overlay.
+      # Sleeper remains the roster/depth-chart source. Injury availability is
+      # fetched separately from nflverse's versioned GitHub data releases.
       - name: Refresh ADP, rosters, injuries, schedule, and K/DEF streaming ranks
         working-directory: production
         run: python scripts/refresh_market_data.py

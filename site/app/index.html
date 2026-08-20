@@ -561,6 +561,7 @@
   .injury-details.injury-d summary { color: #ff9f43; background: rgba(255,159,67,0.1); }
   .injury-details.injury-o summary,
   .injury-details.injury-ir summary,
+  .injury-details.injury-res summary,
   .injury-details.injury-sus summary { color: #ff5555; background: rgba(255,68,68,0.1); }
   .injury-details.injury-pup summary { color: #c084fc; background: rgba(192,132,252,0.1); }
   .injury-details.injury-other summary { color: var(--smoke); background: rgba(148,163,184,0.08); }
@@ -1446,7 +1447,7 @@
       <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus the live board's estimated draft slot</strong>, measured in picks. Estimated slot = current overall pick + BOARD rank − 1. At pick 1, an ADP of 35.7 and BOARD rank #38 equals −2.3 picks. Positive/green means the board would take the player earlier than the market; negative/red means later. It updates with league settings, roster needs, positional scarcity, and live picks.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
-      <tr><td><span class="tag tag-yellow">Q / D / O</span></td><td>Current injury designation from the cached daily Sleeper player feed. Select the badge to expand body part, available notes, practice participation, and source-update time. IR, PUP, suspension, and other roster designations are preserved rather than forced into Q/D/O.</td></tr>
+      <tr><td><span class="tag tag-yellow">Q / D / O</span></td><td>Availability from nflverse's GitHub data releases. Daily roster data supplies explicit injured-reserve, PUP, and NFI status; official weekly reports supply Q/D/O, body part, and practice participation once those reports begin for the season. Select a badge to expand its details. Data is adapted from nflverse under CC BY 4.0.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
       <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high, based on RANGE width relative to PROJ within the player's position. Low means a tighter range. High means a wider range or a player near replacement level.</td></tr>
       <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>Low / medium / high — a draft-value warning that combines RANGE uncertainty, recent injury history, rookie/second-year unknowns, possible ADP overpay, and low VBD at the player's cost. It is not a medical projection.</td></tr>
@@ -1539,7 +1540,7 @@
     <h3>Key Features (July 2026)</h3>
     <ul>
       <li><strong>Current roster overlay</strong> — Sleeper roster/depth data keeps teams, bye weeks, and post-draft movement aligned with the board.</li>
-      <li><strong>Current injury overlay</strong> — Sleeper injury status, body part, notes, practice participation, and news-update timestamp, cached by the daily refresh.</li>
+      <li><strong>Current availability overlay</strong> — nflverse's daily GitHub roster release plus official weekly Q/D/O, body-part, and practice-report data when available.</li>
       <li><strong>Target / carry competition</strong> — Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
       <li><strong>College &amp; draft pipeline</strong> — Draft capital, draft-pick value, combine athleticism, college per-game production, Power 5 flags, and rookie interaction features.</li>
       <li><strong>Injury-adjusted regression</strong> — Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
@@ -2041,7 +2042,7 @@ function updateDataStatus(){
   const statusDetails=[
     `Market data through ${market.period_end||'unknown'} (${market.drafts||0} drafts)`,
     `Fetched ${market.fetched_at||'unknown'}`,
-    `Injuries refreshed ${dataMetadata.injuries?.fetched_at||'unknown'}`,
+    `Availability refreshed ${dataMetadata.injuries?.fetched_at||'unknown'}`,
     `Projection model generated ${model.generated_at||'unknown'}`,
     `${counts.total_players||allPlayers.length||0} board entries`,
   ].join(' · ');
@@ -2051,7 +2052,7 @@ function updateDataStatus(){
   if(summary&&counts.skill_players){
     const injuries=dataMetadata.injuries||{};
     const injuryDate=String(injuries.fetched_at||'').slice(0,10)||'an unknown date';
-    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Current injury designations were refreshed <strong>${injuryDate}</strong>. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
+    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Current nflverse availability data was refreshed <strong>${injuryDate}</strong>. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
   }
 }
 
@@ -2911,7 +2912,10 @@ function injuryStatusInfo(player){
   if(key.startsWith('doubt'))return {code:'D',tier:'d',label:'Doubtful'};
   if(key==='out')return {code:'O',tier:'o',label:'Out'};
   if(key==='ir'||key.includes('injured reserve'))return {code:'IR',tier:'ir',label:'Injured Reserve'};
+  if(key==='res'||key.startsWith('reserve'))return {code:'RES',tier:'res',label:'Reserve List'};
   if(key==='pup')return {code:'PUP',tier:'pup',label:'Physically Unable to Perform'};
+  if(key==='nfi')return {code:'NFI',tier:'pup',label:'Non-Football Injury'};
+  if(key.includes('practice squad injured'))return {code:'IR',tier:'ir',label:'Practice Squad Injured'};
   if(key==='sus'||key.startsWith('susp'))return {code:'SUS',tier:'sus',label:'Suspended'};
   if(key==='dnr')return {code:'DNR',tier:'other',label:'Did Not Report'};
   if(key==='na')return {code:'N/A',tier:'other',label:'Not Active'};
@@ -2921,7 +2925,8 @@ function injuryStatusInfo(player){
 
 function injuryUpdatedInfo(value){
   let timestamp=Number(value||0);
-  if(!Number.isFinite(timestamp)||timestamp<=0)return {label:'update time unavailable',stale:false};
+  if(!Number.isFinite(timestamp)||timestamp<=0)timestamp=Date.parse(String(value||''));
+  if(!Number.isFinite(timestamp)||timestamp<=0)return {label:'refresh time unavailable',stale:false};
   if(timestamp<1e12)timestamp*=1000;
   const date=new Date(timestamp);
   if(Number.isNaN(date.getTime()))return {label:'update time unavailable',stale:false};
@@ -2942,18 +2947,18 @@ function injuryBadgeHtml(player){
   if(practice)details.push(`Practice: ${escapeHtmlAttr(practice)}`);
   if(player.injury_start_date)details.push(`Since ${escapeHtmlAttr(player.injury_start_date)}`);
   if(player.roster_status&&String(player.roster_status).toLowerCase()!=='active')details.push(`Roster: ${escapeHtmlAttr(player.roster_status)}`);
-  const updated=injuryUpdatedInfo(player.injury_news_updated);
+  const updated=injuryUpdatedInfo(player.injury_source_updated_at);
   const stale=updated.stale?'<span class="injury-stale"> · older source update</span>':'';
   const label=escapeHtmlAttr(info.label);
   return `<details class="injury-details injury-${info.tier}">
     <summary aria-label="${label} injury details" title="Open ${label} injury details">${escapeHtmlAttr(info.code)}</summary>
-    <div class="injury-popover"><strong>${label}</strong>${details.length?` · ${details.join(' · ')}`:''}<div class="injury-source">Sleeper · updated ${escapeHtmlAttr(updated.label)}${stale}</div></div>
+    <div class="injury-popover"><strong>${label}</strong>${details.length?` · ${details.join(' · ')}`:''}<div class="injury-source"><a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener">nflverse</a> · refreshed ${escapeHtmlAttr(updated.label)} · CC BY 4.0${stale}</div></div>
   </details>`;
 }
 
 function injuryRowClass(player){
   const tier=injuryStatusInfo(player)?.tier;
-  return ['o','ir','pup','sus'].includes(tier)?'injury-row-severe':'';
+  return ['o','ir','res','pup','sus'].includes(tier)?'injury-row-severe':'';
 }
 
 function getBoardOrder(availablePlayers){
