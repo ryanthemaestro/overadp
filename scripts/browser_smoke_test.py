@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -91,11 +92,25 @@ def main() -> None:
             injury_fixture = driver.find_element(
                 "css selector", "#injurySmokeFixture details.injury-details"
             )
+            injury_summary = injury_fixture.find_element("css selector", "summary")
+            ActionChains(driver).move_to_element(injury_summary).perform()
+            wait.until(
+                lambda d: injury_fixture.find_element(
+                    "css selector", ".injury-popover"
+                ).value_of_css_property("display") == "block"
+            )
+            if injury_fixture.get_attribute("open"):
+                raise AssertionError("Hover should reveal injury detail without opening the control")
+            injury_popover = injury_fixture.find_element("css selector", ".injury-popover")
+            ActionChains(driver).move_to_element(injury_popover).perform()
+            time.sleep(0.2)
+            if injury_popover.value_of_css_property("display") != "block":
+                raise AssertionError("Injury detail should remain visible while moving into it")
             driver.execute_script("arguments[0].open=true", injury_fixture)
             injury_detail_text = injury_fixture.find_element(
                 "css selector", ".injury-popover"
             ).get_attribute("textContent").strip()
-            if "nflverse" not in injury_detail_text or "refreshed" not in injury_detail_text:
+            if "nflverse" not in injury_detail_text or "updated" not in injury_detail_text:
                 raise AssertionError(f"Injury detail provenance is missing: {injury_detail_text}")
             injury_code_map = driver.execute_script(
                 """
