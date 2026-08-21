@@ -165,11 +165,8 @@
         ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid'].forEach(key=>{
           if(source.get(key))destination.searchParams.set(key,source.get(key));
         });
-        if(!destination.searchParams.get('utm_source')){
-          destination.searchParams.set('utm_source','campaign_landing');
-          destination.searchParams.set('utm_medium','website');
-          destination.searchParams.set('utm_campaign','draft_assistant_2026');
-        }
+        // Never add UTMs to an internal link. Doing so starts a new campaign
+        // attribution and can overwrite Google Ads auto-tagging from the gclid.
         link.href=destination.pathname+destination.search;
         link.addEventListener('click',()=>gtag('event','cta_click',{cta_location:link.dataset.location||'unknown',cta_label:link.textContent.trim()}));
       });

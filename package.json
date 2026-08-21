@@ -2,6 +2,9 @@
   "name": "overadp",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "ga4:funnel": "python3 scripts/ga4_paid_funnel.py"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "stripe": "^17.0.0"
