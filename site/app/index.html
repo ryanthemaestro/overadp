@@ -1022,6 +1022,70 @@
     font-size: 13px;
     color: var(--chalk);
   }
+  .upgrade-kicker {
+    color: var(--wr);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .upgrade-continuity {
+    color: var(--chalk);
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 10px auto 16px;
+    max-width: 390px;
+  }
+  .upgrade-primary,
+  .upgrade-secondary {
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    font-family: 'Oswald', sans-serif;
+    justify-content: center;
+    width: 100%;
+  }
+  .upgrade-primary {
+    background: var(--wr);
+    border: 1px solid var(--wr);
+    box-shadow: 0 0 18px var(--wr-glow);
+    color: #001509;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: .35px;
+    min-height: 54px;
+    padding: 13px 16px;
+    text-transform: uppercase;
+  }
+  .upgrade-primary:hover { filter: brightness(1.08); }
+  .upgrade-primary:focus-visible,
+  .upgrade-secondary:focus-visible {
+    outline: 2px solid var(--white);
+    outline-offset: 3px;
+  }
+  .upgrade-reassurance {
+    color: var(--smoke);
+    font-size: 11px;
+    line-height: 1.45;
+    margin: 8px 0 16px;
+  }
+  .upgrade-secondary {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--chalk);
+    font-size: 13px;
+    gap: 8px;
+    min-height: 42px;
+    padding: 9px 12px;
+  }
+  .upgrade-secondary:hover {
+    border-color: var(--rb);
+    color: var(--white);
+  }
+  .upgrade-secondary-price { color: var(--rb); font-weight: 700; }
   .paywall-cta {
     text-align: center;
     padding: 12px;
@@ -1715,34 +1779,18 @@
 <!-- UPGRADE MODAL -->
 <div class="auth-overlay hidden" id="upgradeOverlay">
   <div class="auth-modal" style="max-width:480px;">
-    <div class="auth-logo">DON'T DRAFT<span style="color:var(--rb)"> BLIND</span></div>
-    <h2>Your Opponents May Already Have This Data</h2>
-    <div style="margin:16px 0;">
-      <div class="upgrade-feature">✓ 900+ player board: 844 skill projections + current K/DEF entries</div>
-      <div class="upgrade-feature">✓ Full sleeper &amp; bust list</div>
-      <div class="upgrade-feature">✓ Handcuff alerts for your RBs</div>
-      <div class="upgrade-feature">✓ Projection ranges &amp; risk tiers</div>
-      <div class="upgrade-feature">✓ Draft better or your money back</div>
-    </div>
-    <div style="display:flex;gap:12px;margin:12px 0;">
-      <div style="flex:1;padding:12px;border:1px solid var(--rust);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('draft')">
-        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Single Draft</div>
-        <div style="font-size:24px;font-weight:700;color:var(--fg);">$6.99</div>
-        <div style="font-size:10px;color:var(--green);">START HERE</div>
-        <div style="font-size:10px;color:var(--smoke);">One draft session</div>
-      </div>
-      <div style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;text-align:center;cursor:pointer;" onclick="startCheckout('season')">
-        <div style="font-size:10px;color:var(--smoke);text-transform:uppercase;letter-spacing:1px;">Season Pass</div>
-        <div style="font-size:24px;font-weight:700;color:var(--rb);">$24.99</div>
-        <div style="font-size:10px;color:var(--smoke);">&nbsp;</div>
-        <div style="font-size:10px;color:var(--smoke);">Unlimited drafts, all season</div>
-      </div>
-    </div>
-    <p style="color:var(--chalk);font-size:11px;margin-bottom:8px;">You're spending $100+ on your league — don't waste it drafting blind.</p>
+    <div class="upgrade-kicker">Free preview complete</div>
+    <h2>You've used your 5 free picks.</h2>
+    <p class="upgrade-continuity">Keep drafting with live recommendations. Your board, recorded picks and roster-aware advice stay exactly where you left them.</p>
+    <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Unlock the rest of my draft — $6.99</button>
+    <p class="upgrade-reassurance">One draft. No subscription. Draft better or your money back.</p>
+    <button class="upgrade-secondary" type="button" onclick="startCheckout('season')">
+      Unlimited drafts all season <span class="upgrade-secondary-price">$24.99</span>
+    </button>
     <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
-      → Click a plan above. You'll create your account, then complete checkout — takes 20 seconds. Money-back guarantee.
+      Next: create your account, then complete secure checkout — about 20 seconds. Your board stays intact.
     </div>
-    <button class="auth-close" onclick="document.getElementById('upgradeOverlay').classList.add('hidden')">Maybe later</button>
+    <button class="auth-close" onclick="dismissUpgrade()">Maybe later</button>
   </div>
 </div>
 
@@ -2025,6 +2073,11 @@ function showUpgrade(){
   const hint = document.getElementById('upgradeAuthHint');
   if(hint) hint.style.display = currentUser ? 'none' : 'block';
   gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser });
+}
+
+function dismissUpgrade(){
+  document.getElementById('upgradeOverlay').classList.add('hidden');
+  gaEvent('paywall_dismissed', { source: 'upgrade_modal', is_logged_in: !!currentUser });
 }
 
 let pendingPlan = null;
