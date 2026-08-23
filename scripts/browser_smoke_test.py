@@ -200,6 +200,46 @@ def main() -> None:
                     f"Kyren incorrectly ranked above Gibbs at PPR 1.01: {first_pick_recommendations}"
                 )
 
+            combined_badge_layout = driver.execute_script(
+                """
+                const row=[...document.querySelectorAll('#playerPool [data-player-row]')]
+                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Christian McCaffrey');
+                if(!row)return {missing:true};
+                const heading=row.querySelector('.player-heading');
+                const flags=row.querySelector('.player-status-flags');
+                const sub=row.querySelector('.name-cell > .player-sub');
+                const flagRect=flags?.getBoundingClientRect();
+                const subRect=sub?.getBoundingClientRect();
+                return {
+                  missing:false,
+                  labels:[...flags.children].map(item=>
+                    item.matches('details')?item.querySelector('summary').textContent.trim():item.textContent.trim()
+                  ),
+                  flagCount:flags.children.length,
+                  wraps:getComputedStyle(flags).flexWrap,
+                  overlapsMetadata:flagRect.bottom>subRect.top+0.5,
+                  flagBottom:flagRect.bottom,
+                  subTop:subRect.top,
+                  flagHeight:flagRect.height,
+                  headingHeight:heading.getBoundingClientRect().height,
+                  headingDisplay:getComputedStyle(heading).display,
+                  headingMarginBottom:getComputedStyle(heading).marginBottom,
+                  headingWidth:heading.getBoundingClientRect().width,
+                  cellWidth:row.querySelector('.name-cell').getBoundingClientRect().width,
+                };
+                """
+            )
+            if combined_badge_layout.get("missing"):
+                raise AssertionError("Christian McCaffrey badge fixture is missing")
+            if combined_badge_layout["labels"] != ["W1", "BUST"]:
+                raise AssertionError(f"Combined status labels failed: {combined_badge_layout}")
+            if combined_badge_layout["wraps"] != "nowrap":
+                raise AssertionError(f"Status badges can split apart: {combined_badge_layout}")
+            if combined_badge_layout["overlapsMetadata"]:
+                raise AssertionError(f"Status badges overlap metadata: {combined_badge_layout}")
+            if combined_badge_layout["headingWidth"] > combined_badge_layout["cellWidth"] + 1:
+                raise AssertionError(f"Status heading overflows its cell: {combined_badge_layout}")
+
             driver.execute_script("currentFilter='K'; searchQuery=''; renderPlayerPool()")
             wait.until(
                 lambda d: len(d.find_elements("css selector", "#playerPool tbody tr")) >= 33
@@ -395,6 +435,40 @@ def main() -> None:
             if injury_rect["left"] < -1 or injury_rect["right"] > mobile_widths["client"] + 1:
                 raise AssertionError(f"Mobile injury detail overflow: {injury_rect}")
 
+            mobile_combined_badge_layout = driver.execute_script(
+                """
+                const row=[...document.querySelectorAll('#playerPool [data-player-row]')]
+                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Christian McCaffrey');
+                if(!row)return {missing:true};
+                const flags=row.querySelector('.player-status-flags');
+                const sub=row.querySelector('.name-cell > .player-sub');
+                const flagRect=flags.getBoundingClientRect();
+                const subRect=sub.getBoundingClientRect();
+                return {
+                  missing:false,
+                  labels:[...flags.children].map(item=>
+                    item.matches('details')?item.querySelector('summary').textContent.trim():item.textContent.trim()
+                  ),
+                  wraps:getComputedStyle(flags).flexWrap,
+                  overlapsMetadata:flagRect.bottom>subRect.top+0.5,
+                  flagBottom:flagRect.bottom,
+                  subTop:subRect.top,
+                  rowRight:row.getBoundingClientRect().right,
+                  viewportWidth:document.documentElement.clientWidth,
+                };
+                """
+            )
+            if mobile_combined_badge_layout.get("missing"):
+                raise AssertionError("Mobile Christian McCaffrey badge fixture is missing")
+            if mobile_combined_badge_layout["labels"] != ["W1", "BUST"]:
+                raise AssertionError(f"Mobile combined status labels failed: {mobile_combined_badge_layout}")
+            if mobile_combined_badge_layout["wraps"] != "nowrap":
+                raise AssertionError(f"Mobile status badges can split apart: {mobile_combined_badge_layout}")
+            if mobile_combined_badge_layout["overlapsMetadata"]:
+                raise AssertionError(f"Mobile status badges overlap metadata: {mobile_combined_badge_layout}")
+            if mobile_combined_badge_layout["rowRight"] > mobile_combined_badge_layout["viewportWidth"] + 1:
+                raise AssertionError(f"Mobile status row overflows: {mobile_combined_badge_layout}")
+
             driver.get(urljoin(args.url, "../draft-assistant/"))
             wait.until(lambda d: d.find_element("css selector", "main h1").is_displayed())
             landing_widths = driver.execute_script(
@@ -432,11 +506,13 @@ def main() -> None:
                 "opening_kicker_1": first_kicker,
                 "opening_defense_1": first_defense,
                 "recommendation_timing": recommendation_timing,
+                "combined_badge_layout": combined_badge_layout,
                 "saved_pick_survived_reload": True,
                 "one_pick_funnel": funnel_result,
                 "csv_backup_bytes": download_path.stat().st_size,
                 "mobile_widths": mobile_widths,
                 "mobile_injury_rect": injury_rect,
+                "mobile_combined_badge_layout": mobile_combined_badge_layout,
                 "landing_mobile_widths": landing_widths,
                 "landing_ctas": landing_ctas,
                 "console_errors": 0,

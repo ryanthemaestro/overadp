@@ -502,6 +502,48 @@
     font-size: 13px;
     color: var(--white);
   }
+  .player-heading {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 20px;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    vertical-align: middle;
+  }
+  .player-name-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .player-status-flags {
+    display: inline-flex;
+    flex: 0 0 auto;
+    min-height: 20px;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .player-status-flags .injury-details {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0;
+  }
+  .player-status-flags .intel-badge {
+    display: inline-flex;
+    min-height: 20px;
+    align-items: center;
+    margin: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .name-cell > .player-heading {
+    display: flex;
+    width: 100%;
+    margin-bottom: 3px;
+  }
+  .intel-name .player-heading { display: inline-flex; }
   .player-sub {
     margin-top: 2px;
     font-family: 'JetBrains Mono', monospace;
@@ -3257,6 +3299,17 @@ function injuryBadgeHtml(player){
   </details>`;
 }
 
+function intelBadgeHtml(player){
+  if(player?.intel_label==='SLEEPER')return '<span class="intel-badge sleeper">SLEEPER</span>';
+  if(player?.intel_label==='BUST')return '<span class="intel-badge bust">BUST</span>';
+  return '';
+}
+
+function playerHeadingHtml(player){
+  const flags=`${injuryBadgeHtml(player)}${intelBadgeHtml(player)}`;
+  return `<span class="player-heading"><span class="player-name-text">${player.player_name||player.player_id}</span>${flags?`<span class="player-status-flags">${flags}</span>`:''}</span>`;
+}
+
 function positionInjuryPopover(details){
   const summary=details?.querySelector('summary');
   const popover=details?.querySelector('.injury-popover');
@@ -3428,11 +3481,6 @@ function renderPlayerPool(){
     const valueClass=hasPickValue&&pickValue>0.05?'value-positive':hasPickValue&&pickValue<-0.05?'value-negative':'value-neutral';
     const valueTitle=hasPickValue?`ADP ${adp} − live draft slot #${p.model_draft_pick} = ${valueLabel} picks`:'Value vs. ADP unavailable';
     const mobileValue=hasPickValue?` · <span class="mobile-value ${valueClass}">VALUE ${valueLabel}</span>`:'';
-    const badge=p.intel_label==='SLEEPER'
-      ? '<span class="intel-badge sleeper">SLEEPER</span>'
-      : p.intel_label==='BUST'
-        ? '<span class="intel-badge bust">BUST</span>'
-        : '';
     const rankLabel=`#${boardRankById.get(p.player_id)||i+1}`;
     const modelRank=p.model_rank?`M#${p.model_rank}`:'M—';
     const posRank=p.model_pos_rank?`${p.position}${p.model_pos_rank}`:p.position;
@@ -3461,7 +3509,7 @@ function renderPlayerPool(){
       `<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''} ${injuryRowClass(p)}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
-      <td class="name-cell col-player">${p.player_name||p.player_id}${injuryBadgeHtml(p)}${badge}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}${mobileValue}</div></td>
+      <td class="name-cell col-player">${playerHeadingHtml(p)}<div class="player-sub">${p.adp_cost}${p.intel_reason?` · ${p.intel_reason}`:''}</div><div class="mobile-player-meta">${p.position} · ${p.team||'—'} · BYE ${byeStr} · ${rankLabel}${mobileValue}</div></td>
       <td class="col-pos">${posTag(p.position)}</td>
       <td class="team-cell col-team">${p.team||'—'}</td>
       <td class="col-bye" style="font-family:'JetBrains Mono',monospace;font-size:10px;${byeStyle}">${byeStr}</td>
@@ -3629,7 +3677,7 @@ function renderRecommendations(recs){
   c.innerHTML=header+proofGuide+recs.map((r,i)=>
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
-      <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${injuryBadgeHtml(r)}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
+      <div class="intel-name">${posTag(r.position)} ${playerHeadingHtml(r)}</div>
       <div class="intel-pts">${preview?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
       <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
