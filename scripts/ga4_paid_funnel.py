@@ -31,8 +31,8 @@ ENDPOINT = (
 FUNNEL_STEPS = (
     ("Recommendation viewed", "recommendation_viewed"),
     ("Draft pick recorded", "draft_pick_recorded"),
-    ("Free preview completed", "free_preview_completed"),
-    ("Paywall shown", "paywall_shown"),
+    ("One-pick proof completed", "proof_demo_completed"),
+    ("Offer shown", "offer_shown"),
     ("Checkout intent before auth", "checkout_intent_preauth"),
     ("Checkout started", "checkout_started"),
     ("Purchase", "purchase"),

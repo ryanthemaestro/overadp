@@ -1038,8 +1038,7 @@
     margin: 10px auto 16px;
     max-width: 390px;
   }
-  .upgrade-primary,
-  .upgrade-secondary {
+  .upgrade-primary {
     align-items: center;
     border-radius: 8px;
     cursor: pointer;
@@ -1061,8 +1060,7 @@
     text-transform: uppercase;
   }
   .upgrade-primary:hover { filter: brightness(1.08); }
-  .upgrade-primary:focus-visible,
-  .upgrade-secondary:focus-visible {
+  .upgrade-primary:focus-visible {
     outline: 2px solid var(--white);
     outline-offset: 3px;
   }
@@ -1070,22 +1068,31 @@
     color: var(--smoke);
     font-size: 11px;
     line-height: 1.45;
-    margin: 8px 0 16px;
+    margin: 8px 0 12px;
   }
-  .upgrade-secondary {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.18);
+  .upgrade-proof-list {
+    display: grid;
+    gap: 7px;
+    margin: 0 0 16px;
+    padding: 0;
+    text-align: left;
+  }
+  .upgrade-proof-list li {
     color: var(--chalk);
-    font-size: 13px;
-    gap: 8px;
-    min-height: 42px;
-    padding: 9px 12px;
+    font-size: 12px;
+    line-height: 1.35;
+    list-style: none;
+    padding-left: 20px;
+    position: relative;
   }
-  .upgrade-secondary:hover {
-    border-color: var(--rb);
-    color: var(--white);
+  .upgrade-proof-list li::before {
+    color: var(--wr);
+    content: '✓';
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    left: 0;
+    position: absolute;
   }
-  .upgrade-secondary-price { color: var(--rb); font-weight: 700; }
   .paywall-cta {
     text-align: center;
     padding: 12px;
@@ -1108,6 +1115,18 @@
     color: var(--smoke);
     margin-top: 2px;
   }
+  .proof-guide {
+    background: rgba(0,255,106,0.07);
+    border: 1px solid rgba(0,255,106,0.28);
+    border-radius: 6px;
+    color: var(--chalk);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.45;
+    margin: 0 0 9px;
+    padding: 9px 10px;
+  }
+  .proof-guide strong { color: var(--wr); }
 
   /* Loading overlay */
   .loading-overlay {
@@ -1512,7 +1531,7 @@
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
       <button class="btn" id="loginBtn" onclick="showAuth()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);">LOG IN</button>
       <button class="btn" id="logoutBtn" onclick="logOut()" style="font-size:11px;padding:4px 12px;border:1px solid var(--smoke);color:var(--smoke);display:none;">LOG OUT</button>
-      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">5 FREE PICKS</button>
+      <button class="btn btn-unlock" id="upgradeBtn" onclick="showUpgrade()">1 LIVE PICK</button>
       <button class="btn btn-activate" onclick="loadData()">INITIALIZE</button>
       <button class="btn" id="exportBtn" onclick="exportDraftBoard()" title="Download a draft-day backup CSV">EXPORT</button>
       <button class="btn btn-kill" onclick="resetDraft()">RESET</button>
@@ -1530,7 +1549,7 @@
     <div class="ticker-divider"></div>
     <div class="ticker-stat">ROUND <span class="val wr-c" id="roundNum">1</span></div>
     <div class="ticker-divider"></div>
-    <div class="ticker-stat">ACCESS <span class="val" id="previewStatus">5 FREE PICKS</span></div>
+    <div class="ticker-stat">ACCESS <span class="val" id="previewStatus">1 LIVE PICK</span></div>
     <div class="ticker-divider"></div>
     <div class="ticker-stat">QB <span class="val qb-c" id="qbCount">0</span></div>
     <div class="ticker-stat">RB <span class="val rb-c" id="rbCount">0</span></div>
@@ -1779,18 +1798,20 @@
 <!-- UPGRADE MODAL -->
 <div class="auth-overlay hidden" id="upgradeOverlay">
   <div class="auth-modal" style="max-width:480px;">
-    <div class="upgrade-kicker">Free preview complete</div>
-    <h2>You've used your 5 free picks.</h2>
-    <p class="upgrade-continuity">Keep drafting with live recommendations. Your board, recorded picks and roster-aware advice stay exactly where you left them.</p>
-    <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Unlock the rest of my draft — $6.99</button>
-    <p class="upgrade-reassurance">One draft. No subscription. Draft better or your money back.</p>
-    <button class="upgrade-secondary" type="button" onclick="startCheckout('season')">
-      Unlimited drafts all season <span class="upgrade-secondary-price">$24.99</span>
-    </button>
+    <div class="upgrade-kicker" id="upgradeKicker">Your live preview worked</div>
+    <h2 id="upgradeHeadline">Keep Target Intel live through your final pick.</h2>
+    <p class="upgrade-continuity" id="upgradeContinuity">You saw the model react to your board and roster. Keep getting who to draft now, who can wait and where ADP looks wrong after every selection.</p>
+    <ul class="upgrade-proof-list">
+      <li>Live recommendations recalculate after every pick</li>
+      <li>Roster fit, positional scarcity and ADP cost in one answer</li>
+      <li>Your current board and recorded picks stay intact</li>
+    </ul>
+    <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Keep Target Intel Live — $6.99</button>
+    <p class="upgrade-reassurance">One complete draft · One payment · No subscription · Secure Stripe checkout</p>
     <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
-      Next: create your account, then complete secure checkout — about 20 seconds. Your board stays intact.
+      Next: secure your draft access with email, then complete Stripe checkout — about 20 seconds. Your board stays intact.
     </div>
-    <button class="auth-close" onclick="dismissUpgrade()">Maybe later</button>
+    <button class="auth-close" onclick="dismissUpgrade()">Continue without live recommendations</button>
   </div>
 </div>
 
@@ -1849,6 +1870,7 @@ let myTeamIds = [];
 let opponentIds = [];
 let recommendedIds = new Set();
 let recommendationViewMilestones = new Set();
+let demoStartedTracked = false;
 let currentFilter = 'ALL';
 let searchQuery = '';
 let searchFrame = 0;
@@ -1896,12 +1918,12 @@ mobilePanelMedia.addEventListener?.('change',syncMobilePanelA11y);
 // AUTH & PAYWALL
 // ═══════════════════════════════════════
 const API_BASE = '/.netlify/functions';
-const FREE_PICK_LIMIT = 5;
+const FREE_PICK_LIMIT = 1;
 let currentUser = null;   // { id, email, ... }
 let userPlan = 'free';    // 'free' | 'paid'
 let userPlanType = 'season'; // 'season' | 'draft'
 let isAuthMode = 'register'; // 'register' | 'login'
-// Free users can make five picks and preview live Target Intel.
+// Free users can test live board reactions and record one pick before the offer.
 // Full-board projections, VBD, CI, and risk remain paid features.
 // TAKEN is free on all rows (builds investment via IKEA effect)
 // Auth prompted when user tries to DRAFT, not on load
@@ -2061,18 +2083,27 @@ function showAuth(){
 function promptDraftAuth(){
   if(currentUser){ showUpgrade(); return; }
   gaEvent('auth_prompted', { source: 'draft_gate', trigger: 'locked_feature' });
-  document.getElementById('authTitle').textContent = 'DRAFT LIKE A PRO';
-  document.getElementById('authSubtitle').textContent = 'Create an account to unlock projections & start drafting';
+  document.getElementById('authTitle').textContent = pendingPlan?'SECURE YOUR DRAFT ACCESS':'DRAFT LIKE A PRO';
+  document.getElementById('authSubtitle').textContent = pendingPlan
+    ?'Create a login to save this board, then continue to secure Stripe checkout'
+    :'Create an account to unlock projections & start drafting';
   document.getElementById('authSubmitBtn').textContent = 'CREATE ACCOUNT';
   document.getElementById('authOverlay').classList.remove('hidden');
 }
 
 function showUpgrade(){
+  const proofComplete=myTeamIds.length>=FREE_PICK_LIMIT;
+  document.getElementById('upgradeKicker').textContent=proofComplete?'Your live preview worked':'Unlock your complete draft';
+  document.getElementById('upgradeHeadline').textContent='Keep Target Intel live through your final pick.';
+  document.getElementById('upgradeContinuity').textContent=proofComplete
+    ?'You saw the model react to your board and roster. Keep getting who to draft now, who can wait and where ADP looks wrong after every selection.'
+    :'Get a fresh answer after every selection: who to draft now, who can wait and where ADP looks wrong.';
   document.getElementById('upgradeOverlay').classList.remove('hidden');
   // Show a hint for non-logged-in users so they know signup is part of the flow
   const hint = document.getElementById('upgradeAuthHint');
   if(hint) hint.style.display = currentUser ? 'none' : 'block';
-  gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser });
+  gaEvent('offer_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser, proof_complete: proofComplete });
+  gaEvent('paywall_shown', { source: 'upgrade_modal', is_logged_in: !!currentUser, proof_complete: proofComplete });
 }
 
 function dismissUpgrade(){
@@ -2151,6 +2182,8 @@ function hasFreePick(){ return !isPaid()&&myTeamIds.length<FREE_PICK_LIMIT; }
 function canDraftMine(){ return isPaid()||hasFreePick(); }
 function canPreviewIntel(){ return isPaid()||hasFreePick(); }
 function lockStyle(){ return 'color:var(--fg3);font-family:"JetBrains Mono",monospace;font-size:10px;'; }
+function freePickLabel(){ return myTeamIds.length?'UNLOCK DRAFT':'MY FREE PICK'; }
+function previewAccessLabel(){ return myTeamIds.length?'UNLOCK DRAFT':'1 LIVE PICK'; }
 
 // Update top bar user status
 function updateUserUI(){
@@ -2168,13 +2201,13 @@ function updateUserUI(){
     statusEl.style.display='inline';
     statusEl.textContent = currentUser.email;
     upgradeBtn.style.display = 'inline-block';
-    upgradeBtn.textContent = `${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
+    upgradeBtn.textContent = previewAccessLabel();
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
   } else {
     statusEl.style.display='none';
     upgradeBtn.style.display = 'inline-block';
-    upgradeBtn.textContent = `${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
+    upgradeBtn.textContent = previewAccessLabel();
     loginBtn.style.display = 'inline-block';
     logoutBtn.style.display = 'none';
   }
@@ -2485,11 +2518,12 @@ async function loadData(){
         refreshAll();
       }
     });
-    // No auth gate on load: visitors can browse and make five preview picks.
+    // No auth gate on load: visitors can test board reactions and make one preview pick.
   }catch(e){hideLoading();alert('ERROR: '+e.message);}
 }
 
 function draftPlayer(pid,team){
+  const priorTopRecommendation=[...recommendedIds][0]||null;
   if(team==='mine'){
     if(!canDraftMine()){showUpgrade();return;}
     if(myTeamIds.includes(pid))return;
@@ -2508,13 +2542,24 @@ function draftPlayer(pid,team){
   if(team==='mine'){
     const pickCount=myTeamIds.length;
     gaEvent('draft_pick_recorded',{pick_count:pickCount,preview_user:!isPaid()});
-    if((pickCount===1||pickCount===3)&&!isPaid())gaEvent('free_preview_progress',{pick_count:pickCount});
+    if(pickCount===1&&!isPaid())gaEvent('free_preview_progress',{pick_count:pickCount,preview_version:'one_pick_proof_v1'});
     if(pickCount===FREE_PICK_LIMIT&&!isPaid()){
-      gaEvent('free_preview_completed',{pick_count:pickCount});
-      setTimeout(showUpgrade,350);
+      gaEvent('proof_demo_completed',{pick_count:pickCount,opponent_pick_count:opponentIds.length,preview_version:'one_pick_proof_v1'});
     }
   }
   refreshAll();
+  if(team==='opponent'&&!isPaid()){
+    const nextTopRecommendation=[...recommendedIds][0]||null;
+    if(priorTopRecommendation&&nextTopRecommendation&&priorTopRecommendation!==nextTopRecommendation){
+      gaEvent('recommendation_changed',{
+        opponent_pick_count:opponentIds.length,
+        previous_player_id:priorTopRecommendation,
+        next_player_id:nextTopRecommendation,
+        preview_version:'one_pick_proof_v1'
+      });
+    }
+  }
+  if(team==='mine'&&myTeamIds.length===FREE_PICK_LIMIT&&!isPaid())setTimeout(showUpgrade,350);
   updateUserUI();
 }
 function undoDraft(pid){
@@ -3044,7 +3089,7 @@ function renderSpecialTeamsPool(container,players){
     const tierColor=streamTierColor(p.stream_tier);
     const adp=Number(p.adp)<200?Number(p.adp).toFixed(1):'UDFA';
     const draftBtn=canDraft
-      ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':'FREE PICK'}</button>`
+      ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':freePickLabel()}</button>`
       :`<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div style="color:${tierColor};font-weight:700;">#${p.stream_rank||'—'}</div><div class="player-sub">${position}</div></td>
@@ -3366,7 +3411,7 @@ function renderPlayerPool(){
     const byeStyle=byeConflict?'color:#ff4444;font-weight:700;':'color:var(--smoke);';
     const draftBtn=canDraft?(byeConflict?
       `<button class="btn btn-sm btn-draft" onclick="draftWithWarning('${p.player_id}','mine',${JSON.stringify(byeConflict).replace(/"/g,'&quot;')})" style="border-color:#ff4444;">DRAFT⚠</button>`:
-      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':'FREE PICK'}</button>`):
+      `<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${paid?'DRAFT':freePickLabel()}</button>`):
       `<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`;
     h+=`<tr class="${isR?'rec-row':''} ${injuryRowClass(p)}" data-player-row data-search="${escapeHtmlAttr(playerSearchKey(p))}">
       <td class="rank-cell col-board"><div>${rankLabel}</div><div class="player-sub">${modelRank} / ${posRank}</div></td>
@@ -3391,8 +3436,8 @@ function renderPlayerPool(){
     if(!paid&&i===4){
       h+=`<tr class="full-span-row search-hide-when-active"><td colspan="${vbdMode?13:12}" style="padding:0;">
         <div class="paywall-cta" onclick="showUpgrade()">
-          <div class="paywall-cta-title">DON'T DRAFT BLIND — UNLOCK EVERY PROJECTION</div>
-          <div class="paywall-cta-sub">Your opponents may already have this data. $24.99/season or $6.99/draft</div>
+          <div class="paywall-cta-title">KEEP TARGET INTEL LIVE THROUGH YOUR FINAL PICK</div>
+          <div class="paywall-cta-sub">One complete draft · $6.99 once · no subscription</div>
         </div>
       </td></tr>`;
     }
@@ -3516,11 +3561,14 @@ function renderRecommendations(recs){
     <div style="margin-top:4px;color:var(--fg3);">SPECIAL TEAMS · DEF ${specialStatus('DEF')} · K ${specialStatus('K')}</div>
     ${hardRosterDeadline?`<div style="margin-top:4px;color:var(--te);">ROSTER LOCK · ${formatMandatoryNeeds(required)} · ${rosterSlotsOpen} PICK${rosterSlotsOpen===1?'':'S'} LEFT</div>`:''}
   </div>`;
+  const proofGuide=!isPaid()&&myTeamIds.length===0
+    ?`<div class="proof-guide"><strong>${opponentIds.length?'BOARD UPDATED':'60-SECOND LIVE TEST'}</strong> · ${opponentIds.length?`Target Intel recalculated after ${opponentIds.length} player${opponentIds.length===1?'':'s'} marked TAKEN. Record your free pick when you are on the clock.`:'Mark players already drafted as TAKEN. Watch Target Intel recalculate, then record MY FREE PICK.'}</div>`
+    :'';
   if(!recs||!recs.length){
     const empty=required.total<=0
       ?'Roster complete.'
       :`No legal recommendation. Undo an UNSLOTTED pick or review Settings. Required: ${formatMandatoryNeeds(required)}.`;
-    c.innerHTML=header+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
+    c.innerHTML=header+proofGuide+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
     return;
   }
   const recommendationMilestone=`${isPaid()?'paid':'preview'}:${myTeamIds.length}:${opponentIds.length}`;
@@ -3528,7 +3576,11 @@ function renderRecommendations(recs){
     recommendationViewMilestones.add(recommendationMilestone);
     gaEvent('recommendation_viewed',{pick_count:myTeamIds.length,opponent_pick_count:opponentIds.length,recommendation_count:recs.length,preview_user:!isPaid()});
   }
-  c.innerHTML=header+recs.map((r,i)=>
+  if(preview&&!isPaid()&&!demoStartedTracked){
+    demoStartedTracked=true;
+    gaEvent('demo_started',{preview_version:'one_pick_proof_v1'});
+  }
+  c.innerHTML=header+proofGuide+recs.map((r,i)=>
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${r.player_name||r.player_id}${injuryBadgeHtml(r)}${r.intel_label==='SLEEPER'?'<span class="intel-badge sleeper">SLEEPER</span>':r.intel_label==='BUST'?'<span class="intel-badge bust">BUST</span>':''}</div>
@@ -3536,7 +3588,7 @@ function renderRecommendations(recs){
       <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
-        ${canDraftMine()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">'+(isPaid()?'DRAFT':'FREE PICK')+'</button>':'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>'}
+        ${canDraftMine()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">'+(isPaid()?'DRAFT':freePickLabel())+'</button>':'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>'}
         <button class="btn btn-sm btn-opp" onclick="draftPlayer('${r.player_id}','opponent')">TAKEN</button>
       </div>
     </div>`
@@ -3551,7 +3603,7 @@ function updateStatus(){
   document.getElementById('myCount').textContent=myTeamP.length;
   document.getElementById('oppCount').textContent=oppP.length;
   document.getElementById('roundNum').textContent=getLiveDraftTiming(getRosterPlan()).round;
-  document.getElementById('previewStatus').textContent=isPaid()?'PRO':`${Math.max(0,FREE_PICK_LIMIT-myTeamIds.length)} FREE PICKS`;
+  document.getElementById('previewStatus').textContent=isPaid()?'PRO':previewAccessLabel();
   // Position counts on my team
   const posCounts={};myTeamP.forEach(p=>{const pos=p.position||'?';posCounts[pos]=(posCounts[pos]||0)+1;});
   document.getElementById('qbCount').textContent=posCounts['QB']||0;
@@ -3737,7 +3789,7 @@ function loadSleepers(){
     const bye = p.team ? (byeWeeks[p.team] || []) : [];
     const proj = canPreviewIntel() && p.projected_points ? `${p.projected_points.toFixed(1)} pts` : canPreviewIntel() ? '—' : '🔒';
     const actions = p.player_id ? `<div style="display:flex;gap:4px;margin-top:4px;">
-      ${canDraftMine()?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${isPaid()?'DRAFT':'FREE PICK'}</button>`:`<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`}
+      ${canDraftMine()?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${p.player_id}','mine')">${isPaid()?'DRAFT':freePickLabel()}</button>`:`<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>`}
       <button class="btn btn-sm btn-opp" onclick="draftPlayer('${p.player_id}','opponent')">TAKEN</button>
     </div>` : '';
     return `<div style="padding:5px 7px;font-size:10px;border-left:2px solid ${color};margin:2px 0;background:rgba(255,255,255,0.02);">

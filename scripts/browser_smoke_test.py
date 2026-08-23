@@ -8,6 +8,7 @@ import json
 import tempfile
 import time
 from pathlib import Path
+from urllib.parse import urljoin
 
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
@@ -292,6 +293,71 @@ def main() -> None:
             if download_path is None:
                 raise AssertionError("CSV backup was not downloaded")
 
+            funnel_result = driver.execute_async_script(
+                """
+                const done=arguments[arguments.length-1];
+                window.__smokeEvents=[];
+                window.gtag=(...args)=>window.__smokeEvents.push(args);
+                currentUser=null;
+                userPlan='free';
+                userPlanType='draft';
+                myTeamIds=[];
+                opponentIds=[];
+                recommendedIds=new Set();
+                recommendationViewMilestones=new Set();
+                demoStartedTracked=false;
+                localStorage.setItem('oa_plan',JSON.stringify('free'));
+                localStorage.setItem('oa_plan_type',JSON.stringify('draft'));
+                localStorage.removeItem('oa_user');
+                localStorage.setItem('warroom_myTeam',JSON.stringify([]));
+                localStorage.setItem('warroom_opponentPicks',JSON.stringify([]));
+                refreshAll();
+                updateUserUI();
+                const initialGuide=document.querySelector('.proof-guide')?.textContent||'';
+                const initialAccess=document.getElementById('previewStatus').textContent;
+                const firstTarget=[...recommendedIds][0];
+                draftPlayer(firstTarget,'opponent');
+                const changedTarget=[...recommendedIds][0];
+                const changedGuide=document.querySelector('.proof-guide')?.textContent||'';
+                draftPlayer(changedTarget,'mine');
+                setTimeout(()=>{
+                  const events=window.__smokeEvents
+                    .filter(args=>args[0]==='event')
+                    .map(args=>args[1]);
+                  const overlay=document.getElementById('upgradeOverlay');
+                  const result={
+                    initialGuide,
+                    initialAccess,
+                    firstTarget,
+                    changedTarget,
+                    changedGuide,
+                    pickCount:myTeamIds.length,
+                    accessAfter:document.getElementById('previewStatus').textContent,
+                    offerVisible:!overlay.classList.contains('hidden'),
+                    offerHeadline:document.getElementById('upgradeHeadline').textContent,
+                    seasonChoicePresent:!!overlay.querySelector('.upgrade-secondary'),
+                    events,
+                  };
+                  done(result);
+                },500);
+                """
+            )
+            if funnel_result["initialAccess"] != "1 LIVE PICK":
+                raise AssertionError(f"One-pick preview label failed: {funnel_result}")
+            if "60-SECOND LIVE TEST" not in funnel_result["initialGuide"]:
+                raise AssertionError(f"Proof guide missing: {funnel_result}")
+            if funnel_result["firstTarget"] == funnel_result["changedTarget"]:
+                raise AssertionError(f"TAKEN did not change the top target: {funnel_result}")
+            if "BOARD UPDATED" not in funnel_result["changedGuide"]:
+                raise AssertionError(f"Board-reaction guide missing: {funnel_result}")
+            if funnel_result["pickCount"] != 1 or funnel_result["accessAfter"] != "UNLOCK DRAFT":
+                raise AssertionError(f"One-pick gate failed: {funnel_result}")
+            if not funnel_result["offerVisible"] or funnel_result["seasonChoicePresent"]:
+                raise AssertionError(f"Focused single-draft offer failed: {funnel_result}")
+            for event_name in ("recommendation_changed", "proof_demo_completed", "offer_shown"):
+                if event_name not in funnel_result["events"]:
+                    raise AssertionError(f"Missing funnel event {event_name}: {funnel_result}")
+
             driver.set_window_size(390, 844)
             driver.execute_script(
                 """
@@ -329,6 +395,22 @@ def main() -> None:
             if injury_rect["left"] < -1 or injury_rect["right"] > mobile_widths["client"] + 1:
                 raise AssertionError(f"Mobile injury detail overflow: {injury_rect}")
 
+            driver.get(urljoin(args.url, "../draft-assistant/"))
+            wait.until(lambda d: d.find_element("css selector", "main h1").is_displayed())
+            landing_widths = driver.execute_script(
+                "return {scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}"
+            )
+            landing_ctas = [
+                element.text
+                for element in driver.find_elements("css selector", ".app-cta")
+            ]
+            if landing_widths["scroll"] > landing_widths["client"]:
+                raise AssertionError(f"Landing-page mobile overflow: {landing_widths}")
+            if not landing_ctas or any("5 PICKS" in label for label in landing_ctas):
+                raise AssertionError(f"Landing-page offer is stale: {landing_ctas}")
+            if "TEST TARGET INTEL FREE" not in landing_ctas[0]:
+                raise AssertionError(f"Landing-page CTA mismatch: {landing_ctas}")
+
             severe_logs = [
                 entry for entry in driver.get_log("browser")
                 if entry.get("level") == "SEVERE"
@@ -351,9 +433,12 @@ def main() -> None:
                 "opening_defense_1": first_defense,
                 "recommendation_timing": recommendation_timing,
                 "saved_pick_survived_reload": True,
+                "one_pick_funnel": funnel_result,
                 "csv_backup_bytes": download_path.stat().st_size,
                 "mobile_widths": mobile_widths,
                 "mobile_injury_rect": injury_rect,
+                "landing_mobile_widths": landing_widths,
+                "landing_ctas": landing_ctas,
                 "console_errors": 0,
             }, indent=2))
         finally:
