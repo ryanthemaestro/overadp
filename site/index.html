@@ -22,16 +22,16 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverADP — ML Fantasy Football Draft Model + Target Intel</title>
-<meta name="description" content="Fantasy football projections tested with 1,052 held-out player-season predictions across 2024 and 2025, plus current roster/depth overlays, 80%-target split-conformal ranges, and live roster-aware Target Intel.">
+<title>OverADP — AI Fantasy Football Draft Model Tested Against ADP</title>
+<meta name="description" content="ADP tells you who everyone else is drafting. OverADP's AI recommends who to draft next. In 1,000 historical simulations, OverADP-guided teams finished top three 50.6% of the time versus 25.7% with ADP-first drafting.">
 <meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, opportunity cost draft strategy, VBD draft guide, beat ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
-<meta property="og:title" content="OverADP — Walk-Forward Tested Fantasy Football Projections">
-<meta property="og:description" content="Position-specific projections tested on the 2024 and 2025 seasons. The live War Room adds current ADP, VBD, roster needs, and next-turn availability. Free to start.">
+<meta property="og:title" content="The AI Fantasy Football Draft Model Tested Against ADP">
+<meta property="og:description" content="ADP tells you who everyone else is drafting. OverADP's AI reacts to your roster and every live pick to recommend who to draft next. Test one pick free.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://overadp.com">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OverADP — Beat Your Draft With Machine Learning">
-<meta name="twitter:description" content="ML projections + opportunity-cost Target Intel. Walk-forward tested on 2024-2025, with 80%-target ranges and current roster/depth data. Free to start.">
+<meta name="twitter:title" content="The AI Fantasy Football Draft Model Tested Against ADP">
+<meta name="twitter:description" content="ADP follows the crowd. OverADP's AI reacts to your roster and every live pick to recommend who to draft next. Test one pick free.">
 <link rel="canonical" href="https://overadp.com">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -155,6 +155,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
   max-width:680px;line-height:1.7;margin-bottom:48px;
 }
 .hero-sub strong{color:var(--green);font-weight:600;}
+.hero-proof-note{max-width:680px;margin:-30px 0 30px;color:var(--fg3);font:10px/1.55 var(--mono);}
 .hero-cta{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:64px;}
 .hero-cta .btn{font-size:15px;padding:14px 32px;}
 
@@ -313,6 +314,7 @@ footer a:hover{color:var(--green);}
   .hero{padding:100px 0 60px;}
   .hero-tag{font-size:9px;letter-spacing:1.5px;padding:5px 10px;}
   .hero-sub{font-size:15px;margin-bottom:32px;}
+  .hero-proof-note{margin:-16px 0 24px;}
   .hero-cta .btn{font-size:13px;padding:12px 20px;width:100%;justify-content:center;}
   .hero-cta{flex-direction:column;}
   .section{padding:60px 0;}
@@ -364,12 +366,13 @@ footer a:hover{color:var(--green);}
 <section class="hero">
   <div class="wrap">
     <div class="hero-tag anim"><span class="dot"></span> AUGUST 2026 REFRESH · TARGET INTEL · CURRENT ROSTERS · 844 SKILL-PLAYER PROJECTIONS</div>
-    <h1 class="anim anim-d1">STOP GUESSING <span class="green">ON THE CLOCK.</span></h1>
+    <h1 class="anim anim-d1">THE AI DRAFT MODEL <span class="green">TESTED AGAINST ADP.</span></h1>
     <p class="hero-sub anim anim-d2">
-      OverADP tells you <strong>who to draft now, who can wait, and where the market price looks wrong.</strong> Target Intel reacts to your roster settings, live picks, VBD, ADP, and whether a player is likely to make it back. The projection model behind it was tested on <strong>1,052 held-out player seasons</strong> from 2024 and 2025.
+      ADP tells you who everyone else is drafting. <strong>OverADP analyzes player projections, your roster and every live pick—then tells you who to draft next and who can wait.</strong> In 1,000 historical simulations, OverADP-guided teams finished top three 50.6% of the time versus 25.7% with ADP-first drafting.
     </p>
+    <p class="hero-proof-note anim anim-d2">Historical draft-only simulation across 2023–2024; no in-season management. Results do not guarantee future performance.</p>
     <div class="hero-cta anim anim-d3">
-      <a href="/app/" class="btn btn-go">TEST TARGET INTEL FREE →</a>
+      <a href="/app/" class="btn btn-go">ASK THE AI WHO TO DRAFT NEXT →</a>
       <a href="#proof" class="btn btn-ghost">SEE THE PROOF</a>
     </div>
 
@@ -684,9 +687,9 @@ footer a:hover{color:var(--green);}
 <section class="section cta">
   <div class="wrap">
     <div class="section-tag">Deploy</div>
-    <div class="section-title">Run The Live Test.<br><span style="color:var(--green)">See The Board React.</span></div>
-    <p class="section-desc">Mark players taken, watch Target Intel recalculate, then record one pick free. Unlock every projection, 80%-target range, sleeper candidate, bust candidate, handcuff, and Target Intel rationale for <strong>$6.99 for one complete draft</strong>. Projections are decision aids, not guarantees.</p>
-    <a href="/app/" class="btn btn-go">RUN THE LIVE TEST FREE →</a>
+    <div class="section-title">Ask The AI.<br><span style="color:var(--green)">See Its Answer Change.</span></div>
+    <p class="section-desc">Mark players taken, watch the AI recalculate, then record one pick free. Unlock every projection, 80%-target range, sleeper candidate, bust candidate, handcuff, and recommendation rationale for <strong>$6.99 for one complete draft</strong>. Projections are decision aids, not guarantees.</p>
+    <a href="/app/" class="btn btn-go">ASK THE AI WHO TO DRAFT NEXT →</a>
     <p style="color:var(--fg3);font-size:12px;margin-top:16px;font-family:var(--mono);">⚡ Instant access · No subscription rebilling · Works in any league format</p>
   </div>
 </section>

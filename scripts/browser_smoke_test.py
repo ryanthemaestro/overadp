@@ -408,7 +408,7 @@ def main() -> None:
                 raise AssertionError(f"Landing-page mobile overflow: {landing_widths}")
             if not landing_ctas or any("5 PICKS" in label for label in landing_ctas):
                 raise AssertionError(f"Landing-page offer is stale: {landing_ctas}")
-            if "TEST TARGET INTEL FREE" not in landing_ctas[0]:
+            if "ASK THE AI WHO TO DRAFT NEXT" not in landing_ctas[0]:
                 raise AssertionError(f"Landing-page CTA mismatch: {landing_ctas}")
 
             severe_logs = [

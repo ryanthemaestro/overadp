@@ -1799,14 +1799,14 @@
 <div class="auth-overlay hidden" id="upgradeOverlay">
   <div class="auth-modal" style="max-width:480px;">
     <div class="upgrade-kicker" id="upgradeKicker">Your live preview worked</div>
-    <h2 id="upgradeHeadline">Keep Target Intel live through your final pick.</h2>
-    <p class="upgrade-continuity" id="upgradeContinuity">You saw the model react to your board and roster. Keep getting who to draft now, who can wait and where ADP looks wrong after every selection.</p>
+    <h2 id="upgradeHeadline">Keep the AI live through your final pick.</h2>
+    <p class="upgrade-continuity" id="upgradeContinuity">You saw the AI react to your board and roster. Keep getting who to draft now and who can wait after every selection.</p>
     <ul class="upgrade-proof-list">
       <li>Live recommendations recalculate after every pick</li>
-      <li>Roster fit, positional scarcity and ADP cost in one answer</li>
+      <li>Roster fit, positional scarcity and ADP in one clear answer</li>
       <li>Your current board and recorded picks stay intact</li>
     </ul>
-    <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Keep Target Intel Live — $6.99</button>
+    <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Unlock the AI Draft Room — $6.99</button>
     <p class="upgrade-reassurance">One complete draft · One payment · No subscription · Secure Stripe checkout</p>
     <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
       Next: secure your draft access with email, then complete Stripe checkout — about 20 seconds. Your board stays intact.
@@ -2094,10 +2094,10 @@ function promptDraftAuth(){
 function showUpgrade(){
   const proofComplete=myTeamIds.length>=FREE_PICK_LIMIT;
   document.getElementById('upgradeKicker').textContent=proofComplete?'Your live preview worked':'Unlock your complete draft';
-  document.getElementById('upgradeHeadline').textContent='Keep Target Intel live through your final pick.';
+  document.getElementById('upgradeHeadline').textContent='Keep the AI live through your final pick.';
   document.getElementById('upgradeContinuity').textContent=proofComplete
-    ?'You saw the model react to your board and roster. Keep getting who to draft now, who can wait and where ADP looks wrong after every selection.'
-    :'Get a fresh answer after every selection: who to draft now, who can wait and where ADP looks wrong.';
+    ?'You saw the AI react to your board and roster. Keep getting who to draft now and who can wait after every selection.'
+    :'Get a fresh AI recommendation after every selection: who to draft now and who can wait.';
   document.getElementById('upgradeOverlay').classList.remove('hidden');
   // Show a hint for non-logged-in users so they know signup is part of the flow
   const hint = document.getElementById('upgradeAuthHint');
