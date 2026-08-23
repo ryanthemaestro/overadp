@@ -3059,6 +3059,32 @@ function getRecommendations(){
   const top5=hardSpecialTeamsDeadline&&forcedSpecialTeams.length
     ?forcedSpecialTeams.slice(0,5)
     :[...forcedSpecialTeams,...scored.filter(p=>!forcedIds.has(p.player_id))].slice(0,5);
+  // Keep one live-market checkpoint in the shortlist when a healthy consensus
+  // player is immediately due. The model still controls the other four slots;
+  // this prevents a large projection disagreement from hiding the market's
+  // highest-priority option entirely.
+  if(!hardSpecialTeamsDeadline){
+    const marketCheckpoint=scored
+      .filter(p=>
+        p.position!=='K'&&p.position!=='DEF'&&
+        Number.isFinite(Number(p.adp))&&
+        Number(p.adp)<=pickNum+3&&
+        injuryAvailabilityAdjustment(p).penalty===0
+      )
+      .sort((a,b)=>Number(a.adp)-Number(b.adp))[0];
+    if(marketCheckpoint&&!top5.some(p=>p.player_id===marketCheckpoint.player_id)){
+      const replaceIndex=[...top5]
+        .map((p,index)=>({p,index}))
+        .reverse()
+        .find(({p})=>!forcedIds.has(p.player_id))?.index;
+      if(replaceIndex!==undefined){
+        top5[replaceIndex]={
+          ...marketCheckpoint,
+          pick_reason:`market checkpoint · ${marketCheckpoint.pick_reason}`
+        };
+      }
+    }
+  }
   recommendedIds=new Set(top5.map(x=>x.player_id));
   renderRecommendations(top5);
 }
