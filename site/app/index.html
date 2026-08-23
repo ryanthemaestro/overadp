@@ -999,6 +999,7 @@
     transition: opacity 0.2s;
   }
   .auth-btn:hover { opacity: 0.85; }
+  .auth-btn:disabled { opacity: 0.62; cursor: wait; }
   .auth-switch {
     margin-top: 12px;
     font-size: 12px;
@@ -1999,19 +2000,34 @@ async function authSubmit(){
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   const errEl = document.getElementById('authError');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  if(submitBtn.disabled)return;
   errEl.style.display='none';
 
   if(!email||!password){errEl.textContent='Email and password required';errEl.style.display='block';return;}
   if(password.length<6){errEl.textContent='Password must be 6+ characters';errEl.style.display='block';return;}
 
   const endpoint = isAuthMode==='register' ? 'auth-register' : 'auth-login';
+  submitBtn.disabled=true;
+  submitBtn.textContent='PLEASE WAIT…';
   try{
     const res = await fetch(API_BASE+'/'+endpoint,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({email,password})
     });
     const data = await res.json();
-    if(!res.ok){errEl.textContent=data.error||'Auth failed';errEl.style.display='block';return;}
+    if(!res.ok){
+      errEl.textContent=data.error||'Auth failed';
+      errEl.style.display='block';
+      if(data.code==='account_exists'||data.code==='account_created'){
+        isAuthMode='login';
+        document.getElementById('authTitle').textContent='Welcome Back';
+        document.getElementById('authSubtitle').textContent='Log in to continue to secure checkout. Your board is still saved.';
+        document.getElementById('authSubmitBtn').textContent='LOG IN';
+        document.getElementById('authSwitch').innerHTML='Need a different account? <a href="#" onclick="authToggle(event)">Sign up</a>';
+      }
+      return;
+    }
 
     currentUser = data.user || data.session?.user;
     const token = data.session?.access_token;
@@ -2050,6 +2066,10 @@ async function authSubmit(){
     }
   }catch(e){
     errEl.textContent='Network error — try again';errEl.style.display='block';
+  }finally{
+    submitBtn.disabled=false;
+    if(document.getElementById('authOverlay').classList.contains('hidden'))return;
+    submitBtn.textContent=isAuthMode==='register'?'CREATE ACCOUNT':'LOG IN';
   }
 }
 
