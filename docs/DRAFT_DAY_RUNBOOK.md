@@ -68,6 +68,17 @@ python scripts/refresh_market_data.py
 python scripts/validate_draft_data.py --max-age-hours 72
 ```
 
+After every production deploy, run the no-charge funnel smoke test. It creates
+and removes a disposable account, verifies registration, login, session
+restoration, and the Stripe-hosted checkout handoff, but never submits payment:
+
+```bash
+python scripts/production_funnel_smoke.py --netlify-env
+```
+
+The board-only browser rehearsal seeds a local paid user so it cannot replace
+this production authentication test.
+
 A healthy release reports:
 
 - at least 800 skill projections;

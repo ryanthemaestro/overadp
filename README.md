@@ -58,6 +58,13 @@ and pre-draft checklist. See
 [`docs/KDEF_STREAMING_MODEL.md`](docs/KDEF_STREAMING_MODEL.md) for the special
 teams formulas, holdout evidence, and release gates.
 
+After each production deploy, verify the real registration-to-checkout path
+without making a charge:
+
+```bash
+python scripts/production_funnel_smoke.py --netlify-env
+```
+
 ## Deploy
 
 Connected to GitHub → Netlify. Auto-deploys on push to `main`.
