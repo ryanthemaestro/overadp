@@ -3229,24 +3229,30 @@ function getRecommendations(){
   const top5=hardSpecialTeamsDeadline&&forcedSpecialTeams.length
     ?forcedSpecialTeams.slice(0,5)
     :[...forcedSpecialTeams,...draftNowPool.filter(p=>!forcedIds.has(p.player_id))].slice(0,5);
-  // Keep one live-market checkpoint in the shortlist when a healthy consensus
-  // player is immediately due. The model still controls the other four slots;
-  // this prevents a large projection disagreement from hiding the market's
-  // highest-priority option entirely.
+  // Keep healthy consensus players whose ADP is immediately due in the
+  // shortlist. Preserve at most four market checkpoints so Target Intel still
+  // has room for one model-led alternative, while preventing an elite player
+  // from disappearing solely because another due player already made the list.
   if(!hardSpecialTeamsDeadline){
-    const marketCheckpoint=draftNowPool
+    const marketCheckpoints=draftNowPool
       .filter(p=>
         p.position!=='K'&&p.position!=='DEF'&&
         Number.isFinite(Number(p.adp))&&
         Number(p.adp)<=pickNum+3&&
         injuryAvailabilityAdjustment(p).penalty===0
       )
-      .sort((a,b)=>Number(a.adp)-Number(b.adp))[0];
-    if(marketCheckpoint&&!top5.some(p=>p.player_id===marketCheckpoint.player_id)){
+      .sort((a,b)=>Number(a.adp)-Number(b.adp))
+      .slice(0,4);
+    const marketCheckpointIds=new Set(marketCheckpoints.map(p=>p.player_id));
+    for(const marketCheckpoint of marketCheckpoints){
+      if(top5.some(p=>p.player_id===marketCheckpoint.player_id))continue;
       const replaceIndex=[...top5]
         .map((p,index)=>({p,index}))
         .reverse()
-        .find(({p})=>!forcedIds.has(p.player_id))?.index;
+        .find(({p})=>
+          !forcedIds.has(p.player_id)&&
+          !marketCheckpointIds.has(p.player_id)
+        )?.index;
       if(replaceIndex!==undefined){
         top5[replaceIndex]={
           ...marketCheckpoint,

@@ -65,7 +65,11 @@ def main() -> None:
                 for row in driver.find_elements("css selector", "#playerPool tbody tr")[:10]
                 if row.find_elements("css selector", ".name-cell")
             ]
-            if "Jahmyr Gibbs" not in first_ten or "Puka Nacua" not in first_ten:
+            if (
+                "Jahmyr Gibbs" not in first_ten
+                or "Puka Nacua" not in first_ten
+                or "Ja'Marr Chase" not in first_ten
+            ):
                 raise AssertionError(f"Top-ten sanity failed: {first_ten}")
 
             injury_badge_count = len(
@@ -194,13 +198,13 @@ def main() -> None:
                 raise AssertionError(
                     f"Gibbs missing from PPR 1.01 recommendations: {first_pick_recommendations}"
                 )
-            if (
-                "Kyren Williams" in first_pick_recommendations
-                and first_pick_recommendations.index("Kyren Williams")
-                < first_pick_recommendations.index("Jahmyr Gibbs")
-            ):
+            if "Ja'Marr Chase" not in first_pick_recommendations:
                 raise AssertionError(
-                    f"Kyren incorrectly ranked above Gibbs at PPR 1.01: {first_pick_recommendations}"
+                    f"Chase missing from PPR 1.01 recommendations: {first_pick_recommendations}"
+                )
+            if "Kyren Williams" in first_pick_recommendations:
+                raise AssertionError(
+                    f"Kyren incorrectly recommended at PPR 1.01: {first_pick_recommendations}"
                 )
 
             early_board_recommendations = driver.execute_script(
