@@ -1696,10 +1696,16 @@
 
     .center-panel { padding: 4px 6px calc(10px + env(safe-area-inset-bottom)); }
     .compact-controls {
-      top: -4px;
+      position: static;
       margin: -4px -6px 4px;
       padding: 4px 6px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.28);
+      box-shadow: none;
+    }
+    .pool-table thead {
+      top: -4px;
+      z-index: 9;
+      background: var(--void);
+      box-shadow: 0 5px 10px rgba(0,0,0,0.34);
     }
     .filter-row {
       gap: 3px;
