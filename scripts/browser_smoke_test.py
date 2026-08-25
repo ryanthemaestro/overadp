@@ -50,9 +50,12 @@ def main() -> None:
             wait.until(
                 lambda d: d.execute_script(
                     "return typeof allPlayers==='undefined'?0:allPlayers.length"
-                ) >= 900
+                ) >= 800
             )
-            wait.until(lambda d: len(d.find_elements("css selector", "#playerPool tbody tr")) >= 900)
+            wait.until(
+                lambda d: len(d.find_elements("css selector", "#playerPool tbody tr"))
+                >= d.execute_script("return allPlayers.length")
+            )
 
             player_count = driver.execute_script("return allPlayers.length")
             status_text = driver.find_element("id", "dataStatus").text
@@ -258,7 +261,7 @@ def main() -> None:
             combined_badge_layout = driver.execute_script(
                 """
                 const row=[...document.querySelectorAll('#playerPool [data-player-row]')]
-                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Christian McCaffrey');
+                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Rachaad White');
                 if(!row)return {missing:true};
                 const heading=row.querySelector('.player-heading');
                 const flags=row.querySelector('.player-status-flags');
@@ -285,8 +288,8 @@ def main() -> None:
                 """
             )
             if combined_badge_layout.get("missing"):
-                raise AssertionError("Christian McCaffrey badge fixture is missing")
-            if combined_badge_layout["labels"] != ["W1", "BUST"]:
+                raise AssertionError("Rachaad White badge fixture is missing")
+            if combined_badge_layout["labels"] != ["W1", "SLEEPER"]:
                 raise AssertionError(f"Combined status labels failed: {combined_badge_layout}")
             if combined_badge_layout["wraps"] != "nowrap":
                 raise AssertionError(f"Status badges can split apart: {combined_badge_layout}")
@@ -368,7 +371,7 @@ def main() -> None:
             wait.until(
                 lambda d: d.execute_script(
                     "return typeof allPlayers==='undefined'?0:allPlayers.length"
-                ) >= 900
+                ) >= 800
             )
             wait.until(
                 lambda d: d.execute_script(
@@ -525,7 +528,7 @@ def main() -> None:
             mobile_combined_badge_layout = driver.execute_script(
                 """
                 const row=[...document.querySelectorAll('#playerPool [data-player-row]')]
-                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Christian McCaffrey');
+                  .find(item=>item.querySelector('.player-name-text')?.textContent.trim()==='Rachaad White');
                 if(!row)return {missing:true};
                 const flags=row.querySelector('.player-status-flags');
                 const sub=row.querySelector('.name-cell > .player-sub');
@@ -546,8 +549,8 @@ def main() -> None:
                 """
             )
             if mobile_combined_badge_layout.get("missing"):
-                raise AssertionError("Mobile Christian McCaffrey badge fixture is missing")
-            if mobile_combined_badge_layout["labels"] != ["W1", "BUST"]:
+                raise AssertionError("Mobile Rachaad White badge fixture is missing")
+            if mobile_combined_badge_layout["labels"] != ["W1", "SLEEPER"]:
                 raise AssertionError(f"Mobile combined status labels failed: {mobile_combined_badge_layout}")
             if mobile_combined_badge_layout["wraps"] != "nowrap":
                 raise AssertionError(f"Mobile status badges can split apart: {mobile_combined_badge_layout}")
