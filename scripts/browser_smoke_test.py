@@ -200,6 +200,61 @@ def main() -> None:
                     f"Kyren incorrectly ranked above Gibbs at PPR 1.01: {first_pick_recommendations}"
                 )
 
+            early_board_recommendations = driver.execute_script(
+                """
+                scoringFormat='half_ppr';
+                adjustScoring();
+                buildDraftIntel();
+                rosterConfig.draft_slot=6;
+                myTeamIds=[];
+                const earlyTaken=['Amon-Ra St. Brown','Bijan Robinson','Jaxon Smith-Njigba',"Ja'Marr Chase"];
+                opponentIds=earlyTaken.map(name=>allPlayers.find(p=>p.player_name===name)?.player_id).filter(Boolean);
+                computeClientVBD();
+                getRecommendations();
+                const plan=getRosterPlan();
+                const counts={};
+                const needs=rosterNeeds(counts,plan);
+                const timing=getLiveDraftTiming(plan);
+                const taken=new Set(opponentIds);
+                const available=allPlayers.filter(p=>!taken.has(p.player_id));
+                const byPos={};
+                ['QB','RB','WR','TE','K','DEF'].forEach(pos=>{
+                  byPos[pos]=available
+                    .filter(p=>p.position===pos)
+                    .sort((a,b)=>(b.projected_points||0)-(a.projected_points||0));
+                });
+                const result=[...recommendedIds].map(id=>{
+                  const p=playerMap[id];
+                  const guarded=adpGuardedScore(
+                    p,byPos[p.position]||[],timing.pickNum,timing.nextPick,
+                    counts,needs,plan,timing.round
+                  );
+                  return {
+                    name:p.player_name,
+                    reach:Number(guarded.reach||0),
+                    pGone:Number(guarded.pGone||0),
+                  };
+                });
+                opponentIds=[];
+                computeClientVBD();
+                getRecommendations();
+                renderPlayerPool();
+                return result;
+                """
+            )
+            if any(item["name"] == "Kyren Williams" for item in early_board_recommendations):
+                raise AssertionError(
+                    "Kyren surfaced as an early DRAFT NOW recommendation after four early picks: "
+                    f"{early_board_recommendations}"
+                )
+            if any(
+                item["reach"] > 4 and item["pGone"] < 0.55
+                for item in early_board_recommendations
+            ):
+                raise AssertionError(
+                    f"Early DRAFT NOW shortlist contains an excessive reach: {early_board_recommendations}"
+                )
+
             combined_badge_layout = driver.execute_script(
                 """
                 const row=[...document.querySelectorAll('#playerPool [data-player-row]')]
@@ -398,6 +453,38 @@ def main() -> None:
                 if event_name not in funnel_result["events"]:
                     raise AssertionError(f"Missing funnel event {event_name}: {funnel_result}")
 
+            driver.set_window_size(768, 1080)
+            split_screen_layout = driver.execute_script(
+                """
+                document.getElementById('upgradeOverlay')?.classList.add('hidden');
+                setMobilePanel('board');
+                const root=document.documentElement;
+                const header=document.querySelector('.top-bar').getBoundingClientRect();
+                const controls=document.querySelector('.compact-controls').getBoundingClientRect();
+                const intel=document.getElementById('compactIntel');
+                const intelRect=intel.getBoundingClientRect();
+                return {
+                  client:root.clientWidth,
+                  scroll:root.scrollWidth,
+                  headerHeight:header.height,
+                  controlsTop:controls.top,
+                  intelVisible:!intel.hidden && getComputedStyle(intel).display!=='none' && intelRect.height>0,
+                  intelText:intel.textContent.trim(),
+                  intelActions:intel.querySelectorAll('button').length,
+                  searchVisible:document.getElementById('playerSearch').getBoundingClientRect().height>0,
+                  firstRowVisible:document.querySelector('#playerPool [data-player-row]').getBoundingClientRect().height>0,
+                };
+                """
+            )
+            if split_screen_layout["scroll"] > split_screen_layout["client"]:
+                raise AssertionError(f"Split-screen horizontal overflow: {split_screen_layout}")
+            if split_screen_layout["headerHeight"] > 55:
+                raise AssertionError(f"Split-screen header is too tall: {split_screen_layout}")
+            if not split_screen_layout["intelVisible"] or split_screen_layout["intelActions"] < 2:
+                raise AssertionError(f"Split-screen Target Intel missing: {split_screen_layout}")
+            if not split_screen_layout["searchVisible"] or not split_screen_layout["firstRowVisible"]:
+                raise AssertionError(f"Split-screen board controls missing: {split_screen_layout}")
+
             driver.set_window_size(390, 844)
             driver.execute_script(
                 """
@@ -511,6 +598,7 @@ def main() -> None:
                 "one_pick_funnel": funnel_result,
                 "csv_backup_bytes": download_path.stat().st_size,
                 "mobile_widths": mobile_widths,
+                "split_screen_layout": split_screen_layout,
                 "mobile_injury_rect": injury_rect,
                 "mobile_combined_badge_layout": mobile_combined_badge_layout,
                 "landing_mobile_widths": landing_widths,

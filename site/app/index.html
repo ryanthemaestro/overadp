@@ -253,6 +253,8 @@
 
   .mobile-tabs { display: none; }
   .mobile-player-meta { display: none; }
+  .compact-intel { display: none; }
+  .compact-controls { display: contents; }
 
   /* === LEFT PANEL — MY ROSTER === */
   .left-panel {
@@ -1415,11 +1417,22 @@
     .war-room[data-mobile-panel="intel"] .left-panel,
     .war-room[data-mobile-panel="intel"] .center-panel { display: none; }
 
+    .compact-controls {
+      display: block;
+      position: sticky;
+      top: -10px;
+      z-index: 8;
+      margin: -10px -8px 8px;
+      padding: 10px 8px 7px;
+      background: rgba(5, 8, 12, 0.98);
+      border-bottom: 1px solid var(--rust);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.32);
+    }
     .filter-row {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 5px;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
     .filter-row > .pos-filter {
       min-width: 0;
@@ -1435,6 +1448,74 @@
     }
     #vbdToggle { grid-column: 1 / 3; }
     #settingsBtn { grid-column: 3 / -1; }
+
+    .compact-intel[hidden] { display: none; }
+    .compact-intel.has-data {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+      align-items: center;
+      padding: 8px 9px;
+      background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(59,130,246,0.07));
+      border: 1px solid var(--wr);
+      border-left-width: 3px;
+      border-radius: 2px;
+    }
+    .compact-intel-copy { min-width: 0; }
+    .compact-intel-kicker {
+      color: var(--wr);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .compact-intel-name {
+      margin-top: 2px;
+      color: var(--white);
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .compact-intel-meta {
+      margin-top: 3px;
+      color: var(--ash);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .compact-intel-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(48px, 1fr));
+      gap: 4px;
+    }
+    .compact-intel-actions .btn {
+      min-height: 40px;
+      min-width: 52px;
+      padding: 4px 6px;
+      font-size: 8px;
+    }
+    .compact-intel-next {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      color: var(--smoke);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .compact-intel-next span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     #playerPool { min-width: 0; width: 100%; overflow-x: hidden; }
     .pool-table,
@@ -1543,6 +1624,31 @@
     .info-modal table { display: block; overflow-x: auto; }
   }
 
+  /* Laptop split-screen: keep the mobile interaction model, but reclaim vertical space. */
+  @media (min-width: 640px) and (max-width: 960px) {
+    .war-room { grid-template-rows: 50px 34px 40px minmax(0, 1fr); }
+    .top-bar {
+      padding: 5px 8px;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-bar .logo { flex: 0 0 auto; font-size: 17px; }
+    .top-bar .data-status { display: none; }
+    .top-actions { grid-template-columns: repeat(5, minmax(54px, 1fr)); gap: 4px; }
+    .top-actions .btn { min-height: 36px; }
+    .ticker-bar { padding: 0 10px; gap: 13px; font-size: 9px; }
+    .ticker-stat .val { font-size: 11px; }
+    .mobile-tab { min-height: 40px; }
+    .filter-row > .pos-filter { min-height: 34px; padding-block: 4px; }
+    #playerSearch { grid-column: 1 / 5; min-height: 36px; }
+    #vbdToggle { grid-column: 5 / 6; }
+    #settingsBtn { grid-column: 6 / -1; }
+    .pool-table th, .pool-table td { padding-block: 5px; }
+    .name-cell .player-sub { -webkit-line-clamp: 1; }
+    .actions-wrap .btn { min-height: 36px; }
+  }
+
   @media (max-width: 430px) {
     .top-bar .logo { font-size: 17px; }
     .data-status { max-width: 122px; font-size: 8px; }
@@ -1620,6 +1726,7 @@
 
   <!-- CENTER — PLAYER POOL -->
   <div class="center-panel" id="boardPanel" role="tabpanel" aria-label="Draft Board">
+    <div class="compact-controls">
     <div class="filter-row">
       <button class="pos-filter on" data-pos="ALL" onclick="filterPos('ALL', this)">ALL</button>
       <button class="pos-filter" data-pos="QB" onclick="filterPos('QB', this)">QB</button>
@@ -1634,6 +1741,8 @@
       <input class="search-field" id="playerSearch" type="search" name="q" aria-label="Search players or teams" placeholder="SEARCH PLAYER / TEAM…" oninput="searchPlayers(this.value)" onfocus="focusSearch(this)" readonly autocomplete="off" data-lpignore="true" data-form-type="other">
       <button class="pos-filter" id="vbdToggle" onclick="toggleVBD()" title="Show VBD values in table">VBD</button>
       <button class="pos-filter settings-filter" id="settingsBtn" onclick="toggleSettings()" title="Draft settings">⚙ SETTINGS</button>
+    </div>
+    <div class="compact-intel" id="compactIntel" hidden aria-live="polite"></div>
     </div>
     <div id="playerPool">
       <div class="empty-state">
@@ -3021,7 +3130,9 @@ function getRecommendations(){
     }
 
     if(directNeed>0){
-      score+=kd?18:42;
+      // Skill-position starter need is already included in adpGuardedScore.
+      // Keep the explanation here without paying the same roster bonus twice.
+      if(kd)score+=18;
       reasons.push('starter need');
     }else if(flexNeed){
       score+=22;
@@ -3084,9 +3195,26 @@ function getRecommendations(){
     if(round>=8&&directNeed>0&&!kd){score+=18;reasons.push('late starter hole');}
     if(round>=10&&flexNeed){score+=10;reasons.push('late flex hole');}
     if(!reasons.length)reasons.push('best value');
-    return {...p,score,guarded_score:guarded.score,pick_reason:reasons.slice(0,4).join(' · ')};
+    return {
+      ...p,
+      score,
+      guarded_score:guarded.score,
+      guarded_reach:guarded.reach,
+      guarded_p_gone:guarded.pGone,
+      pick_reason:reasons.slice(0,4).join(' · ')
+    };
   });
   scored.sort((a,b)=>b.score-a.score);
+  // Target Intel is an on-the-clock shortlist, not a rest-of-season ranking.
+  // A future bargain may remain high on the board, but it should not receive a
+  // DRAFT button while the market says it is likely to survive beyond our next
+  // turn. Permit a modest model-led reach and gradually widen it in late rounds.
+  const maxDraftNowReach=Math.min(10,Math.max(4,round+2));
+  const draftNowPool=scored.filter(p=>
+    p.position==='K'||p.position==='DEF'||
+    Number(p.guarded_reach||0)<=maxDraftNowReach||
+    Number(p.guarded_p_gone||0)>=0.55
+  );
   const forcedPositions=[];
   const specialNeed={
     DEF:Math.max(0,(starterSlots.DEF||0)-(myPosCount.DEF||0)),
@@ -3100,13 +3228,13 @@ function getRecommendations(){
   const forcedIds=new Set(forcedSpecialTeams.map(p=>p.player_id));
   const top5=hardSpecialTeamsDeadline&&forcedSpecialTeams.length
     ?forcedSpecialTeams.slice(0,5)
-    :[...forcedSpecialTeams,...scored.filter(p=>!forcedIds.has(p.player_id))].slice(0,5);
+    :[...forcedSpecialTeams,...draftNowPool.filter(p=>!forcedIds.has(p.player_id))].slice(0,5);
   // Keep one live-market checkpoint in the shortlist when a healthy consensus
   // player is immediately due. The model still controls the other four slots;
   // this prevents a large projection disagreement from hiding the market's
   // highest-priority option entirely.
   if(!hardSpecialTeamsDeadline){
-    const marketCheckpoint=scored
+    const marketCheckpoint=draftNowPool
       .filter(p=>
         p.position!=='K'&&p.position!=='DEF'&&
         Number.isFinite(Number(p.adp))&&
@@ -3214,6 +3342,10 @@ function escapeHtmlAttr(value){
     .replace(/"/g,'&quot;')
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;');
+}
+
+function escapeHtml(value){
+  return escapeHtmlAttr(value).replace(/'/g,'&#39;');
 }
 
 function injuryStatusInfo(player){
@@ -3658,6 +3790,7 @@ function renderRecommendations(recs){
   const proofGuide=!isPaid()&&myTeamIds.length===0
     ?`<div class="proof-guide"><strong>${opponentIds.length?'BOARD UPDATED':'60-SECOND LIVE TEST'}</strong> · ${opponentIds.length?`Target Intel recalculated after ${opponentIds.length} player${opponentIds.length===1?'':'s'} marked TAKEN. Record your free pick when you are on the clock.`:'Mark players already drafted as TAKEN. Watch Target Intel recalculate, then record MY FREE PICK.'}</div>`
     :'';
+  renderCompactIntel(recs,timing);
   if(!recs||!recs.length){
     const empty=required.total<=0
       ?'Roster complete.'
@@ -3687,6 +3820,40 @@ function renderRecommendations(recs){
       </div>
     </div>`
   ).join('');
+}
+
+function renderCompactIntel(recs,timing){
+  const c=document.getElementById('compactIntel');
+  if(!c)return;
+  if(!recs||!recs.length){
+    c.hidden=true;
+    c.classList.remove('has-data');
+    c.innerHTML='';
+    return;
+  }
+  const top=recs[0];
+  const preview=canPreviewIntel();
+  const adp=Number(top.adp);
+  const adpLabel=Number.isFinite(adp)&&adp>0&&adp<200?adp.toFixed(1):'—';
+  const value=Number.isFinite(top.value_vs_adp)?` · VALUE ${formatPickValue(top.value_vs_adp)}`:'';
+  const reason=top.pick_reason||top.intel_reason||'best live value';
+  const next=recs.slice(1,3).map((r,i)=>`<span>#${i+2} ${escapeHtml(r.player_name||r.player_id)} · ${r.position}</span>`).join('');
+  const draftAction=canDraftMine()
+    ?`<button class="btn btn-sm btn-draft" onclick="draftPlayer('${top.player_id}','mine')">${isPaid()?'DRAFT':freePickLabel()}</button>`
+    :'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.55;">🔒 DRAFT</button>';
+  c.hidden=false;
+  c.classList.add('has-data');
+  c.innerHTML=`
+    <div class="compact-intel-copy">
+      <div class="compact-intel-kicker">On the clock · pick ${timing.pickNum} · Target Intel #1</div>
+      <div class="compact-intel-name">${posTag(top.position)} ${playerHeadingHtml(top)}</div>
+      <div class="compact-intel-meta">ADP ${adpLabel}${value} · ${escapeHtml(reason)}</div>
+    </div>
+    <div class="compact-intel-actions">
+      ${draftAction}
+      <button class="btn btn-sm btn-opp" onclick="draftPlayer('${top.player_id}','opponent')">TAKEN</button>
+    </div>
+    ${next?`<div class="compact-intel-next"><span>NEXT</span>${next}</div>`:''}`;
 }
 
 function updateStatus(){
