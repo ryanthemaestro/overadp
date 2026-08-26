@@ -4195,7 +4195,16 @@ const VOICE_PLAYER_ALIASES={
   'christian mccaffrey':['cmc','c m c'],
   'jaxon smith njigba':[
     'jsn','j s n','jackson smith njigba','jackson smith jigba','jackson smith en jigba',
+    'jackson smith jig buh','jackson smith en jig buh','jackson smith nick bba',
     'jackson smith mitchell biber','jackson smith mitchell bieber','jackson smith mitchell beaver'
+  ],
+  'jahmyr gibbs':[
+    'jamir gibbs','jameer gibbs','jahmeer gibbs','jimmy gibbs',
+    'jimmy eric gibbs','jimmy air gibbs','jimmy rick gibbs'
+  ],
+  'javonte williams':[
+    'jante williams','javanti williams','ja vontae williams',
+    'devonte williams','jovante williams'
   ],
   'amon ra st brown':['arsb','a r s b','amon ra'],
   'ja marr chase':['jamarr chase'],
@@ -4282,7 +4291,7 @@ function voicePlayerContext(value){
     remaining=remaining.replace(voicePhrasePattern(positionMatch.alias),' ');
   }
   remaining=remaining
-    .replace(/\b(?:from|for|on|with|the|a|an|player|team)\b/g,' ')
+    .replace(/\b(?:from|for|on|with|the|a|an|player|team|uh|um|please|off|board|just|now)\b/g,' ')
     .trim().replace(/\s+/g,' ');
   return {name:voiceCanonicalPlayerName(remaining),team,position};
 }
@@ -4333,9 +4342,18 @@ function voiceTokenAlignment(query,name){
 
 function voiceCanonicalPlayerName(value){
   const normalized=voiceNormalize(value);
+  const contained=[];
   for(const [canonical,aliases] of Object.entries(VOICE_PLAYER_ALIASES)){
-    if(normalized===canonical||aliases.includes(normalized))return canonical;
+    for(const candidate of [canonical,...aliases]){
+      const alias=voiceNormalize(candidate);
+      if(normalized===alias)return canonical;
+      if(alias.split(' ').length>=2&&voicePhrasePattern(alias).test(normalized)){
+        contained.push({canonical,length:alias.length});
+      }
+    }
   }
+  const containedPlayers=[...new Set(contained.map(item=>item.canonical))];
+  if(containedPlayers.length===1)return containedPlayers[0];
   // Keep this fallback deliberately narrow: Vosk often substitutes ordinary
   // words for “Njigba,” but no other board player should match this prefix.
   if(/^(?:jaxon|jackson) smith\b/.test(normalized)

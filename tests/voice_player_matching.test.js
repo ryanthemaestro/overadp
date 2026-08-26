@@ -57,6 +57,36 @@ test('does not treat a bare common surname as a confident match', () => {
   assert.equal(match.confident, false);
 });
 
+test('maps the offline recognizer transcription for Jahmyr Gibbs', () => {
+  const match = context.voiceMatchPlayer('Jimmy Eric Gibbs');
+  assert.equal(match.player.player_name, 'Jahmyr Gibbs');
+  assert.equal(match.exact, true);
+  assert.equal(match.confident, true);
+});
+
+test('removes harmless command filler around a noisy player name', () => {
+  const parsed = context.voicePlayerContext('uh Jimmy Eric Gibbs off the board please');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(parsed)),
+    {name: 'jahmyr gibbs', team: '', position: ''}
+  );
+});
+
+test('maps the offline recognizer transcription for Jaxon Smith-Njigba', () => {
+  const match = context.voiceMatchPlayer('Jackson Smith Mitchell Biber');
+  assert.equal(match.player.player_name, 'Jaxon Smith-Njigba');
+  assert.equal(match.exact, true);
+  assert.equal(match.confident, true);
+});
+
+test('maps a common Kyren Williams transcription with team context', () => {
+  const match = context.voiceMatchPlayer('Kieran Williams running back from the Rams');
+  assert.equal(match.player.player_name, 'Kyren Williams');
+  assert.equal(match.context.team, 'LA');
+  assert.equal(match.exact, true);
+  assert.equal(match.confident, true);
+});
+
 test('adds descriptive player phrases to the offline speech grammar', () => {
   const grammar = new Set(JSON.parse(context.voiceGrammar()));
   assert.equal(grammar.has('taken javonte williams running back'), true);
