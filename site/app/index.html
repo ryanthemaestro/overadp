@@ -1297,6 +1297,62 @@
   /* VBD column */
   .vbd-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; color: var(--te); }
 
+  /* Hands-free status stays docked; the microphone trigger lives in the top bar. */
+  .voice-dock {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 940;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .voice-toggle {
+    flex: 0 0 auto;
+    min-width: 76px;
+    min-height: 28px;
+    padding: 6px 8px;
+    border: 1px solid var(--smoke);
+    border-radius: 3px;
+    background: var(--steel);
+    color: var(--ash);
+    font: 700 10px/1 'JetBrains Mono', monospace;
+    letter-spacing: .8px;
+    cursor: pointer;
+    box-shadow: none;
+  }
+  .voice-toggle:hover { border-color: var(--confirm); color: var(--chalk); }
+  .voice-toggle.listening {
+    border-color: var(--confirm);
+    color: var(--confirm);
+    background: #071b18;
+    box-shadow: 0 0 18px var(--wr-glow);
+  }
+  .logo .voice-toggle { margin-left: 2px; }
+  .voice-toggle.error { border-color: var(--alert); color: var(--alert); }
+  .voice-panel {
+    width: min(360px, calc(100vw - 28px));
+    padding: 10px 12px;
+    border: 1px solid var(--rust);
+    border-left: 3px solid var(--confirm);
+    border-radius: 3px;
+    background: rgba(11,17,26,.97);
+    color: var(--ash);
+    box-shadow: 0 12px 32px rgba(0,0,0,.52);
+  }
+  .voice-panel[hidden] { display: none; }
+  .voice-status { font-size: 10px; line-height: 1.5; }
+  .voice-status strong { color: var(--chalk); }
+  .voice-actions { display: flex; gap: 7px; margin-top: 8px; }
+  .voice-actions .btn { padding: 5px 9px; font-size: 9px; }
+
+  @media (max-width: 600px) {
+    .voice-dock { right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); }
+    .voice-panel { width: calc(100vw - 16px); }
+  }
+
   @media (max-width: 960px) {
     html, body { width: 100%; height: 100%; overflow: hidden; }
     body::after { display: none; }
@@ -1809,6 +1865,7 @@
       <div class="icon">Δ</div>
       OverADP
       <span class="data-status" id="dataStatus" role="status" aria-live="polite" title="Checking board freshness">BOARD CHECKING</span>
+      <button class="voice-toggle" id="voiceToggle" type="button" onclick="toggleVoiceDraft()" aria-pressed="false" aria-describedby="voiceStatus" title="Hands-free draft control">MIC OFF</button>
     </div>
     <div class="top-actions">
       <span id="userStatus" style="font-size:11px;color:var(--smoke);margin-right:8px;display:none;"></span>
@@ -1918,6 +1975,13 @@
   </div>
 </div>
 
+<div class="voice-dock" id="voiceDock">
+  <div class="voice-panel" id="voicePanel" hidden>
+    <div class="voice-status" id="voiceStatus" role="status" aria-live="polite">Say <strong>“taken Ja'Marr Chase.”</strong> Name unclear? Add a position, team, or city: <strong>“taken Jante Williams from Dallas.”</strong></div>
+    <div class="voice-actions" id="voiceActions" hidden></div>
+  </div>
+</div>
+
 <div class="info-overlay" id="infoOverlay" onclick="if(event.target===this)toggleInfo()">
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()" aria-label="Close War Room guide">&times;</button>
@@ -1931,6 +1995,8 @@
       <li><strong>DRAFT</strong> — Click to add this player to YOUR team.</li>
       <li><strong>TAKEN</strong> — Click to mark this player as drafted by an OPPONENT (removes them from the board).</li>
     </ul>
+    <h3>Hands-Free Voice Control</h3>
+        <p>Select <strong>MIC OFF</strong>, allow microphone access, then say commands such as <strong>“taken Ja'Marr Chase,” “draft Bijan Robinson,”</strong> or <strong>“undo.”</strong> If a name is unclear, add the position, team, or city—for example, <strong>“taken Jante Williams running back from Dallas.”</strong> The first activation downloads the offline English speech model. Recognition then runs on your device; OverADP does not save or send audio or transcripts to analytics.</p>
     <table>
       <tr><th>Column</th><th>Meaning</th></tr>
       <tr><td><span class="tag tag-green">ADP</span></td><td><strong>Average Draft Position</strong> — where the market usually selects the player. A lower number means an earlier pick.</td></tr>
@@ -2150,6 +2216,7 @@
   </div>
 </div>
 
+<script src="/assets/vendor/vosk/vosk.js"></script>
 <script>
 let allPlayers = [];
 let myTeamIds = [];
@@ -2172,6 +2239,22 @@ let rosterConfig = {};
 let dataMetadata = {};
 let playerMap = {};  // player_id → player object
 let scoringFormat = 'half_ppr'; // 'standard', 'half_ppr', 'ppr'
+const VOICE_MODEL_URL = '/assets/vendor/vosk/vosk-model-small-en-us-0.15.tar.gz';
+let voiceModelPromise = null;
+let voiceModel = null;
+let voiceRecognizer = null;
+let voiceStream = null;
+let voiceAudioContext = null;
+let voiceAudioSource = null;
+let voiceAudioProcessor = null;
+let voiceSilentGain = null;
+let voiceListening = false;
+let voiceStarting = false;
+let voiceSessionId = 0;
+let voicePendingCommand = null;
+let voiceLastAction = null;
+let voiceLastTranscript = '';
+let voiceLastTranscriptAt = 0;
 
 const mobilePanelMedia = window.matchMedia('(max-width: 960px)');
 const mobilePanelIds = {board:'boardPanel', team:'teamPanel', intel:'intelPanel'};
@@ -4051,6 +4134,514 @@ function applyPlayerSearch(){
   });
   pool.querySelectorAll('.search-empty-row').forEach(row=>{row.hidden=matches!==0;});
   pool.querySelectorAll('.search-hide-when-active').forEach(row=>{row.hidden=!!searchQuery;});
+}
+
+function setVoiceUi(message,{mode='listening',actions='none'}={}){
+  const panel=document.getElementById('voicePanel');
+  const status=document.getElementById('voiceStatus');
+  const actionBox=document.getElementById('voiceActions');
+  const toggle=document.getElementById('voiceToggle');
+  if(!panel||!status||!actionBox||!toggle)return;
+  panel.hidden=false;
+  status.innerHTML=message;
+  actionBox.hidden=actions==='none';
+  actionBox.innerHTML=actions==='confirm'
+    ? '<button class="btn btn-sm btn-draft" type="button" onclick="confirmVoiceCommand()">CONFIRM</button><button class="btn btn-sm btn-opp" type="button" onclick="cancelVoiceCommand()">CANCEL</button>'
+    : actions==='undo'
+      ? '<button class="btn btn-sm btn-opp" type="button" onclick="undoVoiceAction()">UNDO</button>'
+      : '';
+  toggle.classList.toggle('listening',mode==='listening');
+  toggle.classList.toggle('error',mode==='error');
+  toggle.textContent=voiceStarting?'MIC LOAD':voiceListening?'MIC LIVE':'MIC OFF';
+  toggle.setAttribute('aria-pressed',String(voiceListening||voiceStarting));
+}
+
+function voiceNormalize(value){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g,' ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim().replace(/\s+/g,' ');
+}
+
+function voicePlayerName(player){
+  return String(player?.player_name||player?.name||player?.player_id||'').trim();
+}
+
+function voiceDistance(left,right){
+  const a=String(left||'');
+  const b=String(right||'');
+  if(!a.length)return b.length;
+  if(!b.length)return a.length;
+  const prior=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    let diagonal=prior[0];
+    prior[0]=i;
+    for(let j=1;j<=b.length;j++){
+      const saved=prior[j];
+      prior[j]=Math.min(
+        prior[j]+1,
+        prior[j-1]+1,
+        diagonal+(a[i-1]===b[j-1]?0:1)
+      );
+      diagonal=saved;
+    }
+  }
+  return prior[b.length];
+}
+
+const VOICE_PLAYER_ALIASES={
+  'christian mccaffrey':['cmc','c m c'],
+  'jaxon smith njigba':[
+    'jsn','j s n','jackson smith njigba','jackson smith jigba','jackson smith en jigba',
+    'jackson smith mitchell biber','jackson smith mitchell bieber','jackson smith mitchell beaver'
+  ],
+  'amon ra st brown':['arsb','a r s b','amon ra'],
+  'ja marr chase':['jamarr chase'],
+  'de von achane':['devon achane','de von a chain'],
+  'kyren williams':[
+    'kyrin williams','kieran williams','kyron williams','kiren williams',
+    'karen williams','current williams','kyren william','kyrin william',
+    'kieran william','kyron william','kiren william','karen william','current william',
+    'kyren will yums','kyrin will yums','kieran will yums','karen will yums',
+    'kyren will yum','kyrin will yum','kieran will yum','karen will yum'
+  ]
+};
+
+const VOICE_TEAM_ALIASES={
+  ARI:['ari','arizona cardinals','arizona','cardinals'],
+  ATL:['atl','atlanta falcons','atlanta','falcons'],
+  BAL:['bal','baltimore ravens','baltimore','ravens'],
+  BUF:['buf','buffalo bills','buffalo','bills'],
+  CAR:['car','carolina panthers','carolina','panthers'],
+  CHI:['chi','chicago bears','chicago','bears'],
+  CIN:['cin','cincinnati bengals','cincinnati','bengals'],
+  CLE:['cle','cleveland browns','cleveland','browns'],
+  DAL:['dal','dallas cowboys','dallas','cowboys'],
+  DEN:['den','denver broncos','denver','broncos'],
+  DET:['det','detroit lions','detroit','lions'],
+  GB:['gb','green bay packers','green bay','packers'],
+  HOU:['hou','houston texans','houston','texans'],
+  IND:['ind','indianapolis colts','indianapolis','colts'],
+  JAX:['jax','jacksonville jaguars','jacksonville','jaguars','jags'],
+  KC:['kc','kansas city chiefs','kansas city','chiefs'],
+  LV:['lv','las vegas raiders','las vegas','raiders'],
+  LAC:['lac','los angeles chargers','chargers'],
+  LA:['la','los angeles rams','rams'],
+  MIA:['mia','miami dolphins','miami','dolphins'],
+  MIN:['min','minnesota vikings','minnesota','vikings'],
+  NE:['ne','new england patriots','new england','patriots'],
+  NO:['no','new orleans saints','new orleans','saints'],
+  NYG:['nyg','new york giants','giants'],
+  NYJ:['nyj','new york jets','jets'],
+  PHI:['phi','philadelphia eagles','philadelphia','eagles'],
+  PIT:['pit','pittsburgh steelers','pittsburgh','steelers'],
+  SEA:['sea','seattle seahawks','seattle','seahawks'],
+  SF:['sf','san francisco 49ers','san francisco','49ers','forty niners','niners'],
+  TB:['tb','tampa bay buccaneers','tampa bay','buccaneers','bucs'],
+  TEN:['ten','tennessee titans','tennessee','titans'],
+  WAS:['was','washington commanders','washington','commanders']
+};
+
+const VOICE_POSITION_ALIASES={
+  QB:['quarterback','quarter back','qb','q b'],
+  RB:['running back','runningback','halfback','half back','rb','r b'],
+  WR:['wide receiver','wideout','receiver','wr','w r'],
+  TE:['tight end','tightend','te','t e'],
+  K:['kicker','place kicker'],
+  DEF:['defense','team defense','def','d s t','dst']
+};
+
+function voicePhrasePattern(phrase){
+  const escaped=voiceNormalize(phrase).split(' ')
+    .map(token=>token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))
+    .join('\\s+');
+  return new RegExp(`\\b${escaped}\\b`,'g');
+}
+
+function voicePlayerContext(value){
+  const normalized=voiceNormalize(value);
+  let remaining=` ${normalized} `;
+  let team='';
+  let position='';
+  const teamPhrases=Object.entries(VOICE_TEAM_ALIASES)
+    .flatMap(([code,aliases])=>aliases.map(alias=>({code,alias:voiceNormalize(alias)})))
+    .sort((a,b)=>b.alias.length-a.alias.length);
+  const positionPhrases=Object.entries(VOICE_POSITION_ALIASES)
+    .flatMap(([code,aliases])=>aliases.map(alias=>({code,alias:voiceNormalize(alias)})))
+    .sort((a,b)=>b.alias.length-a.alias.length);
+  const teamMatch=teamPhrases.find(item=>voicePhrasePattern(item.alias).test(remaining));
+  if(teamMatch){
+    team=teamMatch.code;
+    remaining=remaining.replace(voicePhrasePattern(teamMatch.alias),' ');
+  }
+  const positionMatch=positionPhrases.find(item=>voicePhrasePattern(item.alias).test(remaining));
+  if(positionMatch){
+    position=positionMatch.code;
+    remaining=remaining.replace(voicePhrasePattern(positionMatch.alias),' ');
+  }
+  remaining=remaining
+    .replace(/\b(?:from|for|on|with|the|a|an|player|team)\b/g,' ')
+    .trim().replace(/\s+/g,' ');
+  return {name:voiceCanonicalPlayerName(remaining),team,position};
+}
+
+function voiceTokenSkeleton(value){
+  const token=voiceNormalize(value).replace(/\s+/g,'');
+  if(token.length<2)return token;
+  return token[0]+token.slice(1).replace(/[aeiouy]/g,'').replace(/(.)\1+/g,'$1');
+}
+
+function voiceTokenSimilarity(left,right){
+  const a=voiceNormalize(left);
+  const b=voiceNormalize(right);
+  if(!a||!b)return 0;
+  if(a===b)return 1;
+  const edit=1-(voiceDistance(a,b)/Math.max(a.length,b.length,1));
+  const aSkeleton=voiceTokenSkeleton(a);
+  const bSkeleton=voiceTokenSkeleton(b);
+  const skeleton=1-(voiceDistance(aSkeleton,bSkeleton)/Math.max(aSkeleton.length,bSkeleton.length,1));
+  const prefix=(a.length>=4&&b.length>=4&&(a.startsWith(b)||b.startsWith(a))) ? .88 : 0;
+  return Math.max(edit,skeleton*.94,prefix);
+}
+
+function voiceTokenAlignment(query,name){
+  const queryTokens=query.split(' ').filter(Boolean);
+  const nameTokens=name.split(' ').filter(Boolean);
+  const used=new Set();
+  const similarities=nameTokens.map(nameToken=>{
+    let best={index:-1,score:0};
+    queryTokens.forEach((queryToken,index)=>{
+      if(used.has(index))return;
+      const score=voiceTokenSimilarity(queryToken,nameToken);
+      if(score>best.score)best={index,score};
+    });
+    if(best.index>=0)used.add(best.index);
+    return best.score;
+  });
+  const coverage=similarities.reduce((sum,score)=>sum+score,0)/Math.max(nameTokens.length,1);
+  const exact=nameTokens.filter(token=>queryTokens.includes(token));
+  return {
+    coverage,
+    exact,
+    first:similarities[0]||0,
+    last:similarities[similarities.length-1]||0,
+    noise:Math.max(0,queryTokens.length-nameTokens.length)
+  };
+}
+
+function voiceCanonicalPlayerName(value){
+  const normalized=voiceNormalize(value);
+  for(const [canonical,aliases] of Object.entries(VOICE_PLAYER_ALIASES)){
+    if(normalized===canonical||aliases.includes(normalized))return canonical;
+  }
+  // Keep this fallback deliberately narrow: Vosk often substitutes ordinary
+  // words for “Njigba,” but no other board player should match this prefix.
+  if(/^(?:jaxon|jackson) smith\b/.test(normalized)
+    && /\b(?:njigba|jigba|mitchell|biber|bieber|beaver)\b/.test(normalized)){
+    return 'jaxon smith njigba';
+  }
+  return normalized;
+}
+
+function voiceMatchPlayer(spokenName){
+  const context=voicePlayerContext(spokenName);
+  const query=context.name;
+  if(!query)return null;
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const available=allPlayers.filter(player=>!drafted.has(player.player_id));
+  const normalizedNames=available.map(player=>voiceNormalize(voicePlayerName(player)));
+  const lastNameCounts=new Map();
+  normalizedNames.forEach(name=>{
+    const last=name.split(' ').filter(Boolean).at(-1);
+    if(last?.length>=3)lastNameCounts.set(last,(lastNameCounts.get(last)||0)+1);
+  });
+  const spokenTokens=query.split(' ').filter(Boolean);
+  const candidates=available
+    .map(player=>{
+      const normalized=voiceNormalize(voicePlayerName(player));
+      const queryTokens=new Set(spokenTokens);
+      const nameTokens=new Set(normalized.split(' '));
+      const overlap=[...queryTokens].filter(token=>nameTokens.has(token)).length;
+      const tokenScore=overlap/Math.max(queryTokens.size,nameTokens.size,1);
+      const editScore=1-(voiceDistance(query,normalized)/Math.max(query.length,normalized.length,1));
+      // A bare surname (for example, "Smith") is not enough to act on, even
+      // if only one matching player currently remains on the board.
+      const contained=(spokenTokens.length>=2&&(normalized.includes(query)||query.includes(normalized)))?0.92:0;
+      const alignment=voiceTokenAlignment(query,normalized);
+      const nameParts=normalized.split(' ').filter(Boolean);
+      const surname=nameParts.at(-1)||'';
+      const exactSurname=surname.length>=3&&spokenTokens.includes(surname);
+      const uniqueSurname=exactSurname&&lastNameCounts.get(surname)===1;
+      const alignedScore=(alignment.coverage*.78)+(editScore*.1)+(tokenScore*.12)
+        +(uniqueSurname ? .14 : 0)-(alignment.noise*.018);
+      const teamMatches=!context.team||String(player.team||'').toUpperCase()===context.team;
+      const positionMatches=!context.position||String(player.position||'').toUpperCase()===context.position;
+      const contextProvided=!!(context.team||context.position);
+      const contextMatches=(context.team&&teamMatches?1:0)+(context.position&&positionMatches?1:0);
+      const contextPenalty=(context.team&&!teamMatches?.24:0)+(context.position&&!positionMatches?.18:0);
+      const contextBonus=(context.team&&teamMatches?.13:0)+(context.position&&positionMatches?.09:0);
+      const confident=(uniqueSurname&&alignment.first>=.42)
+        || (alignment.exact.length>=2&&alignment.coverage>=.72)
+        || (contextProvided&&contextMatches>0&&teamMatches&&positionMatches
+          && alignment.coverage>=.68&&alignment.last>=.78);
+      const baseScore=Math.max(contained,(editScore*.72)+(tokenScore*.28),alignedScore);
+      return {
+        player,
+        normalized,
+        score:Math.min(1,Math.max(0,baseScore+contextBonus-contextPenalty)),
+        confident,
+        contextCompatible:teamMatches&&positionMatches
+      };
+    })
+    .sort((a,b)=>b.score-a.score);
+  if(!candidates.length)return null;
+  const best=candidates[0];
+  const runnerUp=candidates[1]?.score||0;
+  return {
+    player:best.player,
+    score:best.score,
+    margin:best.score-runnerUp,
+    exact:best.normalized===query&&best.contextCompatible,
+    confident:best.confident&&best.contextCompatible,
+    context
+  };
+}
+
+function parseVoiceCommand(transcript){
+  const heard=String(transcript||'').trim().replace(/[.!?]+$/,'');
+  if(!heard)return null;
+  if(/^(?:stop|stop listening|mic off)$/i.test(heard))return {type:'stop'};
+  if(/^(?:undo|undo last|go back)$/i.test(heard))return {type:'undo'};
+  if(/^(?:confirm|yes|do it)$/i.test(heard))return {type:'confirm'};
+  if(/^(?:cancel|no|never mind)$/i.test(heard))return {type:'cancel'};
+  let match=heard.match(/^(?:taken|take|opponent took|mark taken)\s+(.+)$/i)
+    || heard.match(/^mark\s+(.+?)\s+(?:as\s+)?taken$/i)
+    || heard.match(/^(.+?)\s+(?:is\s+)?taken$/i);
+  if(match)return {type:'player',team:'opponent',name:match[1]};
+  match=heard.match(/^(?:draft|pick|my pick|i drafted|drafted)\s+(.+)$/i)
+    || heard.match(/^mark\s+(.+?)\s+(?:as\s+)?(?:mine|drafted)$/i);
+  if(match)return {type:'player',team:'mine',name:match[1]};
+  return {type:'unknown',heard};
+}
+
+function applyVoicePlayerAction(command){
+  const player=command?.player;
+  const team=command?.team;
+  if(!player||!team)return;
+  const pid=player.player_id;
+  const before=team==='mine'?myTeamIds.includes(pid):opponentIds.includes(pid);
+  if(before){
+    setVoiceUi(`<strong>${escapeHtml(voicePlayerName(player))}</strong> is already marked.`,{mode:'error'});
+    return;
+  }
+  draftPlayer(pid,team);
+  const applied=team==='mine'?myTeamIds.includes(pid):opponentIds.includes(pid);
+  if(!applied){
+    setVoiceUi(`Could not mark <strong>${escapeHtml(voicePlayerName(player))}</strong>. Check the board message.`,{mode:'error'});
+    return;
+  }
+  voiceLastAction={pid,team,name:voicePlayerName(player)};
+  voicePendingCommand=null;
+  gaEvent('voice_draft_action',{action:team==='mine'?'draft':'taken'});
+  setVoiceUi(`<strong>${team==='mine'?'DRAFTED':'TAKEN'}:</strong> ${escapeHtml(voiceLastAction.name)}.`,{actions:'undo'});
+}
+
+function undoVoiceAction(){
+  if(!voiceLastAction){
+    setVoiceUi('Nothing from voice control to undo.',{mode:'error'});
+    return;
+  }
+  const action=voiceLastAction;
+  undoDraft(action.pid);
+  voiceLastAction=null;
+  voicePendingCommand=null;
+  gaEvent('voice_draft_action',{action:'undo'});
+  setVoiceUi(`<strong>UNDONE:</strong> ${escapeHtml(action.name)}.`);
+}
+
+function confirmVoiceCommand(){
+  if(!voicePendingCommand){
+    setVoiceUi('There is no pending voice command.',{mode:'error'});
+    return;
+  }
+  applyVoicePlayerAction(voicePendingCommand);
+}
+
+function cancelVoiceCommand(){
+  voicePendingCommand=null;
+  setVoiceUi('Cancelled. Listening for the next command.');
+}
+
+function executeVoiceCommand(command){
+  if(!command)return;
+  if(command.type==='stop'){stopVoiceDraft('Microphone stopped.');return;}
+  if(command.type==='undo'){undoVoiceAction();return;}
+  if(command.type==='confirm'){confirmVoiceCommand();return;}
+  if(command.type==='cancel'){cancelVoiceCommand();return;}
+  if(command.type==='unknown'){
+    setVoiceUi('Try <strong>“taken Ja\'Marr Chase”</strong> or add context: <strong>“taken Jante Williams from Dallas.”</strong>',{mode:'error'});
+    return;
+  }
+  const match=voiceMatchPlayer(command.name);
+  if(!match||match.score<.64){
+    setVoiceUi(`No safe match for <strong>${escapeHtml(command.name)}</strong>. Add a position, team, or city—like <strong>“running back from Dallas.”</strong>`,{mode:'error'});
+    return;
+  }
+  const resolved={...command,player:match.player};
+  if(match.exact||match.confident||(match.score>=.88&&match.margin>=.08)){
+    applyVoicePlayerAction(resolved);
+    return;
+  }
+  voicePendingCommand=resolved;
+  setVoiceUi(`Did you mean <strong>${escapeHtml(voicePlayerName(match.player))}</strong> as ${command.team==='mine'?'your pick':'taken'}?`,{actions:'confirm'});
+}
+
+function voiceNameVariants(player){
+  const original=voicePlayerName(player);
+  const normalized=voiceNormalize(original);
+  const variants=[normalized,...(VOICE_PLAYER_ALIASES[normalized]||[])];
+  if(/[’']/.test(original)){
+    const tokens=normalized.split(' ');
+    if(tokens.length>1)variants.push(tokens[0]+tokens[1]+' '+tokens.slice(2).join(' '));
+  }
+  return [...new Set(variants.filter(Boolean))];
+}
+
+function voiceGrammar(){
+  const drafted=new Set([...myTeamIds,...opponentIds]);
+  const phrases=new Set([
+    '[unk]','undo','undo last','go back','confirm','yes','do it','cancel','no','never mind',
+    'stop','stop listening','mic off'
+  ]);
+  allPlayers.filter(player=>!drafted.has(player.player_id)).forEach(player=>{
+    const teamAliases=VOICE_TEAM_ALIASES[String(player.team||'').toUpperCase()]||[];
+    const positionAliases=VOICE_POSITION_ALIASES[String(player.position||'').toUpperCase()]||[];
+    const teamFull=teamAliases[1]||teamAliases[0]||'';
+    const teamShort=teamAliases[2]||teamAliases[3]||teamFull;
+    const positionName=positionAliases[0]||'';
+    voiceNameVariants(player).forEach(name=>{
+      const descriptions=new Set([
+        name,
+        positionName&&`${name} ${positionName}`,
+        teamShort&&`${name} from ${teamShort}`,
+        teamFull&&`${name} from the ${teamFull}`,
+        positionName&&teamShort&&`${name} ${positionName} from ${teamShort}`
+      ].filter(Boolean));
+      descriptions.forEach(description=>{
+        phrases.add(`taken ${description}`);
+        phrases.add(`draft ${description}`);
+      });
+    });
+  });
+  return JSON.stringify([...phrases]);
+}
+
+async function loadVoiceModel(){
+  if(voiceModel)return voiceModel;
+  if(!window.Vosk)throw new Error('Offline speech engine did not load.');
+  if(!voiceModelPromise){
+    voiceModelPromise=window.Vosk.createModel(VOICE_MODEL_URL)
+      .then(model=>{voiceModel=model;return model;})
+      .catch(error=>{voiceModelPromise=null;throw error;});
+  }
+  return voiceModelPromise;
+}
+
+function handleVoiceTranscript(transcript){
+  const heard=String(transcript||'').trim();
+  if(!heard)return;
+  const now=Date.now();
+  if(heard===voiceLastTranscript&&now-voiceLastTranscriptAt<1200)return;
+  voiceLastTranscript=heard;
+  voiceLastTranscriptAt=now;
+  executeVoiceCommand(parseVoiceCommand(heard));
+}
+
+async function startVoiceDraft(){
+  if(voiceStarting||voiceListening)return;
+  if(!navigator.mediaDevices?.getUserMedia){
+    setVoiceUi('This browser cannot access a microphone here. Use HTTPS or localhost and try again.',{mode:'error'});
+    return;
+  }
+  if(!allPlayers.length){
+    setVoiceUi('Initialize the draft board before using voice control.',{mode:'error'});
+    return;
+  }
+  const sessionId=++voiceSessionId;
+  voiceStarting=true;
+  setVoiceUi('Loading the offline voice model. The first activation may take a moment…',{mode:'loading'});
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
+    const model=await loadVoiceModel();
+    if(sessionId!==voiceSessionId){
+      if(voiceStream){voiceStream.getTracks().forEach(track=>track.stop());voiceStream=null;}
+      return;
+    }
+    const stream=voiceStream;
+    const AudioContextApi=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextApi)throw new Error('Web Audio is unavailable.');
+    voiceAudioContext=new AudioContextApi();
+    await voiceAudioContext.resume();
+    voiceRecognizer=new model.KaldiRecognizer(voiceAudioContext.sampleRate,voiceGrammar());
+    voiceRecognizer.on('result',message=>handleVoiceTranscript(message?.result?.text));
+    voiceRecognizer.on('error',event=>{
+      console.error('Offline voice recognition error',event);
+      stopVoiceDraft('Offline voice recognition stopped unexpectedly. Toggle the microphone to retry.',false,'error');
+    });
+    voiceAudioSource=voiceAudioContext.createMediaStreamSource(stream);
+    voiceAudioProcessor=voiceAudioContext.createScriptProcessor(4096,1,1);
+    voiceSilentGain=voiceAudioContext.createGain();
+    voiceSilentGain.gain.value=0;
+    voiceAudioProcessor.onaudioprocess=event=>{
+      if(voiceListening&&voiceRecognizer)voiceRecognizer.acceptWaveform(event.inputBuffer);
+    };
+    voiceAudioSource.connect(voiceAudioProcessor);
+    voiceAudioProcessor.connect(voiceSilentGain);
+    voiceSilentGain.connect(voiceAudioContext.destination);
+    voiceStarting=false;
+    voiceListening=true;
+    gaEvent('voice_draft_control',{action:'start'});
+    setVoiceUi('Listening. Say <strong>“taken [player]”</strong> or <strong>“draft [player].”</strong> Name unclear? Add a position, team, or city.');
+  }catch(error){
+    console.error('Could not start offline voice recognition',error);
+    voiceStarting=false;
+    voiceListening=false;
+    const message=error?.name==='NotAllowedError'
+      ? 'Microphone permission was blocked. Allow it in the browser site settings and try again.'
+      : error?.name==='NotFoundError'
+        ? 'No microphone was found. Check the active input device.'
+        : 'Could not load offline voice recognition. Check the connection once for the model download, then retry.';
+    stopVoiceDraft(message,false,'error');
+  }
+}
+
+function stopVoiceDraft(message='Microphone stopped.',trackEvent=true,mode='idle'){
+  const wasActive=voiceListening||voiceStarting;
+  voiceSessionId++;
+  voiceStarting=false;
+  voiceListening=false;
+  voicePendingCommand=null;
+  if(voiceAudioProcessor){voiceAudioProcessor.onaudioprocess=null;try{voiceAudioProcessor.disconnect();}catch(error){}}
+  if(voiceAudioSource){try{voiceAudioSource.disconnect();}catch(error){}}
+  if(voiceSilentGain){try{voiceSilentGain.disconnect();}catch(error){}}
+  if(voiceStream)voiceStream.getTracks().forEach(track=>track.stop());
+  if(voiceRecognizer){try{voiceRecognizer.remove();}catch(error){}}
+  if(voiceAudioContext){try{voiceAudioContext.close();}catch(error){}}
+  voiceAudioProcessor=null;
+  voiceAudioSource=null;
+  voiceSilentGain=null;
+  voiceStream=null;
+  voiceRecognizer=null;
+  voiceAudioContext=null;
+  if(trackEvent&&wasActive)gaEvent('voice_draft_control',{action:'stop'});
+  setVoiceUi(message,{mode});
+}
+
+function toggleVoiceDraft(){
+  if(voiceListening||voiceStarting)stopVoiceDraft();
+  else startVoiceDraft();
 }
 
 function checkByeConflictForPlayer(player){

@@ -258,6 +258,12 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
   padding:28px;transition:border-color 0.2s;
 }
 .feat-card:hover{border-color:rgba(0,255,106,0.15);}
+.feat-card.featured{
+  grid-column:1/-1;
+  background:linear-gradient(120deg,rgba(0,255,106,0.055),var(--bg2) 62%);
+  border-color:rgba(0,255,106,0.16);
+}
+.feat-card.featured .feat-desc{max-width:940px;}
 .feat-icon{font-family:var(--mono);font-size:20px;color:var(--green);margin-bottom:12px;}
 .feat-title{font-family:var(--display);font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
 .feat-desc{color:var(--fg2);font-size:14px;line-height:1.6;}
@@ -590,8 +596,13 @@ footer a:hover{color:var(--green);}
   <div class="wrap">
     <div class="section-tag">Arsenal</div>
     <div class="section-title">Your Draft Weapons</div>
-    <div class="section-desc">Split-conformal ranges. Depth-chart awareness. College context for rookies. Opportunity-cost Target Intel. Live draft tracking.</div>
+    <div class="section-desc">Split-conformal ranges. Depth-chart awareness. College context for rookies. Opportunity-cost Target Intel. Hands-free live draft tracking.</div>
     <div class="feat-grid">
+      <div class="feat-card featured">
+        <div class="feat-icon">▸ HANDS-FREE</div>
+        <div class="feat-title">Keep Your Hands on the Draft</div>
+        <div class="feat-desc">Mark picks without leaving the board. Say <strong>“taken Ja'Marr Chase.”</strong> If speech recognition misses a name, add the position, team, or city: <strong>“taken Jante Williams, running back from Dallas.”</strong> Recognition runs locally in your browser; OverADP does not save or send your audio or transcripts to analytics.</div>
+      </div>
       <div class="feat-card">
         <div class="feat-icon">▸ COLLEGE</div>
         <div class="feat-title">College/Draft Pipeline</div>

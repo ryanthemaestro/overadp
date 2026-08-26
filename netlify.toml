@@ -24,6 +24,11 @@
     Access-Control-Allow-Origin = "*"
 
 [[headers]]
+  for = "/assets/vendor/vosk/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
