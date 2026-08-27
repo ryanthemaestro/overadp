@@ -7,7 +7,9 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-8GM0JH1DM4');
+  const isVerifiedPaymentReturn=new URLSearchParams(window.location.search).get('payment')==='success';
+  // Stripe is a payment processor, not the source that acquired the customer.
+  gtag('config', 'G-8GM0JH1DM4', { ignore_referrer: isVerifiedPaymentReturn });
   function captureAttribution(){
     try{
       const query=new URLSearchParams(window.location.search);
@@ -2284,8 +2286,9 @@ function dismissUpgrade(){
 
 let pendingPlan = null;
 async function startCheckout(planType){
+  const checkoutPlan=planType||'season';
   if(!currentUser){
-    pendingPlan = planType||'season';
+    pendingPlan = checkoutPlan;
     gaEvent('checkout_intent_preauth', { plan_type: pendingPlan });
     // Close upgrade modal first so the auth modal is visible (they share z-index)
     document.getElementById('upgradeOverlay').classList.add('hidden');
@@ -2293,17 +2296,20 @@ async function startCheckout(planType){
     return;
   }
   pendingPlan = null;
-  gaEvent('checkout_started', { plan_type: planType||'season' });
   try{
     const res = await fetch(API_BASE+'/stripe-checkout',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:planType||'season',attribution:marketingAttribution})
+      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:checkoutPlan,attribution:marketingAttribution})
     });
     const data = await res.json();
     if(!res.ok||!data.url)throw new Error(data.error||'Checkout session was not created');
+    const checkoutValue=checkoutPlan==='draft'?6.99:24.99;
+    const checkoutItem={item_id:`overadp_${checkoutPlan}`,item_name:checkoutPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:checkoutValue,quantity:1};
+    gaEvent('begin_checkout',{plan_type:checkoutPlan,value:checkoutValue,currency:'USD',items:[checkoutItem]});
+    gaEvent('checkout_started',{plan_type:checkoutPlan});
     window.location.href=data.url;
   }catch(e){
-    gaEvent('checkout_error',{plan_type:planType||'season',error_message:String(e?.message||'unknown').slice(0,120)});
+    gaEvent('checkout_error',{plan_type:checkoutPlan,error_message:String(e?.message||'unknown').slice(0,120)});
     alert('Checkout could not start. Please try again or contact support.');
   }
 }
@@ -2329,7 +2335,7 @@ async function checkPaymentReturn(){
       const purchaseValue=Number(verified.value)||(purchasedPlan==='draft'?6.99:24.99);
       const currency=verified.currency||'USD';
       const transactionId=verified.transaction_id||sessionId;
-      gaEvent('purchase_complete',{source:'stripe_verified',plan_type:purchasedPlan,value:purchaseValue,currency,transaction_id:transactionId});
+      gaEvent('purchase_complete',{verification_method:'stripe',plan_type:purchasedPlan,value:purchaseValue,currency,transaction_id:transactionId});
       gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency,items:[{item_id:`overadp_${purchasedPlan}`,item_name:purchasedPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:purchaseValue,quantity:1}]});
       window.history.replaceState({},'',window.location.pathname);
 
