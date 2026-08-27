@@ -26,7 +26,7 @@ Do not launch Performance Max, Display, broad match, competitor terms, or Search
 The site sends these GA4 events:
 
 1. `purchase` — primary conversion; value is $6.99 or $24.99.
-2. `free_preview_completed` — secondary conversion; diagnostic only.
+2. `proof_demo_completed` — secondary conversion; diagnostic only.
 3. `draft_pick_recorded` — diagnostic activation event; keep it secondary.
 4. `sign_up` — secondary conversion; account creation.
 
@@ -36,12 +36,28 @@ Before launch:
 2. Enable Google Ads auto-tagging.
 3. Trigger each event once in a test session so it appears in GA4.
 4. Mark `purchase` as the primary Google Ads conversion. Keep
-   `free_preview_completed`, `draft_pick_recorded`, and `sign_up` secondary so
+   `proof_demo_completed`, `draft_pick_recorded`, and `sign_up` secondary so
    they are available for funnel diagnosis without teaching bidding to optimize
    for free activity.
 5. Import them into Google Ads.
 6. Set only `purchase` as Primary. Keep the other three Secondary so bidding does not optimize for free activity.
 7. Verify the purchase event includes `currency`, `value`, and `transaction_id`.
+
+The app also sends GA4's recommended `begin_checkout` event and the internal
+`checkout_started` event only after Stripe successfully creates a Checkout
+Session. A failed request is recorded as `checkout_error`, not as a checkout.
+
+## Attribution hygiene
+
+The Stripe success return sets GA4's `ignore_referrer` option so
+`checkout.stripe.com` does not replace the source that acquired the customer.
+Also add `checkout.stripe.com` under GA4 **Admin > Data streams > Web > Configure
+tag settings > List unwanted referrals**. The code protects payment returns;
+the stream setting protects any other Stripe referrals.
+
+Use `verification_method: stripe` on the diagnostic `purchase_complete` event.
+Do not use an event parameter named `source` for verification metadata because
+traffic-source reporting can interpret it as acquisition data.
 
 ## Import order
 
@@ -81,8 +97,8 @@ filters sessions to `google / cpc`, and measures this closed funnel:
 
 1. `recommendation_viewed`
 2. `draft_pick_recorded`
-3. `free_preview_completed`
-4. `paywall_shown`
+3. `proof_demo_completed`
+4. `offer_shown`
 5. `checkout_intent_preauth`
 6. `checkout_started`
 7. `purchase`
