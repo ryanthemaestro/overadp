@@ -3278,6 +3278,13 @@ function draftBoardScore(p,ownList){
   return guarded+coverageBonus-capPenalty-availabilityPenalty;
 }
 
+function qualifiesForMarketCheckpoint(player,pickNum){
+  const modelRank=Number(player&&player.model_rank);
+  const livePick=Math.max(1,Number(pickNum)||1);
+  const modelRankCeiling=Math.max(livePick+48,Math.ceil(livePick*1.75));
+  return Number.isFinite(modelRank)&&modelRank>0&&modelRank<=modelRankCeiling;
+}
+
 function getRecommendations(){
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
@@ -3456,6 +3463,7 @@ function getRecommendations(){
         p.position!=='K'&&p.position!=='DEF'&&
         Number.isFinite(Number(p.adp))&&
         Number(p.adp)<=pickNum+3&&
+        qualifiesForMarketCheckpoint(p,pickNum)&&
         injuryAvailabilityAdjustment(p).penalty===0
       )
       .sort((a,b)=>Number(a.adp)-Number(b.adp))
