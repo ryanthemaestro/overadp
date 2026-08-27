@@ -167,7 +167,7 @@ footer a:hover{color:var(--green);}
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
   "datePublished":"2026-07-20",
-  "dateModified":"2026-08-17",
+  "dateModified":"2026-08-27",
   "mainEntityOfPage":"https://overadp.com/methodology/"
 }
 </script>
@@ -202,7 +202,7 @@ function toggleHubNav(button){
 <div class="section-tag">Transparency</div>
 <h1>How the <span class="accent">Model</span> Works</h1>
 <p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
-<div class="byline"><span>By OverADP Research</span><span>Updated August 17, 2026</span><span>Methods and limitations</span></div>
+<div class="byline"><span>By OverADP Research</span><span>Updated August 27, 2026</span><span>Methods and limitations</span></div>
 
 <h2>The one-sentence version</h2>
 <p>We train one CatBoost point model per position on completed NFL seasons, test it chronologically on the next season, and pair the point estimate with a separate split-conformal quantile range targeting 80% marginal coverage.</p>
@@ -236,7 +236,7 @@ function toggleHubNav(button){
 <p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. The exact-cohort market check uses true FFC ADP in 2024 but an explicitly labeled ESPN preseason-rank proxy in 2025, so no ADP improvement percentage is published here.</p>
 <table class="rank">
   <thead><tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr></thead>
-  <tbody><tr><td>QB</td><td class="positive">57.15</td><td>72.43</td><td class="positive">0.61</td><td>134</td></tr><tr><td>RB</td><td class="positive">42.97</td><td>60.31</td><td class="positive">0.51</td><td>269</td></tr><tr><td>WR</td><td class="positive">31.78</td><td>43.62</td><td class="positive">0.58</td><td>426</td></tr><tr><td>TE</td><td class="positive">23.78</td><td>33.25</td><td class="positive">0.56</td><td>223</td></tr><tr><td><strong>Player-weighted summary</strong></td><td class="positive">36.18</td><td>51.02</td><td class="positive">0.56</td><td>1,052</td></tr></tbody>
+  <tbody><tr><td>QB</td><td class="positive">57.15</td><td>72.43</td><td class="positive">0.61</td><td>134</td></tr><tr><td>RB</td><td class="positive">43.39</td><td>60.47</td><td class="positive">0.51</td><td>269</td></tr><tr><td>WR</td><td class="positive">31.90</td><td>43.78</td><td class="positive">0.57</td><td>426</td></tr><tr><td>TE</td><td class="positive">23.79</td><td>33.35</td><td class="positive">0.56</td><td>223</td></tr><tr><td><strong>Player-weighted summary</strong></td><td class="positive">36.34</td><td>51.14</td><td class="positive">0.56</td><td>1,052</td></tr></tbody>
 </table>
 
 <h2>What the model doesn't do</h2>
@@ -261,7 +261,7 @@ function toggleHubNav(button){
     
   </div></main>
 <footer>
-  <div>Updated August 17, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
+  <div>Updated August 27, 2026 · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>
