@@ -42,7 +42,7 @@ def main() -> None:
             driver.execute_script(
                 """
                 localStorage.setItem('oa_plan', JSON.stringify('paid'));
-                localStorage.setItem('oa_plan_type', JSON.stringify('season'));
+                localStorage.setItem('oa_plan_type', JSON.stringify('draft'));
                 localStorage.setItem('oa_user', JSON.stringify({id:'smoke-test',email:'smoke@example.invalid'}));
                 """
             )
@@ -55,6 +55,19 @@ def main() -> None:
             wait.until(
                 lambda d: len(d.find_elements("css selector", "#playerPool tbody tr"))
                 >= d.execute_script("return allPlayers.length")
+            )
+            if driver.execute_script("return isPaid()"):
+                raise AssertionError("A cached localStorage plan incorrectly unlocked paid access")
+            driver.execute_script(
+                """
+                currentUser={id:'smoke-test',email:'smoke@example.invalid'};
+                userPlan='paid';
+                userPlanType='draft';
+                serverEntitlementVerified=true;
+                activeDraftEntitlement='draft:smoke-test';
+                updateUserUI();
+                refreshAll();
+                """
             )
 
             player_count = driver.execute_script("return allPlayers.length")
