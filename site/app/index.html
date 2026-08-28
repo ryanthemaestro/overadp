@@ -2079,6 +2079,7 @@ let userPlan = 'free';    // 'free' | 'paid'
 let userPlanType = 'draft';
 let serverEntitlementVerified = false;
 let activeDraftEntitlement = null;
+let accessRole = 'free'; // 'free' | 'customer' | 'owner'
 let paidDraftSaveTimer = null;
 let isAuthMode = 'register'; // 'register' | 'login'
 // Free users can test live board reactions and record one pick before the offer.
@@ -2103,6 +2104,7 @@ function hydrateCachedAuth(){
   userPlanType = 'draft';
   serverEntitlementVerified = false;
   activeDraftEntitlement = null;
+  accessRole = 'free';
   updateUserUI();
 }
 
@@ -2116,9 +2118,10 @@ async function resumePaidDraft(accessToken){
     const data=await res.json();
     if(!res.ok||!data.authorized)throw new Error(data.error||'Paid draft is not active');
     userPlan='paid';
-    userPlanType='draft';
+    userPlanType=data.plan_type==='owner'?'owner':'draft';
     serverEntitlementVerified=true;
     activeDraftEntitlement=data.entitlement_id;
+    accessRole=data.role==='owner'?'owner':'customer';
     const state=data.state||{};
     myTeamIds=Array.isArray(state.my_team_ids)?state.my_team_ids.filter(id=>!Object.keys(playerMap).length||playerMap[id]):[];
     opponentIds=Array.isArray(state.opponent_ids)?state.opponent_ids.filter(id=>!Object.keys(playerMap).length||playerMap[id]):[];
@@ -2130,6 +2133,7 @@ async function resumePaidDraft(accessToken){
     userPlan='free';
     serverEntitlementVerified=false;
     activeDraftEntitlement=null;
+    accessRole='free';
     return false;
   }
 }
@@ -2153,6 +2157,7 @@ function queuePaidDraftSave(){
       if(res.status===401||res.status===409){
         serverEntitlementVerified=false;
         userPlan='free';
+        accessRole='free';
         updateUserUI();
         refreshAll();
       }
@@ -2199,11 +2204,10 @@ async function restoreSession(timeoutMs=3500){
       userPlan = data.profile?.plan || 'free';
       userPlanType = 'draft';
       lsSetAuth('user',data.user);
-      if(userPlan==='paid')await resumePaidDraft(token);
-      else{serverEntitlementVerified=false;activeDraftEntitlement=null;}
+      await resumePaidDraft(token);
       updateUserUI();
     } else {
-      userPlan='free';serverEntitlementVerified=false;activeDraftEntitlement=null;
+      userPlan='free';serverEntitlementVerified=false;activeDraftEntitlement=null;accessRole='free';
       lsSetAuth('access_token',null);
       lsSetAuth('refresh_token',null);
     }
@@ -2260,8 +2264,7 @@ async function authSubmit(){
       userPlan = 'free';
       userPlanType = 'draft';
     }
-    if(userPlan==='paid')await resumePaidDraft(token);
-    else{serverEntitlementVerified=false;activeDraftEntitlement=null;}
+    await resumePaidDraft(token);
     updateUserUI();
 
     gaEvent(isAuthMode==='register' ? 'sign_up' : 'login', { method: 'email', user_plan: userPlan });
@@ -2425,6 +2428,7 @@ async function checkPaymentReturn(){
 
 // Paywall: free users see all names but no projections
 function isPaid(){ return userPlan==='paid'&&serverEntitlementVerified; }
+function isOwner(){ return isPaid()&&accessRole==='owner'; }
 function hasFreePick(){ return !isPaid()&&myTeamIds.length<FREE_PICK_LIMIT; }
 function canDraftMine(){ return isPaid()||hasFreePick(); }
 function canPreviewIntel(){ return isPaid()||hasFreePick(); }
@@ -2440,7 +2444,7 @@ function updateUserUI(){
   const logoutBtn = document.getElementById('logoutBtn');
   if(isPaid()){
     statusEl.style.display='inline';
-    statusEl.textContent = '✓ PRO';
+    statusEl.textContent = isOwner() ? '✓ OWNER' : '✓ PRO';
     upgradeBtn.style.display = 'none';
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
@@ -2465,6 +2469,7 @@ function logOut(){
   userPlan = 'free';
   serverEntitlementVerified=false;
   activeDraftEntitlement=null;
+  accessRole='free';
   lsSetAuth('access_token',null);
   lsSetAuth('refresh_token',null);
   lsSetAuth('user',null);
@@ -2822,7 +2827,10 @@ function undoDraft(pid){
 }
 async function resetDraft(){
   const paid=isPaid();
-  const warning=paid
+  const owner=isOwner();
+  const warning=owner
+    ?'RESET ALL DRAFT PICKS?\n\nYour owner access will remain active.'
+    :paid
     ?'END THIS PAID DRAFT?\n\nReset Draft ends and consumes your $6.99 single-draft access. You can refresh or log back in to resume without resetting.'
     :'RESET ALL DRAFT PICKS?';
   if(!confirm(warning))return;
@@ -2833,13 +2841,18 @@ async function resetDraft(){
     try{
       const res=await fetch(API_BASE+'/draft-access',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({access_token:accessToken,action:'complete',entitlement_id:activeDraftEntitlement})
+        body:JSON.stringify({access_token:accessToken,action:owner?'reset':'complete',entitlement_id:activeDraftEntitlement})
       });
       const data=await res.json();
-      if(!res.ok||!data.completed)throw new Error(data.error||'Draft could not be completed');
-      userPlan='free';
-      serverEntitlementVerified=false;
-      activeDraftEntitlement=null;
+      if(owner){
+        if(!res.ok||!data.authorized||data.role!=='owner')throw new Error(data.error||'Owner board could not be reset');
+      }else{
+        if(!res.ok||!data.completed)throw new Error(data.error||'Draft could not be completed');
+        userPlan='free';
+        serverEntitlementVerified=false;
+        activeDraftEntitlement=null;
+        accessRole='free';
+      }
     }catch(error){
       alert('This draft was not reset because paid access could not be updated. Please try again.');
       return;
@@ -2847,7 +2860,7 @@ async function resetDraft(){
   }
   myTeamIds=[];opponentIds=[];
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
-  gaEvent('draft_reset',{user_plan:paid?'paid':'free',user_plan_type:'draft',paid_access_consumed:paid});
+  gaEvent('draft_reset',{user_plan:paid?'paid':'free',user_plan_type:owner?'owner':'draft',paid_access_consumed:paid&&!owner});
   refreshAll();
   updateUserUI();
 }
