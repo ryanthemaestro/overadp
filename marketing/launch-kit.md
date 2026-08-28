@@ -8,7 +8,7 @@
 
 **Mechanism:** Target Intel combines the available player pool, roster settings, current picks, ADP price, VBD, positional scarcity and next-turn availability.
 
-**Primary offer:** five picks free, then $6.99 for one complete draft. The $24.99 season pass is the upsell.
+**Primary offer:** one live pick free, then $6.99 for one complete draft. No recurring subscription.
 
 **Audience:** a manager drafting a paid redraft league in the next 7–21 days who already uses rankings or ADP but wants help making live choices.
 
@@ -20,7 +20,7 @@ ADP tells you what a player costs. It does not know your roster, your league set
 
 I built OverADP to answer one question while you're on the clock: take him now or wait?
 
-Try five roster-aware picks free: https://overadp.com/draft-assistant/?utm_source=x&utm_medium=organic&utm_campaign=launch&utm_content=pinned
+Try one roster-aware live pick free: https://overadp.com/draft-assistant/?utm_source=x&utm_medium=organic&utm_campaign=launch&utm_content=pinned
 
 ## Launch thread
 
@@ -30,7 +30,7 @@ Most fantasy draft tools start with the same static rankings.
 
 The problem: your best pick changes after every player leaves the board.
 
-OverADP's Target Intel recalculates from your roster and live draft state. Five picks are free.
+OverADP's Target Intel recalculates from your roster and live draft state. One live pick is free.
 
 **Post 2**
 
@@ -56,7 +56,7 @@ You can try the actual decision flow before making an account.
 
 **Post 5**
 
-Open the War Room, set your league and make five picks free:
+Open the War Room, set your league and make one live pick free:
 
 https://overadp.com/draft-assistant/?utm_source=x&utm_medium=organic&utm_campaign=launch&utm_content=thread
 
@@ -147,7 +147,7 @@ Reply if any recommendation looks wrong. Early draft feedback is being reviewed 
 
 ADP tells you what the room is likely to pay. OverADP gives you an independent second opinion, then weighs whether a target is urgent enough to take now.
 
-Make five picks free and watch the recommendation change: https://overadp.com/app/?utm_source=email&utm_medium=lifecycle&utm_campaign=activation&utm_content=day_one
+Make one live pick free and watch the recommendation change: https://overadp.com/app/?utm_source=email&utm_medium=lifecycle&utm_campaign=activation&utm_content=day_one
 
 ### Email 3 — three days later
 
@@ -191,4 +191,3 @@ End of week:
 - Count purchases by source, campaign and content.
 - Keep the top two messages; retire the rest.
 - Do not increase paid spend unless a purchase and meaningful preview completions came from qualified search traffic.
-

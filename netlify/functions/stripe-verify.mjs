@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -13,10 +14,10 @@ export default async (req) => {
   }
 
   try {
-    const { session_id: sessionId, user_id: userId } = await req.json();
+    const { session_id: sessionId, access_token: accessToken } = await req.json();
 
-    if (!sessionId || !userId) {
-      return json({ error: "Session ID and user ID required" }, 400);
+    if (!sessionId || !accessToken) {
+      return json({ error: "Session ID and login required" }, 400);
     }
 
     const stripeSecretKey = Netlify.env.get("STRIPE_SECRET_KEY");
@@ -25,11 +26,20 @@ export default async (req) => {
       return json({ error: "Payment verification unavailable" }, 500);
     }
 
+    const supabaseUrl = Netlify.env.get("SUPABASE_URL");
+    const serviceKey = Netlify.env.get("SUPABASE_SERVICE_KEY");
+    if (!supabaseUrl || !serviceKey) return json({ error: "Payment verification unavailable" }, 503);
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !user) return json({ error: "Log in again to verify payment" }, 401);
+
     const stripe = new Stripe(stripeSecretKey);
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const sessionUserId = session.metadata?.user_id || session.client_reference_id;
 
-    if (!sessionUserId || sessionUserId !== userId) {
+    if (!sessionUserId || sessionUserId !== user.id) {
       return json({ error: "Checkout session does not belong to this user" }, 403);
     }
 
@@ -37,12 +47,10 @@ export default async (req) => {
       return json({ error: "Payment is not complete", verified: false }, 409);
     }
 
-    const planType = session.metadata?.plan_type === "draft" ? "draft" : "season";
-
     return json({
       verified: true,
       transaction_id: session.id,
-      plan_type: planType,
+      plan_type: "draft",
       value: Number(session.amount_total || 0) / 100,
       currency: String(session.currency || "usd").toUpperCase(),
     });

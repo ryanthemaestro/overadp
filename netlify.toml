@@ -12,6 +12,14 @@
     Pragma = "no-cache"
 
 [[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
   for = "/app/"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
@@ -21,12 +29,11 @@
   for = "/app/data/*"
   [headers.values]
     Cache-Control = "public, max-age=3600"
-    Access-Control-Allow-Origin = "*"
+    X-Robots-Tag = "noindex, nofollow, nosnippet"
 
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
-    Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, stripe-signature"
 

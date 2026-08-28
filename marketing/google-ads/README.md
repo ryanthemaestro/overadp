@@ -25,7 +25,7 @@ Do not launch Performance Max, Display, broad match, competitor terms, or Search
 
 The site sends these GA4 events:
 
-1. `purchase` — primary conversion; value is $6.99 or $24.99.
+1. `purchase` — primary conversion; value comes from the verified $6.99 Stripe payment.
 2. `proof_demo_completed` — secondary conversion; diagnostic only.
 3. `draft_pick_recorded` — diagnostic activation event; keep it secondary.
 4. `sign_up` — secondary conversion; account creation.
@@ -65,7 +65,7 @@ traffic-source reporting can interpret it as acquisition data.
 2. Import `keywords.csv`.
 3. Import `responsive-search-ads.csv`; map headline and description columns during the import review.
 4. Add every term in `negative-keywords.csv` as a campaign-level phrase or exact negative.
-5. Add callouts: `5 Picks Free`, `No Recurring Subscription`, `Roster-Aware Picks`, `Public Methodology`.
+5. Add callouts: `1 Live Pick Free`, `No Recurring Subscription`, `Roster-Aware Picks`, `Public Methodology`.
 6. Add a structured snippet with header `Types`: `Target Intel`, `VBD`, `ADP Signals`, `Risk Ranges`.
 7. Confirm every ad resolves to the dedicated landing page and retains the `gclid`.
 
@@ -76,7 +76,7 @@ Review daily, but do not make bid changes more than once every 48 hours.
 - Pause a search term immediately if it is clearly about the NFL Draft, DFS, betting, dynasty, auction drafts, another sport, support, or employment.
 - Pause a keyword after 20 clicks with zero `draft_pick_recorded` events.
 - If landing-page-to-War-Room clickthrough is below 20% after 100 visits, fix the landing page before buying more traffic.
-- If fewer than 10% of War Room visitors reach three picks after 50 visitors, fix activation before buying more traffic.
+- If fewer than 10% of War Room visitors complete the one-pick proof after 50 visitors, fix activation before buying more traffic.
 - If no purchases occur after 100 qualified clicks, stop the campaign and review recordings/feedback; do not increase budget.
 - Continue beyond $100 only if at least one purchase and five preview completions can be attributed to qualified search terms.
 

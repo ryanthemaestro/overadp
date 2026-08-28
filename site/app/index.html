@@ -1854,7 +1854,7 @@
       <tr><td><span class="tag tag-yellow">Medium Scarcity</span></td><td>Moderate dropoff</td><td>Balanced — draft when value aligns with your pick</td></tr>
       <tr><td><span class="tag tag-green">Low Scarcity</span></td><td>Shallow dropoff — many comparable options</td><td>Safe to wait — replacement-level players are almost as good as "starters"</td></tr>
     </table>
-    <p><strong>Example:</strong> In a 12-team league starting 1 TE, the #1 TE (Kittle, 136 pts) and the #12 TE (~97 pts) differ by 39 pts. But the #1 QB (Lamar, 245 pts) and #12 QB (~170 pts) differ by 75 pts. However, QB scarcity is often <em>lower</em> because there are only 12-14 starting QBs rostered, while TE has a steeper talent cliff at the top. The scarcity panel shows you which positions have the steepest cliffs so you can draft accordingly.</p>
+    <p><strong>Example:</strong> If the gap from the top available tight end to a replacement-level tight end is much larger than the comparable quarterback gap, tight end is more scarce for your league settings. The live scarcity panel calculates those gaps from the current projections and your roster configuration, so the example never depends on stale player names or point totals.</p>
 
     <h3>Projection Range (CQR)</h3>
     <p>The 80% target range is built via <strong>Conformalized Quantile Regression</strong> — separate 10th- and 90th-percentile models plus a split-conformal adjustment learned from 2025 calibration rows.</p>
@@ -1962,6 +1962,7 @@
     </ul>
     <button class="upgrade-primary" type="button" onclick="startCheckout('draft')">Unlock the AI Draft Room — $6.99</button>
     <p class="upgrade-reassurance">One complete draft · One payment · No subscription · Secure Stripe checkout</p>
+    <p class="upgrade-reassurance"><a href="/terms/" target="_blank">Terms</a> · <a href="/privacy/" target="_blank">Privacy</a> · <a href="/refunds/" target="_blank">Refund policy</a></p>
     <div id="upgradeAuthHint" style="display:none;padding:10px 12px;margin-bottom:10px;background:rgba(0,255,106,0.06);border:1px solid rgba(0,255,106,0.25);border-radius:6px;font-size:11px;color:var(--chalk);text-align:center;line-height:1.45;">
       Next: secure your draft access with email, then complete Stripe checkout — about 20 seconds. Your board stays intact.
     </div>
@@ -2075,7 +2076,10 @@ const API_BASE = '/.netlify/functions';
 const FREE_PICK_LIMIT = 1;
 let currentUser = null;   // { id, email, ... }
 let userPlan = 'free';    // 'free' | 'paid'
-let userPlanType = 'season'; // 'season' | 'draft'
+let userPlanType = 'draft';
+let serverEntitlementVerified = false;
+let activeDraftEntitlement = null;
+let paidDraftSaveTimer = null;
 let isAuthMode = 'register'; // 'register' | 'login'
 // Free users can test live board reactions and record one pick before the offer.
 // Full-board projections, VBD, CI, and risk remain paid features.
@@ -2093,9 +2097,67 @@ function fetchWithTimeout(url, opts={}, timeoutMs=3500){
 
 function hydrateCachedAuth(){
   currentUser = lsGetAuth('user', null);
-  userPlan = lsGetAuth('plan', 'free') || 'free';
-  userPlanType = lsGetAuth('plan_type', 'season') || 'season';
+  // Cached identity improves continuity, but paid access is never trusted from
+  // localStorage. The server must verify the entitlement every session.
+  userPlan = 'free';
+  userPlanType = 'draft';
+  serverEntitlementVerified = false;
+  activeDraftEntitlement = null;
   updateUserUI();
+}
+
+async function resumePaidDraft(accessToken){
+  if(!accessToken)return false;
+  try{
+    const res=await fetchWithTimeout(API_BASE+'/draft-access',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({access_token:accessToken,action:'resume'})
+    },6000);
+    const data=await res.json();
+    if(!res.ok||!data.authorized)throw new Error(data.error||'Paid draft is not active');
+    userPlan='paid';
+    userPlanType='draft';
+    serverEntitlementVerified=true;
+    activeDraftEntitlement=data.entitlement_id;
+    const state=data.state||{};
+    myTeamIds=Array.isArray(state.my_team_ids)?state.my_team_ids.filter(id=>!Object.keys(playerMap).length||playerMap[id]):[];
+    opponentIds=Array.isArray(state.opponent_ids)?state.opponent_ids.filter(id=>!Object.keys(playerMap).length||playerMap[id]):[];
+    lsSet('myTeam',myTeamIds);
+    lsSet('opponentPicks',opponentIds);
+    if(state.settings){lsSet('settings',state.settings);restoreSettings();}
+    return true;
+  }catch(error){
+    userPlan='free';
+    serverEntitlementVerified=false;
+    activeDraftEntitlement=null;
+    return false;
+  }
+}
+
+function queuePaidDraftSave(){
+  if(!isPaid()||!activeDraftEntitlement)return;
+  clearTimeout(paidDraftSaveTimer);
+  paidDraftSaveTimer=setTimeout(async()=>{
+    const accessToken=lsGetAuth('access_token',null);
+    if(!accessToken)return;
+    try{
+      const res=await fetch(API_BASE+'/draft-access',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          access_token:accessToken,
+          action:'save',
+          entitlement_id:activeDraftEntitlement,
+          state:{my_team_ids:myTeamIds,opponent_ids:opponentIds,settings:lsGet('settings',null)}
+        })
+      });
+      if(res.status===401||res.status===409){
+        serverEntitlementVerified=false;
+        userPlan='free';
+        updateUserUI();
+        refreshAll();
+      }
+    }catch(error){console.warn('Paid draft save will retry after the next change',error);}
+  },450);
 }
 
 // Restore session on load
@@ -2135,12 +2197,13 @@ async function restoreSession(timeoutMs=3500){
       const data = await res.json();
       currentUser = data.user;
       userPlan = data.profile?.plan || 'free';
-      userPlanType = data.profile?.plan_type || 'season';
+      userPlanType = 'draft';
       lsSetAuth('user',data.user);
-      lsSetAuth('plan',userPlan);
-      lsSetAuth('plan_type',userPlanType);
+      if(userPlan==='paid')await resumePaidDraft(token);
+      else{serverEntitlementVerified=false;activeDraftEntitlement=null;}
       updateUserUI();
     } else {
+      userPlan='free';serverEntitlementVerified=false;activeDraftEntitlement=null;
       lsSetAuth('access_token',null);
       lsSetAuth('refresh_token',null);
     }
@@ -2192,13 +2255,13 @@ async function authSubmit(){
     // Get profile for login
     if(isAuthMode==='login'){
       userPlan = data.profile?.plan || 'free';
-      userPlanType = data.profile?.plan_type || 'season';
+      userPlanType = 'draft';
     } else {
       userPlan = 'free';
-      userPlanType = 'season';
+      userPlanType = 'draft';
     }
-    lsSetAuth('plan',userPlan);
-    lsSetAuth('plan_type',userPlanType);
+    if(userPlan==='paid')await resumePaidDraft(token);
+    else{serverEntitlementVerified=false;activeDraftEntitlement=null;}
     updateUserUI();
 
     gaEvent(isAuthMode==='register' ? 'sign_up' : 'login', { method: 'email', user_plan: userPlan });
@@ -2286,7 +2349,7 @@ function dismissUpgrade(){
 
 let pendingPlan = null;
 async function startCheckout(planType){
-  const checkoutPlan=planType||'season';
+  const checkoutPlan='draft';
   if(!currentUser){
     pendingPlan = checkoutPlan;
     gaEvent('checkout_intent_preauth', { plan_type: pendingPlan });
@@ -2297,15 +2360,19 @@ async function startCheckout(planType){
   }
   pendingPlan = null;
   try{
+    const accessToken=lsGetAuth('access_token',null);
+    if(!accessToken)throw new Error('Your login expired. Please log in again.');
     const res = await fetch(API_BASE+'/stripe-checkout',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({user_id:currentUser.id,email:currentUser.email,plan_type:checkoutPlan,attribution:marketingAttribution})
+      body:JSON.stringify({access_token:accessToken,attribution:marketingAttribution})
     });
     const data = await res.json();
     if(!res.ok||!data.url)throw new Error(data.error||'Checkout session was not created');
-    const checkoutValue=checkoutPlan==='draft'?6.99:24.99;
-    const checkoutItem={item_id:`overadp_${checkoutPlan}`,item_name:checkoutPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:checkoutValue,quantity:1};
-    gaEvent('begin_checkout',{plan_type:checkoutPlan,value:checkoutValue,currency:'USD',items:[checkoutItem]});
+    const checkoutValue=Number(data.value);
+    if(!Number.isFinite(checkoutValue)||checkoutValue<=0)throw new Error('Checkout price could not be verified');
+    const checkoutCurrency=data.currency||'USD';
+    const checkoutItem={item_id:data.item_id||'overadp_draft',item_name:data.item_name||'OverADP Single Draft',price:checkoutValue,quantity:1};
+    gaEvent('begin_checkout',{plan_type:checkoutPlan,value:checkoutValue,currency:checkoutCurrency,items:[checkoutItem]});
     gaEvent('checkout_started',{plan_type:checkoutPlan});
     window.location.href=data.url;
   }catch(e){
@@ -2324,28 +2391,31 @@ async function checkPaymentReturn(){
       return;
     }
     try{
+      const accessToken=lsGetAuth('access_token',null);
+      if(!accessToken)throw new Error('Log in again to verify payment');
       const res=await fetch(API_BASE+'/stripe-verify',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({session_id:sessionId,user_id:currentUser.id})
+        body:JSON.stringify({session_id:sessionId,access_token:accessToken})
       });
       const verified=await res.json();
       if(!res.ok||!verified.verified)throw new Error(verified.error||'Payment could not be verified');
 
-      const purchasedPlan=verified.plan_type==='draft'?'draft':'season';
-      const purchaseValue=Number(verified.value)||(purchasedPlan==='draft'?6.99:24.99);
+      const purchasedPlan='draft';
+      const purchaseValue=Number(verified.value);
+      if(!Number.isFinite(purchaseValue)||purchaseValue<=0)throw new Error('Verified payment amount is missing');
       const currency=verified.currency||'USD';
       const transactionId=verified.transaction_id||sessionId;
       gaEvent('purchase_complete',{verification_method:'stripe',plan_type:purchasedPlan,value:purchaseValue,currency,transaction_id:transactionId});
-      gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency,items:[{item_id:`overadp_${purchasedPlan}`,item_name:purchasedPlan==='draft'?'OverADP Single Draft':'OverADP Season Pass',price:purchaseValue,quantity:1}]});
+      gaEvent('purchase',{transaction_id:transactionId,value:purchaseValue,currency,items:[{item_id:'overadp_draft',item_name:'OverADP Single Draft',price:purchaseValue,quantity:1}]});
       window.history.replaceState({},'',window.location.pathname);
 
       // The signed webhook grants access. Retry briefly in case its database update
       // completes just after Stripe redirects the customer back to the app.
-      for(let attempt=0;attempt<3&&userPlan!=='paid';attempt++){
+      for(let attempt=0;attempt<3&&!isPaid();attempt++){
         await restoreSession();
-        if(userPlan!=='paid')await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+        if(!isPaid())await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
       }
-      if(userPlan==='paid'&&allPlayers.length)refreshAll();
+      if(isPaid()&&allPlayers.length)refreshAll();
     }catch(e){
       gaEvent('purchase_verification_failed',{reason:'verification_error',error_message:String(e?.message||'unknown').slice(0,120)});
       alert('Your payment return could not be verified yet. Reload this page in a moment or contact support.');
@@ -2354,7 +2424,7 @@ async function checkPaymentReturn(){
 }
 
 // Paywall: free users see all names but no projections
-function isPaid(){ return userPlan==='paid'; }
+function isPaid(){ return userPlan==='paid'&&serverEntitlementVerified; }
 function hasFreePick(){ return !isPaid()&&myTeamIds.length<FREE_PICK_LIMIT; }
 function canDraftMine(){ return isPaid()||hasFreePick(); }
 function canPreviewIntel(){ return isPaid()||hasFreePick(); }
@@ -2368,7 +2438,7 @@ function updateUserUI(){
   const upgradeBtn = document.getElementById('upgradeBtn');
   const loginBtn = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
-  if(userPlan==='paid'){
+  if(isPaid()){
     statusEl.style.display='inline';
     statusEl.textContent = '✓ PRO';
     upgradeBtn.style.display = 'none';
@@ -2393,10 +2463,13 @@ function updateUserUI(){
 function logOut(){
   currentUser = null;
   userPlan = 'free';
+  serverEntitlementVerified=false;
+  activeDraftEntitlement=null;
   lsSetAuth('access_token',null);
   lsSetAuth('refresh_token',null);
   lsSetAuth('user',null);
-  lsSetAuth('plan','free');
+  lsSetAuth('plan',null);
+  lsSetAuth('plan_type',null);
   updateUserUI();
   if(typeof renderPlayerPool==='function'){renderPlayerPool();getRecommendations();}
 }
@@ -2716,6 +2789,7 @@ function draftPlayer(pid,team){
     opponentIds.push(pid);
   }
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  if(isPaid())queuePaidDraftSave();
   if(team==='mine'){
     const pickCount=myTeamIds.length;
     gaEvent('draft_pick_recorded',{pick_count:pickCount,preview_user:!isPaid()});
@@ -2743,13 +2817,37 @@ function undoDraft(pid){
   myTeamIds=myTeamIds.filter(id=>id!==pid);
   opponentIds=opponentIds.filter(id=>id!==pid);
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
+  if(isPaid())queuePaidDraftSave();
   refreshAll();
 }
-function resetDraft(){
-  if(!confirm('RESET ALL DRAFT PICKS?'))return;
+async function resetDraft(){
+  const paid=isPaid();
+  const warning=paid
+    ?'END THIS PAID DRAFT?\n\nReset Draft ends and consumes your $6.99 single-draft access. You can refresh or log back in to resume without resetting.'
+    :'RESET ALL DRAFT PICKS?';
+  if(!confirm(warning))return;
+  if(paid){
+    clearTimeout(paidDraftSaveTimer);
+    const accessToken=lsGetAuth('access_token',null);
+    if(!accessToken){alert('Your login expired. Log in again before ending this draft.');return;}
+    try{
+      const res=await fetch(API_BASE+'/draft-access',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({access_token:accessToken,action:'complete',entitlement_id:activeDraftEntitlement})
+      });
+      const data=await res.json();
+      if(!res.ok||!data.completed)throw new Error(data.error||'Draft could not be completed');
+      userPlan='free';
+      serverEntitlementVerified=false;
+      activeDraftEntitlement=null;
+    }catch(error){
+      alert('This draft was not reset because paid access could not be updated. Please try again.');
+      return;
+    }
+  }
   myTeamIds=[];opponentIds=[];
   lsSet('myTeam',myTeamIds);lsSet('opponentPicks',opponentIds);
-  gaEvent('draft_reset',{user_plan:userPlan,user_plan_type:userPlanType});
+  gaEvent('draft_reset',{user_plan:paid?'paid':'free',user_plan_type:'draft',paid_access_consumed:paid});
   refreshAll();
   updateUserUI();
 }
@@ -2777,7 +2875,7 @@ function exportDraftBoard(){
   const special=allPlayers
     .filter(p=>p.position==='K'||p.position==='DEF')
     .sort((a,b)=>(b.stream_score||0)-(a.stream_score||0));
-  const headers=['Board','Player','Pos','Team','Bye','ADP','Projection','Opening Rank','Opening Score','Opening Schedule','Draft Timing','VBD','Range Low','Range High','Uncertainty','Draft Risk','Status'];
+  const headers=['Board','Player','Pos','Team','Bye','ADP','Projection','Opening Rank','Opening Score','Opening Schedule','Draft Timing','VBD','Range Low','Range High','Model Uncertainty Tier','Draft Risk','Status'];
   const rows=[headers.map(csvValue).join(',')];
   [...skill,...special].forEach((p,index)=>{
     const status=myTeamIds.includes(p.player_id)?'MY TEAM':opponentIds.includes(p.player_id)?'TAKEN':'AVAILABLE';
@@ -4106,7 +4204,7 @@ function loadHandcuffs(){
   const c=document.getElementById('handcuffPanel');
   const myTeamP=getMyTeamPlayers();
   if(!myTeamP.length){c.innerHTML='<div style="color:var(--smoke);font-size:12px;padding:4px;">Draft RBs to see handcuff options.</div>';return;}
-  if(userPlan!=='paid'){
+  if(!isPaid()){
     c.innerHTML=`<div class="paywall-cta" onclick="showUpgrade()" style="margin:4px 0;padding:8px;">
       <div class="paywall-cta-title">🔒 HANDCUFF ALERTS — DON'T GET CAUGHT SHORT</div>
       <div class="paywall-cta-sub">See backup RBs for your starters</div>
@@ -4212,6 +4310,7 @@ function applySettings(){
   rosterConfig.bench_size=benchv;
   // Save to localStorage
   lsSet('settings',{scoring:scoringFormat,numTeams,draftSlot,slots:rosterConfig.roster_slots,bench:benchv});
+  if(isPaid())queuePaidDraftSave();
   // Recalculate everything
   refreshAll();
   toggleSettings();

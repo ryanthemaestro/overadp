@@ -106,7 +106,7 @@ export default async function authRegister(request) {
         id: userId,
         email,
         plan: "free",
-        plan_type: "season",
+        plan_type: "draft",
         created_at: new Date().toISOString(),
       }, { onConflict: "id" });
 
@@ -149,7 +149,7 @@ export default async function authRegister(request) {
     return jsonResponse({
       user: loginData.user,
       session: loginData.session,
-      profile: { plan: "free", plan_type: "season" },
+      profile: { plan: "free", plan_type: "draft" },
     });
   } catch (error) {
     console.error("Auth registration upstream request failed", {

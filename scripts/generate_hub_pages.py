@@ -232,7 +232,7 @@ def html_foot(related_pairs: list[tuple[str, str]] | None = None) -> str:
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
       <h2>Get the Full Model in Your Draft Room</h2>
-      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80% confidence interval, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. $6.99 for a single draft, $24.99 for the full season.</p>
+      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80%-target range, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. Unlock one complete draft for $6.99 with no subscription.</p>
       <a href="/app/" class="btn btn-primary">ENTER THE WAR ROOM →</a>
     </div>
     """
@@ -243,7 +243,7 @@ def html_foot(related_pairs: list[tuple[str, str]] | None = None) -> str:
     {cta}
   </div></main>
 <footer>
-  <div>Updated {today} · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
+  <div>Updated {today} · Walk-forward validated through 2025 · <a href="/">Home</a> · <a href="/2026/who-should-i-draft/">Who Should I Draft?</a> · <a href="/2026/adp-vs-model/">ADP Study</a> · <a href="/methodology/">Methodology</a> · <a href="/app/">Draft Tool</a> · <a href="/support/">Support</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · <a href="/refunds/">Refunds</a> · <a href="mailto:overadp@gmail.com">overadp@gmail.com</a></div>
 </footer>
 </body>
 </html>
@@ -971,6 +971,9 @@ def main():
         "/methodology/",
         "/support/",
         "/draft-assistant/",
+        "/privacy/",
+        "/terms/",
+        "/refunds/",
     ]
     (SITE / "sitemap.xml").write_text(build_sitemap(pages))
     print(f"  wrote /sitemap.xml ({len(pages)+2} URLs)")
