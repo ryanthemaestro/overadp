@@ -45,6 +45,7 @@ class CommerceContractTests(unittest.TestCase):
 
     def test_owner_access_is_server_configured_and_never_consumed(self):
         self.assertIn('Netlify.env.get("OVERADP_OWNER_EMAILS")', DRAFT_ACCESS)
+        self.assertIn('app_metadata?.overadp_role === "owner"', DRAFT_ACCESS)
         self.assertNotIn("ryan.a.stover", DRAFT_ACCESS)
         self.assertIn('role: owner ? "owner" : "customer"', DRAFT_ACCESS)
         self.assertIn("action:owner?'reset':'complete'", APP)

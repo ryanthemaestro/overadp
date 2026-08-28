@@ -48,7 +48,8 @@ export default async function draftAccess(request) {
     if (userError || !user) return json({ error: "Session expired" }, 401);
     const { data: authoritativeUserData } = await supabase.auth.admin.getUserById(user.id);
     const authoritativeUser = authoritativeUserData?.user || user;
-    const owner = isConfiguredOwner(authoritativeUser);
+    const owner = isConfiguredOwner(authoritativeUser)
+      || authoritativeUser.app_metadata?.overadp_role === "owner";
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
