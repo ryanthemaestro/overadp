@@ -18,6 +18,14 @@ function cleanSettings(value) {
   return serialized.length <= 5000 ? JSON.parse(serialized) : null;
 }
 
+function isConfiguredOwner(user) {
+  const configured = String(Netlify.env.get("OVERADP_OWNER_EMAILS") || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return Boolean(user?.email) && configured.includes(String(user.email).trim().toLowerCase());
+}
+
 export default async function draftAccess(request) {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
@@ -25,7 +33,7 @@ export default async function draftAccess(request) {
     const input = await request.json();
     const accessToken = input?.access_token;
     const action = input?.action;
-    if (!accessToken || !["resume", "save", "complete"].includes(action)) {
+    if (!accessToken || !["resume", "save", "reset", "complete"].includes(action)) {
       return json({ error: "Valid access token and action required" }, 400);
     }
 
@@ -40,6 +48,7 @@ export default async function draftAccess(request) {
     if (userError || !user) return json({ error: "Session expired" }, 401);
     const { data: authoritativeUserData } = await supabase.auth.admin.getUserById(user.id);
     const authoritativeUser = authoritativeUserData?.user || user;
+    const owner = isConfiguredOwner(authoritativeUser);
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -47,12 +56,12 @@ export default async function draftAccess(request) {
       .eq("id", user.id)
       .maybeSingle();
     if (profileError) return json({ error: "Draft access unavailable" }, 503);
-    if (profile?.plan !== "paid" || profile?.plan_type !== "draft") {
+    if (!owner && (profile?.plan !== "paid" || profile?.plan_type !== "draft")) {
       return json({ authorized: false, plan: "free" });
     }
 
-    let entitlementId = String(profile.season_paid || "");
-    if (!entitlementId.startsWith("draft:")) {
+    let entitlementId = owner ? `owner:${user.id}` : String(profile.season_paid || "");
+    if (!owner && !entitlementId.startsWith("draft:")) {
       entitlementId = `draft:legacy:${user.id}:${profile.paid_at || "unknown"}`;
       const { error: normalizeError } = await supabase
         .from("profiles")
@@ -61,7 +70,8 @@ export default async function draftAccess(request) {
       if (normalizeError) return json({ error: "Draft access unavailable" }, 503);
     }
 
-    const current = authoritativeUser.app_metadata?.overadp_draft;
+    const metadataKey = owner ? "overadp_owner_board" : "overadp_draft";
+    const current = authoritativeUser.app_metadata?.[metadataKey];
     let state = current?.entitlement_id === entitlementId && current?.status === "active"
       ? current
       : {
@@ -84,11 +94,22 @@ export default async function draftAccess(request) {
       };
     }
 
-    if (action === "complete") {
+    if (owner && (action === "reset" || action === "complete")) {
+      state = {
+        entitlement_id: entitlementId,
+        status: "active",
+        my_team_ids: [],
+        opponent_ids: [],
+        settings: null,
+        updated_at: new Date().toISOString(),
+      };
+    } else if (action === "reset") {
+      return json({ error: "Reset is only available to the owner account" }, 403);
+    } else if (action === "complete") {
       if (input.entitlement_id !== entitlementId) return json({ error: "Draft entitlement changed" }, 409);
       const completed = { ...state, status: "completed", completed_at: new Date().toISOString() };
       const { error: metadataError } = await supabase.auth.admin.updateUserById(user.id, {
-        app_metadata: { ...authoritativeUser.app_metadata, overadp_draft: completed },
+        app_metadata: { ...authoritativeUser.app_metadata, [metadataKey]: completed },
       });
       if (metadataError) return json({ error: "Could not complete draft" }, 503);
       const { error: completionError } = await supabase
@@ -101,11 +122,19 @@ export default async function draftAccess(request) {
     }
 
     const { error: metadataError } = await supabase.auth.admin.updateUserById(user.id, {
-      app_metadata: { ...authoritativeUser.app_metadata, overadp_draft: state },
+      app_metadata: { ...authoritativeUser.app_metadata, [metadataKey]: state },
     });
     if (metadataError) return json({ error: "Could not save draft" }, 503);
 
-    return json({ authorized: true, plan: "paid", plan_type: "draft", entitlement_id: entitlementId, state });
+    return json({
+      authorized: true,
+      plan: "paid",
+      plan_type: owner ? "owner" : "draft",
+      role: owner ? "owner" : "customer",
+      unlimited: owner,
+      entitlement_id: entitlementId,
+      state,
+    });
   } catch (error) {
     console.error("Draft access error", error);
     return json({ error: "Draft access unavailable" }, 500);
