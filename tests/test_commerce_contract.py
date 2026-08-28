@@ -38,10 +38,21 @@ class CommerceContractTests(unittest.TestCase):
         self.assertIn("userPlan==='paid'&&serverEntitlementVerified", APP)
 
     def test_single_draft_reset_consumes_server_entitlement(self):
-        self.assertIn("action:'complete'", APP)
+        self.assertIn("action:owner?'reset':'complete'", APP)
         self.assertIn("paid_access_consumed:paid", APP)
-        self.assertIn('["resume", "save", "complete"]', DRAFT_ACCESS)
+        self.assertIn('["resume", "save", "reset", "complete"]', DRAFT_ACCESS)
         self.assertIn('update({ plan: "free"', DRAFT_ACCESS)
+
+    def test_owner_access_is_server_configured_and_never_consumed(self):
+        self.assertIn('Netlify.env.get("OVERADP_OWNER_EMAILS")', DRAFT_ACCESS)
+        self.assertNotIn("ryan.a.stover", DRAFT_ACCESS)
+        self.assertIn('role: owner ? "owner" : "customer"', DRAFT_ACCESS)
+        self.assertIn("action:owner?'reset':'complete'", APP)
+        self.assertIn("paid_access_consumed:paid&&!owner", APP)
+        self.assertIn("statusEl.textContent = isOwner() ? '✓ OWNER' : '✓ PRO'", APP)
+
+    def test_every_authenticated_account_checks_server_entitlement(self):
+        self.assertGreaterEqual(APP.count("await resumePaidDraft(token);"), 2)
 
     def test_webhook_requires_paid_status(self):
         self.assertIn('session.payment_status !== "paid"', WEBHOOK)
