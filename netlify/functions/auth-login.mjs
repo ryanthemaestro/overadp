@@ -84,7 +84,7 @@ export default async (request) => {
     return jsonResponse({
       user: data.user,
       session: data.session,
-      profile: profile || { plan: "free", plan_type: "season" },
+      profile: profile || { plan: "free", plan_type: "draft" },
     });
   } catch (error) {
     console.error("Auth login upstream request failed", {
