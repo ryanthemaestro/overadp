@@ -80,3 +80,13 @@ test('questionable status is represented as a probability instead of a ban', () 
   assert.ok(result.adjustedVbd < 90);
   assert.ok(result.adjustedVbd > 80);
 });
+
+test('availability badge is hover-only without a click arrow or pinned details state', () => {
+  assert.match(html, /class="injury-badge" aria-label=/);
+  assert.doesNotMatch(html, /class="injury-badge" tabindex=/);
+  assert.doesNotMatch(html, /<details class="injury-details/);
+  assert.doesNotMatch(html, /injury-badge-caret/);
+  assert.doesNotMatch(html, /injury-details\[open\]/);
+  assert.doesNotMatch(html, /document\.addEventListener\('focusin'/);
+  assert.match(html, /window\.addEventListener\('scroll',closeActiveInjuryPopover,true\)/);
+});

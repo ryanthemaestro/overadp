@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "site/app/index.html").read_text()
 CHECKOUT = (ROOT / "netlify/functions/stripe-checkout.mjs").read_text()
 WEBHOOK = (ROOT / "netlify/functions/stripe-webhook.mjs").read_text()
+VERIFY = (ROOT / "netlify/functions/stripe-verify.mjs").read_text()
+ACTIVATE_DRAFT = (ROOT / "netlify/functions/_shared/activate-paid-draft.mjs").read_text()
 DRAFT_ACCESS = (ROOT / "netlify/functions/draft-access.mjs").read_text()
 NETLIFY = (ROOT / "netlify.toml").read_text()
 
@@ -57,7 +59,19 @@ class CommerceContractTests(unittest.TestCase):
 
     def test_webhook_requires_paid_status(self):
         self.assertIn('session.payment_status !== "paid"', WEBHOOK)
-        self.assertIn('plan_type: "draft"', WEBHOOK)
+        self.assertIn('session.metadata?.plan_type !== "draft"', WEBHOOK)
+        self.assertIn('plan_type: "draft"', ACTIVATE_DRAFT)
+
+    def test_verified_payment_activates_access_without_waiting_for_webhook(self):
+        self.assertIn("activatePaidDraft", VERIFY)
+        self.assertIn("access_granted", VERIFY)
+        self.assertIn("activatePaidDraft", WEBHOOK)
+        self.assertIn("verified.access_granted===false", APP)
+
+    def test_completed_single_draft_cannot_be_reactivated_by_replay(self):
+        self.assertIn("alreadyCompleted", ACTIVATE_DRAFT)
+        self.assertIn('status: "completed"', ACTIVATE_DRAFT)
+        self.assertIn('profile?.season_paid === `completed:${entitlementId}`', ACTIVATE_DRAFT)
 
     def test_policies_and_security_headers_are_published(self):
         for page in ("privacy", "terms", "refunds"):

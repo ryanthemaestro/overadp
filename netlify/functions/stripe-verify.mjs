@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { activatePaidDraft } from "./_shared/activate-paid-draft.mjs";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -46,9 +47,20 @@ export default async (req) => {
     if (session.status !== "complete" || session.payment_status !== "paid") {
       return json({ error: "Payment is not complete", verified: false }, 409);
     }
+    if (session.metadata?.plan_type !== "draft") {
+      return json({ error: "Checkout is not a draft purchase", verified: false }, 409);
+    }
+
+    const activation = await activatePaidDraft({
+      supabase,
+      userId: user.id,
+      sessionId: session.id,
+      fallbackEmail: user.email,
+    });
 
     return json({
       verified: true,
+      access_granted: activation.status === "active",
       transaction_id: session.id,
       plan_type: "draft",
       value: Number(session.amount_total || 0) / 100,

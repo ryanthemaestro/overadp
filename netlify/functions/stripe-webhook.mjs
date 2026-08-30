@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { activatePaidDraft } from "./_shared/activate-paid-draft.mjs";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -46,38 +47,20 @@ export default async function stripeWebhook(request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const entitlementId = `draft:${session.id}`;
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      plan: "paid",
-      plan_type: "draft",
-      season_paid: entitlementId,
-      paid_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-  if (profileError) {
-    console.error("Profile update error", profileError);
-    return json({ error: "Database update failed" }, 500);
-  }
-
-  const { data: userData, error: getUserError } = await supabase.auth.admin.getUserById(userId);
-  if (!getUserError && userData?.user) {
-    const existingMetadata = userData.user.app_metadata || {};
-    const { error: metadataError } = await supabase.auth.admin.updateUserById(userId, {
-      app_metadata: {
-        ...existingMetadata,
-        overadp_draft: {
-          entitlement_id: entitlementId,
-          status: "active",
-          my_team_ids: [],
-          opponent_ids: [],
-          settings: null,
-          updated_at: new Date().toISOString(),
-        },
-      },
+  try {
+    const activation = await activatePaidDraft({
+      supabase,
+      userId,
+      sessionId: session.id,
+      fallbackEmail: session.customer_details?.email || session.customer_email,
     });
-    if (metadataError) console.error("Draft metadata initialization failed", metadataError);
+    if (activation.status === "completed") {
+      console.log(`Ignored completed draft entitlement replay (${session.id})`);
+      return json({ received: true });
+    }
+  } catch (error) {
+    console.error("Paid draft activation failed", error);
+    return json({ error: "Database update failed" }, 500);
   }
 
   console.log(`User ${userId} paid for one draft (${session.id})`);

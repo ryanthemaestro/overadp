@@ -586,57 +586,32 @@
     font-family: 'JetBrains Mono', monospace;
     font-weight: 500;
   }
-  .injury-details summary {
+  .injury-details .injury-badge {
     display: inline-flex;
-    min-width: 28px;
-    min-height: 20px;
+    min-width: 24px;
+    min-height: 18px;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 2px 6px;
-    border: 1px solid color-mix(in srgb, var(--injury-accent) 82%, white 18%);
-    border-radius: 4px;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--injury-accent) 20%, transparent), color-mix(in srgb, var(--injury-accent) 9%, transparent));
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.035) inset, 0 0 12px var(--injury-glow);
+    padding: 2px 5px;
+    border: 1px solid color-mix(in srgb, var(--injury-accent) 68%, transparent);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--injury-accent) 10%, transparent);
+    box-shadow: none;
     color: var(--injury-accent);
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 900;
     line-height: 1;
-    letter-spacing: 0.6px;
-    list-style: none;
-    cursor: pointer;
-    transform: translateY(-1px);
-    transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+    letter-spacing: 0.45px;
+    cursor: help;
+    transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
   }
-  .injury-details summary::-webkit-details-marker { display: none; }
-  .injury-details summary:hover,
-  .injury-details summary:focus-visible,
-  .injury-details[open] summary {
+  .injury-details .injury-badge:hover {
     border-color: color-mix(in srgb, var(--injury-accent) 68%, white 32%);
-    background: color-mix(in srgb, var(--injury-accent) 24%, var(--steel));
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--injury-accent) 16%, transparent), 0 0 18px var(--injury-glow);
+    background: color-mix(in srgb, var(--injury-accent) 18%, var(--steel));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--injury-accent) 12%, transparent);
     color: color-mix(in srgb, var(--injury-accent) 80%, white 20%);
     outline: none;
-    transform: translateY(-2px);
   }
-  .injury-badge-dot {
-    width: 5px;
-    height: 5px;
-    flex: 0 0 5px;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 7px currentColor;
-  }
-  .injury-badge-caret {
-    width: 0;
-    height: 0;
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-top: 4px solid currentColor;
-    opacity: 0.72;
-    transition: transform 0.14s ease;
-  }
-  .injury-details[open] .injury-badge-caret { transform: rotate(180deg); }
   .injury-details.injury-q { --injury-accent: #f8c24e; --injury-glow: rgba(248,194,78,0.22); }
   .injury-details.injury-ready { --injury-accent: #32d583; --injury-glow: rgba(50,213,131,0.22); }
   .injury-details.injury-d { --injury-accent: #ff9f43; --injury-glow: rgba(255,159,67,0.24); }
@@ -665,13 +640,10 @@
     line-height: 1.5;
     white-space: normal;
     overflow: hidden;
-    pointer-events: auto;
+    pointer-events: none;
     animation: injury-popover-in 0.14s ease-out;
   }
-  .injury-details:hover > .injury-popover,
-  .injury-details.injury-hover-active > .injury-popover,
-  .injury-details:focus-within > .injury-popover,
-  .injury-details[open] > .injury-popover { display: block; }
+  .injury-details.injury-hover-active > .injury-popover { display: block; }
   .injury-popover::before {
     content: '';
     display: block;
@@ -1803,7 +1775,7 @@
       <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus the live board's estimated draft slot</strong>, measured in picks. Estimated slot = current overall pick + BOARD rank − 1. At pick 1, an ADP of 35.7 and BOARD rank #38 equals −2.3 picks. Positive/green means the board would take the player earlier than the market; negative/red means later. It updates with league settings, roster needs, positional scarcity, and live picks.</td></tr>
       <tr><td><span class="tag tag-blue">PROJ</span></td><td>Expected roster contribution for the full season. When a player is expected to miss time, this includes his active-week projection plus realistic fill-in production.</td></tr>
       <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — expected points above replacement after availability, fill-in production, return uncertainty, and bench-slot cost. Higher means more value over a waiver-wire option.</td></tr>
-      <tr><td><span class="tag tag-yellow">Q / D / O / IR / PUP / SUSP</span></td><td>Color-coded availability badges follow familiar fantasy-football shorthand. Hover, focus, or select a badge for the current status, return estimate, expected games missed, and availability-adjusted roster value. No badge means no current availability flag—not guaranteed health.</td></tr>
+      <tr><td><span class="tag tag-yellow">Q / D / O / IR / PUP / SUSP</span></td><td>Color-coded availability badges follow familiar fantasy-football shorthand. Hover over a badge for the current status, return estimate, expected games missed, and availability-adjusted roster value. The pop-up closes as soon as you move away or scroll. No badge means no current availability flag—not guaranteed health.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
       <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high, based on RANGE width relative to PROJ within the player's position. Low means a tighter range. High means a wider range or a player near replacement level.</td></tr>
       <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>Low / medium / high — a draft-value warning that combines RANGE uncertainty, recent injury history, rookie/second-year unknowns, possible ADP overpay, and low VBD at the player's cost. It is not a medical projection.</td></tr>
@@ -2416,7 +2388,8 @@ async function checkPaymentReturn(){
         await restoreSession();
         if(!isPaid())await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
       }
-      if(isPaid()&&allPlayers.length)refreshAll();
+      if(!isPaid()||verified.access_granted===false)throw new Error('Payment verified, but draft access did not activate');
+      if(allPlayers.length)refreshAll();
     }catch(e){
       gaEvent('purchase_verification_failed',{reason:'verification_error',error_message:String(e?.message||'unknown').slice(0,120)});
       alert('Your payment return could not be verified yet. Reload this page in a moment or contact support.');
@@ -3544,8 +3517,8 @@ function injuryBadgeHtml(player){
   const label=escapeHtmlAttr(info.label);
   const kicker='Player availability';
   const displayNote=availabilityDisplayNote(player);
-  return `<details class="injury-details injury-${info.tier}">
-    <summary aria-label="${label}. Hover or press Enter for player status details"><span class="injury-badge-dot" aria-hidden="true"></span><span>${escapeHtmlAttr(info.code)}</span><span class="injury-badge-caret" aria-hidden="true"></span></summary>
+  return `<span class="injury-details injury-${info.tier}">
+    <span class="injury-badge" aria-label="${label}. Hover for player status details">${escapeHtmlAttr(info.code)}</span>
     <div class="injury-popover" role="tooltip">
       <div class="injury-popover-head"><div><div class="injury-popover-kicker">${kicker}</div><div class="injury-popover-title">${label}</div></div><span class="injury-popover-code">${escapeHtmlAttr(info.code)}</span></div>
       <div class="injury-popover-body">
@@ -3555,7 +3528,7 @@ function injuryBadgeHtml(player){
         <div class="injury-update">Updated ${escapeHtmlAttr(updated.label)}${stale}</div>
       </div>
     </div>
-  </details>`;
+  </span>`;
 }
 
 function intelBadgeHtml(player){
@@ -3570,7 +3543,7 @@ function playerHeadingHtml(player){
 }
 
 function positionInjuryPopover(details){
-  const summary=details?.querySelector('summary');
+  const summary=details?.querySelector('.injury-badge');
   const popover=details?.querySelector('.injury-popover');
   if(!summary||!popover)return;
   const gutter=12;
@@ -3589,14 +3562,15 @@ function positionInjuryPopover(details){
 }
 
 let activeInjuryHover=null;
-let injuryHoverCloseTimer=null;
+function closeActiveInjuryPopover(){
+  if(!activeInjuryHover)return;
+  activeInjuryHover.classList.remove('injury-hover-active');
+  activeInjuryHover=null;
+}
 document.addEventListener('pointerover',event=>{
   const details=event.target.closest?.('.injury-details');
   if(!details)return;
-  window.clearTimeout(injuryHoverCloseTimer);
-  if(activeInjuryHover&&activeInjuryHover!==details&&!activeInjuryHover.open){
-    activeInjuryHover.classList.remove('injury-hover-active');
-  }
+  if(activeInjuryHover&&activeInjuryHover!==details)closeActiveInjuryPopover();
   activeInjuryHover=details;
   details.classList.add('injury-hover-active');
   requestAnimationFrame(()=>positionInjuryPopover(details));
@@ -3604,23 +3578,11 @@ document.addEventListener('pointerover',event=>{
 document.addEventListener('pointerout',event=>{
   const details=event.target.closest?.('.injury-details');
   if(!details||details.contains(event.relatedTarget))return;
-  window.clearTimeout(injuryHoverCloseTimer);
-  injuryHoverCloseTimer=window.setTimeout(()=>{
-    if(!details.matches(':hover')&&!details.contains(document.activeElement)&&!details.open){
-      details.classList.remove('injury-hover-active');
-      if(activeInjuryHover===details)activeInjuryHover=null;
-    }
-  },500);
+  details.classList.remove('injury-hover-active');
+  if(activeInjuryHover===details)activeInjuryHover=null;
 });
-document.addEventListener('focusin',event=>{
-  const details=event.target.closest?.('.injury-details');
-  if(details)requestAnimationFrame(()=>positionInjuryPopover(details));
-});
-document.addEventListener('toggle',event=>{
-  if(event.target.matches?.('.injury-details')&&event.target.open){
-    requestAnimationFrame(()=>positionInjuryPopover(event.target));
-  }
-},true);
+window.addEventListener('scroll',closeActiveInjuryPopover,true);
+window.addEventListener('resize',closeActiveInjuryPopover);
 
 function injuryRowClass(player){
   const tier=injuryStatusInfo(player)?.tier;
