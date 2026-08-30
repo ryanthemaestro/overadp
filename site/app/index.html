@@ -642,9 +642,10 @@
   .injury-details.injury-d { --injury-accent: #ff9f43; --injury-glow: rgba(255,159,67,0.24); }
   .injury-details.injury-o,
   .injury-details.injury-ir,
-  .injury-details.injury-res,
-  .injury-details.injury-sus { --injury-accent: #ff5d68; --injury-glow: rgba(255,93,104,0.25); }
+  .injury-details.injury-res { --injury-accent: #ff5d68; --injury-glow: rgba(255,93,104,0.25); }
+  .injury-details.injury-sus { --injury-accent: #ff68b7; --injury-glow: rgba(255,104,183,0.25); }
   .injury-details.injury-pup { --injury-accent: #c990ff; --injury-glow: rgba(201,144,255,0.23); }
+  .injury-details.injury-nfi { --injury-accent: #a78bfa; --injury-glow: rgba(167,139,250,0.23); }
   .injury-details.injury-other { --injury-accent: #f6b73c; --injury-glow: rgba(246,183,60,0.22); }
   .injury-popover {
     display: none;
@@ -736,14 +737,11 @@
     font-size: 8.5px;
   }
   .injury-popover-meta strong { color: var(--fg2); font-weight: 700; }
-  .injury-source {
+  .injury-update {
     margin-top: 9px;
     color: var(--smoke);
     font-size: 8px;
   }
-  .injury-source a { color: #8ab4ff; text-underline-offset: 2px; }
-  .injury-source a:hover,
-  .injury-source a:focus-visible { color: #b8d1ff; }
   .injury-stale { color: var(--te); }
   @keyframes injury-popover-in {
     from { opacity: 0; transform: translateY(-4px) scale(0.985); }
@@ -1803,9 +1801,9 @@
       <tr><th>Column</th><th>Meaning</th></tr>
       <tr><td><span class="tag tag-green">ADP</span></td><td><strong>Average Draft Position</strong> — where the market usually selects the player. A lower number means an earlier pick.</td></tr>
       <tr><td><span class="tag tag-green">VALUE vs ADP</span></td><td><strong>Market ADP minus the live board's estimated draft slot</strong>, measured in picks. Estimated slot = current overall pick + BOARD rank − 1. At pick 1, an ADP of 35.7 and BOARD rank #38 equals −2.3 picks. Positive/green means the board would take the player earlier than the market; negative/red means later. It updates with league settings, roster needs, positional scarcity, and live picks.</td></tr>
-      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Projected fantasy points for the full season (half-PPR by default; scoring format is configurable).</td></tr>
-      <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — projected points above the replacement level at each position. Higher means more value over a waiver-wire fill-in.</td></tr>
-      <tr><td><span class="tag tag-yellow">W1 / MISS / Q / O</span></td><td>Preseason badges summarize reported season-opening outlook: W1 means expected ready for Week 1, W1? means monitor, MISS means regular-season time is expected to be missed, and SZN means expected out for the season. Once official weekly reports begin, badges switch to Q/D/O. Select a badge for the source, return estimate, expected games missed, and draft-value adjustment. No badge means no current report in the covered sources—not guaranteed health. nflverse roster/report data is adapted under CC BY 4.0.</td></tr>
+      <tr><td><span class="tag tag-blue">PROJ</span></td><td>Expected roster contribution for the full season. When a player is expected to miss time, this includes his active-week projection plus realistic fill-in production.</td></tr>
+      <tr><td><span class="tag tag-green">VBD</span></td><td><strong>Value Based Drafting</strong> — expected points above replacement after availability, fill-in production, return uncertainty, and bench-slot cost. Higher means more value over a waiver-wire option.</td></tr>
+      <tr><td><span class="tag tag-yellow">Q / D / O / IR / PUP / SUSP</span></td><td>Color-coded availability badges follow familiar fantasy-football shorthand. Hover, focus, or select a badge for the current status, return estimate, expected games missed, and availability-adjusted roster value. No badge means no current availability flag—not guaranteed health.</td></tr>
       <tr><td><span class="tag tag-yellow">RANGE</span></td><td>The model's <strong>80%-target season projection range</strong>, shown low–high. It is calibrated across comparable players; it is not an 80% guarantee for one player. Wider ranges mean more uncertainty. Rookie and second-year ranges are widened to reflect their limited history.</td></tr>
       <tr><td><span class="tag tag-red">UNC</span></td><td><strong>Uncertainty</strong>: low / medium / high, based on RANGE width relative to PROJ within the player's position. Low means a tighter range. High means a wider range or a player near replacement level.</td></tr>
       <tr><td><span class="tag tag-red">DRAFT RISK</span></td><td>Low / medium / high — a draft-value warning that combines RANGE uncertainty, recent injury history, rookie/second-year unknowns, possible ADP overpay, and low VBD at the player's cost. It is not a medical projection.</td></tr>
@@ -1898,7 +1896,7 @@
     <h3>Key Features (August 2026)</h3>
     <ul>
       <li><strong>Current roster overlay</strong> — Sleeper roster/depth data keeps teams, bye weeks, and post-draft movement aligned with the board.</li>
-      <li><strong>Current availability overlay</strong> — nflverse's daily GitHub roster release, reviewed preseason return outlooks for fantasy-relevant injuries, and official weekly Q/D/O data when available.</li>
+      <li><strong>Current availability overlay</strong> — injuries, reserve-list designations, practice status, expected returns, and suspensions are refreshed throughout draft season.</li>
       <li><strong>Target / carry competition</strong> — Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
       <li><strong>College &amp; draft pipeline</strong> — Draft capital, draft-pick value, combine athleticism, college per-game production, Power 5 flags, and rookie interaction features.</li>
       <li><strong>Injury-adjusted regression</strong> — Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
@@ -2514,7 +2512,7 @@ function updateDataStatus(){
   if(summary&&counts.skill_players){
     const injuries=dataMetadata.injuries||{};
     const injuryDate=String(injuries.fetched_at||'').slice(0,10)||'an unknown date';
-    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Current nflverse availability data was refreshed <strong>${injuryDate}</strong>. Target Intel adapts that data to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
+    summary.innerHTML=`OverADP combines <strong>${counts.skill_players} skill-player projections</strong> with <strong>${counts.k_def_players} current K/DEF starters</strong>. The projection model was generated ${String(model.generated_at||'').slice(0,10)||'on an unknown date'}; ADP, teams, bye weeks, and the K/DEF opening schedule were refreshed through <strong>${market.period_end||'an unknown date'}</strong> from ${market.drafts||0} recent drafts. Player availability was refreshed <strong>${injuryDate}</strong>. Target Intel adapts that information to your roster settings, live picks, VBD, scarcity, and next-turn availability.`;
   }
 }
 
@@ -3135,8 +3133,9 @@ function adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round){
   if(p.position==='K'||p.position==='DEF')return {score:0,urgency:0,reach:0,pGone:0};
   const pos=p.position;
   const adp=Math.min(Number(p.adp||200),250);
-  const proj=Number(p.projected_points||0);
-  const vbd=Number(p.vbd||0);
+  const availability=injuryAvailabilityAdjustment(p);
+  const proj=availability.adjustedProjection;
+  const vbd=availability.adjustedVbd;
   const pickGap=Math.max(1,nextPick-pickNum);
   const goneScale=Math.max(6,Math.min(16,pickGap/2.5));
   const pGone=sigmoid((nextPick-adp)/goneScale);
@@ -3145,7 +3144,7 @@ function adpGuardedScore(p,ownList,pickNum,nextPick,counts,needs,plan,round){
     if(x.player_id===p.player_id)return;
     const xAdp=Math.min(Number(x.adp||200),250);
     const xAvail=1-sigmoid((nextPick-xAdp)/goneScale);
-    waitSame=Math.max(waitSame,Number(x.vbd||0)*xAvail);
+    waitSame=Math.max(waitSame,injuryAvailabilityAdjustment(x).adjustedVbd*xAvail);
   });
   const starterNeed=needs[pos]||0;
   const flexNeed=plan.flexEligible.includes(pos)?(needs.FLEX||0):0;
@@ -3174,8 +3173,7 @@ function draftBoardScore(p,ownList){
   const coverageNeed=coverage.needs[p.position]||0;
   const capPenalty=posCount>=max?70:0;
   const coverageBonus=Math.min(34,coverageNeed*(p.position==='QB'||p.position==='TE'?18:12));
-  const availabilityPenalty=injuryAvailabilityAdjustment(p).penalty;
-  return guarded+coverageBonus-capPenalty-availabilityPenalty;
+  return guarded+coverageBonus-capPenalty;
 }
 
 function getRecommendations(){
@@ -3232,9 +3230,10 @@ function getRecommendations(){
     const liveCliff=nextSame?Math.max(0,(p.projected_points||0)-(nextSame.projected_points||0)):0;
     const scarcity=scarcityByPos[p.position]||{};
     const scarcityWeight=(Number(scarcity.tier_gap)||0)/maxTierGap;
+    const availability=injuryAvailabilityAdjustment(p);
     const guarded=adpGuardedScore(p,ownList,pickNum,nextPickEstimate,myPosCount,draftNeeds,plan,round);
 
-    let score=(p.vbd||0);
+    let score=availability.adjustedVbd;
     if(kd){
       score=Number(p.stream_score||0)*0.45;
       if(p.stream_rank)reasons.push(`opening ${p.position}${p.stream_rank}`);
@@ -3287,8 +3286,6 @@ function getRecommendations(){
     score-=intrinsicRiskPenalty;
     if(intrinsicRiskScore>=2)reasons.push('player uncertainty');
 
-    const availability=injuryAvailabilityAdjustment(p);
-    score-=availability.penalty;
     if(availability.reason)reasons.push(availability.reason);
 
     if(kd){
@@ -3473,29 +3470,33 @@ function escapeHtml(value){
 
 function injuryStatusInfo(player){
   const outlook=String(player?.season_outlook||'').trim().toLowerCase();
-  const outlookMap={
-    expected_week_1:{code:'W1',tier:'ready',label:'Expected Ready for Week 1'},
-    monitor_week_1:{code:'W1?',tier:'q',label:'Week 1 Status Uncertain'},
-    expected_absence:{code:'MISS',tier:'o',label:'Expected to Miss Regular-Season Time'},
-    season_out:{code:'SZN',tier:'ir',label:'Expected Out for the Season'},
-  };
-  if(outlookMap[outlook])return {...outlookMap[outlook],seasonOutlook:true};
   const raw=String(player?.injury_status||'').trim();
-  if(!raw)return null;
   const key=raw.toLowerCase();
-  if(key==='inj'||key==='injury'||key==='injured')return {code:'INJ',tier:'other',label:'Reported Injury'};
   if(key.startsWith('question'))return {code:'Q',tier:'q',label:'Questionable'};
   if(key.startsWith('doubt'))return {code:'D',tier:'d',label:'Doubtful'};
   if(key==='out')return {code:'O',tier:'o',label:'Out'};
   if(key==='ir'||key.includes('injured reserve'))return {code:'IR',tier:'ir',label:'Injured Reserve'};
   if(key==='res'||key.startsWith('reserve'))return {code:'RES',tier:'res',label:'Reserve List'};
-  if(key==='pup')return {code:'PUP',tier:'pup',label:'Physically Unable to Perform'};
-  if(key==='nfi')return {code:'NFI',tier:'pup',label:'Non-Football Injury'};
+  if(key==='pup'||key.includes('physically unable'))return {code:'PUP',tier:'pup',label:'Physically Unable to Perform'};
+  if(key==='nfi'||key.includes('non-football injury'))return {code:'NFI',tier:'nfi',label:'Non-Football Injury'};
   if(key.includes('practice squad injured'))return {code:'IR',tier:'ir',label:'Practice Squad Injured'};
-  if(key==='sus'||key.startsWith('susp'))return {code:'SUS',tier:'sus',label:'Suspended'};
+  if(key==='sus'||key.includes('susp')){
+    const games=Math.max(0,Number(player?.suspension_games??player?.expected_games_missed??0));
+    const suffix=games>0?` · ${games.toFixed(Number.isInteger(games)?0:1)}G`:'';
+    return {code:`SUSP${suffix}`,tier:'sus',label:'Suspended'};
+  }
   if(key==='dnr')return {code:'DNR',tier:'other',label:'Did Not Report'};
   if(key==='na')return {code:'N/A',tier:'other',label:'Not Active'};
   if(key.startsWith('prob'))return {code:'P',tier:'q',label:'Probable'};
+  const outlookMap={
+    expected_week_1:{code:'Q',tier:'q',label:'Questionable — Expected to Play Week 1'},
+    monitor_week_1:{code:'Q',tier:'q',label:'Questionable for Week 1'},
+    expected_absence:{code:'O',tier:'o',label:'Expected to Miss Time'},
+    season_out:{code:'IR',tier:'ir',label:'Expected Out for the Season'},
+  };
+  if(outlookMap[outlook])return {...outlookMap[outlook],seasonOutlook:true};
+  if(key==='inj'||key==='injury'||key==='injured')return {code:'Q',tier:'q',label:'Injury Status to Monitor'};
+  if(!raw)return null;
   return {code:raw.slice(0,5).toUpperCase(),tier:'other',label:raw};
 }
 
@@ -3513,42 +3514,45 @@ function injuryUpdatedInfo(value){
   };
 }
 
+function availabilityDisplayNote(player){
+  return String(player?.injury_notes||'')
+    .replace(/,\s*[^,]{1,120}\breports?\.?$/i,'')
+    .replace(/\s+(?:per|according to)\s+[^.]{1,140}\.?$/i,'')
+    .trim();
+}
+
 function injuryBadgeHtml(player){
   const info=injuryStatusInfo(player);
   if(!info)return '';
+  const impact=injuryAvailabilityAdjustment(player);
   const meta=[];
   const practice=player.practice_description||player.practice_participation;
   if(practice)meta.push(`<span><strong>Practice</strong> · ${escapeHtmlAttr(practice)}</span>`);
   if(player.injury_start_date)meta.push(`<span><strong>Since</strong> · ${escapeHtmlAttr(player.injury_start_date)}</span>`);
   if(player.roster_status&&String(player.roster_status).toLowerCase()!=='active')meta.push(`<span><strong>Roster</strong> · ${escapeHtmlAttr(player.roster_status)}</span>`);
-  if(info.seasonOutlook){
-    const missed=Math.max(0,Math.min(17,Number(player.expected_games_missed||0)));
-    const missedLabel=missed===0?'none currently expected':`${missed.toFixed(Number.isInteger(missed)?0:1)} expected`;
-    meta.push(`<span><strong>Games missed</strong> · ${missedLabel}</span>`);
-    if(player.expected_return_date)meta.push(`<span><strong>Estimated return</strong> · ${escapeHtmlAttr(player.expected_return_date)}</span>`);
-    if(player.outlook_confidence)meta.push(`<span><strong>Outlook</strong> · ${escapeHtmlAttr(player.outlook_confidence)}</span>`);
-    const impact=injuryAvailabilityAdjustment(player);
-    if(Number(player.projected_points||0)>0){
-      meta.push(`<span><strong>Draft projection</strong> · ${impact.adjustedProjection.toFixed(1)} availability-adjusted vs ${Number(player.projected_points).toFixed(1)} healthy-model pts</span>`);
-    }
-    meta.push(`<span><strong>Target Intel</strong> · ${impact.penalty?`−${impact.penalty.toFixed(1)} score`: 'no current deduction'}</span>`);
+  const missed=impact.expectedGamesMissed;
+  const missedLabel=missed<0.05?'none currently expected':`${missed.toFixed(Number.isInteger(missed)?0:1)} expected`;
+  meta.push(`<span><strong>Expected games missed</strong> · ${missedLabel}</span>`);
+  meta.push(`<span><strong>Next-game availability</strong> · ${Math.round((impact.weeklyAvailability[0]??1)*100)}%</span>`);
+  if(player.expected_return_date)meta.push(`<span><strong>Eligible / target return</strong> · ${escapeHtmlAttr(player.expected_return_date)}</span>`);
+  if(Number(player.projected_points||0)>0){
+    meta.push(`<span><strong>Expected roster contribution</strong> · ${impact.adjustedProjection.toFixed(1)} pts, including expected fill-in production</span>`);
+    if(impact.valueLost>0.05)meta.push(`<span><strong>Availability cost</strong> · ${impact.valueLost.toFixed(1)} pts vs. healthy value</span>`);
   }
   const updated=injuryUpdatedInfo(player.injury_source_updated_at);
   const stale=updated.stale?'<span class="injury-stale"> · older source update</span>':'';
   const label=escapeHtmlAttr(info.label);
-  const sourceUrl=escapeHtmlAttr(player.injury_source_url||'https://github.com/nflverse/nflverse-data');
-  const sourceLabel=escapeHtmlAttr(player.injury_source_label||'nflverse');
-  const sourceLicense=player.injury_source_url?'':' · CC BY 4.0';
-  const kicker=info.seasonOutlook?'Season availability':'Player status';
+  const kicker='Player availability';
+  const displayNote=availabilityDisplayNote(player);
   return `<details class="injury-details injury-${info.tier}">
     <summary aria-label="${label}. Hover or press Enter for player status details"><span class="injury-badge-dot" aria-hidden="true"></span><span>${escapeHtmlAttr(info.code)}</span><span class="injury-badge-caret" aria-hidden="true"></span></summary>
     <div class="injury-popover" role="tooltip">
       <div class="injury-popover-head"><div><div class="injury-popover-kicker">${kicker}</div><div class="injury-popover-title">${label}</div></div><span class="injury-popover-code">${escapeHtmlAttr(info.code)}</span></div>
       <div class="injury-popover-body">
         ${player.injury_body_part?`<span class="injury-body-part">${escapeHtmlAttr(player.injury_body_part)}</span>`:''}
-        ${player.injury_notes?`<div class="injury-popover-note">${escapeHtmlAttr(player.injury_notes)}</div>`:'<div class="injury-popover-note">No additional availability note is currently reported.</div>'}
+        ${displayNote?`<div class="injury-popover-note">${escapeHtmlAttr(displayNote)}</div>`:'<div class="injury-popover-note">No additional availability note is currently reported.</div>'}
         ${meta.length?`<div class="injury-popover-meta">${meta.join('')}</div>`:''}
-        <div class="injury-source"><a href="${sourceUrl}" target="_blank" rel="noopener">View ${sourceLabel}</a> · updated ${escapeHtmlAttr(updated.label)}${sourceLicense}${stale}</div>
+        <div class="injury-update">Updated ${escapeHtmlAttr(updated.label)}${stale}</div>
       </div>
     </div>
   </details>`;
@@ -3620,43 +3624,87 @@ document.addEventListener('toggle',event=>{
 
 function injuryRowClass(player){
   const tier=injuryStatusInfo(player)?.tier;
-  return ['o','ir','res','pup','sus'].includes(tier)?'injury-row-severe':'';
+  return ['o','ir','res','pup','nfi','sus'].includes(tier)?'injury-row-severe':'';
+}
+
+function frontLoadedAvailability(expectedMissed,totalGames=17){
+  const missed=Math.max(0,Math.min(totalGames,Number(expectedMissed)||0));
+  const weeks=Array.from({length:totalGames},()=>1);
+  const whole=Math.floor(missed);
+  for(let week=0;week<whole&&week<totalGames;week++)weeks[week]=0;
+  if(whole<totalGames&&missed>whole)weeks[whole]=1-(missed-whole);
+  return weeks;
+}
+
+function playerWeeklyAvailability(player){
+  const info=injuryStatusInfo(player);
+  if(!info)return Array.from({length:17},()=>1);
+  const outlook=String(player?.season_outlook||'').toLowerCase();
+  const explicit=Number(player?.expected_games_missed);
+  let expectedMissed=Number.isFinite(explicit)?Math.max(0,Math.min(17,explicit)):null;
+  if(outlook==='season_out')expectedMissed=17;
+  else if(outlook==='expected_week_1')expectedMissed=Math.max(expectedMissed||0,0.05);
+  else if(outlook==='monitor_week_1')expectedMissed=Math.max(expectedMissed||0,0.45);
+  else if(outlook==='expected_absence')expectedMissed=Math.max(expectedMissed||0,1);
+  const defaultMissed={ready:0.05,q:0.45,d:0.8,o:1,ir:4,res:4,pup:4,nfi:4,sus:1,other:0.2};
+  if(info.tier==='sus'){
+    const suspensionGames=Number(player?.suspension_games);
+    if(Number.isFinite(suspensionGames)&&suspensionGames>=0)expectedMissed=suspensionGames;
+  }
+  if(expectedMissed===null||(
+    expectedMissed===0&&['ir','res','pup','nfi','sus'].includes(info.tier)
+  ))expectedMissed=defaultMissed[info.tier]??0.2;
+  return frontLoadedAvailability(expectedMissed);
 }
 
 function injuryAvailabilityAdjustment(player){
   const info=injuryStatusInfo(player);
   const projection=Math.max(0,Number(player?.projected_points||0));
-  if(!info)return {penalty:0,reason:'',adjustedProjection:projection};
-  const preseason=dataMetadata?.injuries?.reporting_mode==='preseason_availability';
-  const officialReserve={ir:220,res:220,pup:140,sus:160};
-  if(!info.seasonOutlook&&Object.prototype.hasOwnProperty.call(officialReserve,info.tier)){
-    return {penalty:officialReserve[info.tier],reason:'official reserve status',adjustedProjection:0};
-  }
-  if(preseason&&info.seasonOutlook){
-    const outlook=String(player.season_outlook||'');
-    const missed=Math.max(0,Math.min(17,Number(player.expected_games_missed||0)));
-    const adjustedProjection=projection*(1-missed/17);
-    if(outlook==='season_out'){
-      return {penalty:500,reason:'expected out for season',adjustedProjection:0};
-    }
-    const uncertainty=outlook==='monitor_week_1'?4:outlook==='expected_absence'?6:0;
-    // Target Intel weights projection at 0.10 and VBD at 0.34. Applying
-    // their combined 0.44 weight to expected lost fantasy points keeps the
-    // availability cost on the same score scale without changing the model.
-    const penalty=Math.round(((projection-adjustedProjection)*0.44+uncertainty)*10)/10;
-    const reason=outlook==='expected_absence'
-      ?`expected ${missed.toFixed(Number.isInteger(missed)?0:1)} games missed`
-      :outlook==='monitor_week_1'
-      ?'Week 1 health uncertainty'
-      :'';
-    return {penalty,reason,adjustedProjection};
-  }
-  // Preseason injury notes are context only. Once official weekly reports are
-  // available, game-status designations receive explicit availability costs.
-  if(preseason)return {penalty:0,reason:'',adjustedProjection:projection};
-  const weeklyStatus={o:220,d:90,q:24};
-  const penalty=weeklyStatus[info.tier]||0;
-  return {penalty,reason:penalty?'weekly injury status':'',adjustedProjection:projection};
+  const baseVbd=Number(player?.vbd||0);
+  if(!info)return {
+    reason:'',adjustedProjection:projection,adjustedVbd:baseVbd,valueLost:0,
+    expectedGamesMissed:0,weeklyAvailability:Array.from({length:17},()=>1),
+    replacementPoints:0,uncertaintyCost:0,stashCost:0
+  };
+  const weeklyAvailability=playerWeeklyAvailability(player);
+  const expectedGamesAvailable=weeklyAvailability.reduce((sum,p)=>sum+p,0);
+  const expectedGamesMissed=Math.max(0,17-expectedGamesAvailable);
+  const replacementSeason=Number(
+    scarcityData.find(row=>row.position===player.position)?.replacement_pts
+    || projection*0.45
+  );
+  const plan=typeof getRosterPlan==='function'?getRosterPlan():{};
+  const teams=Math.max(8,Number(plan?.numTeams||12));
+  const bench=Math.max(1,Number(plan?.bench||rosterConfig?.bench_size||6));
+  const replacementCapture=Math.max(0.45,Math.min(0.80,0.78-(teams-10)*0.025-(bench-6)*0.02));
+  const activePlayerPoints=projection*(expectedGamesAvailable/17);
+  const replacementPoints=replacementSeason*(expectedGamesMissed/17)*replacementCapture;
+  const adjustedProjection=activePlayerPoints+replacementPoints;
+  const uncertainWeeks=weeklyAvailability.reduce((sum,p)=>sum+p*(1-p),0);
+  const weeklyAboveReplacement=Math.max(0,(projection-replacementSeason)/17);
+  const uncertaintyCost=Math.sqrt(uncertainWeeks)*weeklyAboveReplacement*0.35;
+  const stashRate=Math.max(0.07,Math.min(0.18,0.12*Math.sqrt(6/bench)));
+  const stashCost=expectedGamesMissed*(replacementSeason/17)*stashRate;
+  const valueLost=Math.max(0,projection-adjustedProjection)+uncertaintyCost+stashCost;
+  const adjustedVbd=baseVbd-valueLost;
+  const missedLabel=expectedGamesMissed.toFixed(Number.isInteger(expectedGamesMissed)?0:1);
+  const reason=info.tier==='sus'
+    ?`${missedLabel}-game suspension priced in`
+    :expectedGamesMissed>=0.1
+    ?`${missedLabel} expected games missed`
+    :'availability monitored';
+  return {
+    reason,adjustedProjection,adjustedVbd,valueLost,expectedGamesMissed,
+    weeklyAvailability,replacementPoints,uncertaintyCost,stashCost
+  };
+}
+
+function availabilityAdjustedProjection(player){
+  return injuryAvailabilityAdjustment(player).adjustedProjection;
+}
+
+function availabilityAdjustedVbd(player){
+  return injuryAvailabilityAdjustment(player).adjustedVbd;
 }
 
 function getBoardOrder(availablePlayers){
@@ -3739,13 +3787,15 @@ function renderPlayerPool(){
     const rankLabel=`#${boardRankById.get(p.player_id)||i+1}`;
     const modelRank=p.model_rank?`M#${p.model_rank}`:'M—';
     const posRank=p.model_pos_rank?`${p.position}${p.model_pos_rank}`:p.position;
-    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell col-vbd" style="${paid?'':'lockStyle()'}">${paid?(p.vbd||0).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell col-vbd" style="color:var(--smoke);">—</td>':'';
+    const vbdCell=vbdMode&&!kd?`<td class="vbd-cell col-vbd" style="${paid?'':'lockStyle()'}">${paid?availabilityAdjustedVbd(p).toFixed(1):'🔒'}</td>`:vbdMode?'<td class="vbd-cell col-vbd" style="color:var(--smoke);">—</td>':'';
     let projCell;
     if(kd){
       const proj=p.projected_points>0?p.projected_points.toFixed(0):'—';
       projCell=`<td class="pts-cell col-proj" style="font-size:10px;" title="FantasyPros consensus projection">${proj}</td>`;
     }else{
-      projCell=`<td class="pts-cell col-proj" style="${paid?'':'lockStyle()'}">${paid?(p.projected_points||0).toFixed(1):'🔒'}</td>`;
+      const impact=injuryAvailabilityAdjustment(p);
+      const title=impact.valueLost>0.05?`Availability-adjusted roster contribution; healthy projection ${Number(p.projected_points||0).toFixed(1)}`:'Full-season projection';
+      projCell=`<td class="pts-cell col-proj" style="${paid?'':'lockStyle()'}" title="${title}">${paid?impact.adjustedProjection.toFixed(1):'🔒'}</td>`;
     }
     const ciLow=kd&&p.ci_low!=null?p.ci_low.toFixed(0):(paid&&p.ci_low!=null?p.ci_low.toFixed(0):'—');
     const ciHigh=kd&&p.ci_high!=null?p.ci_high.toFixed(0):(paid&&p.ci_high!=null?p.ci_high.toFixed(0):'—');
@@ -3859,14 +3909,14 @@ function renderMyTeam(){
       const overflowStyle=slot.key==='overflow'?' style="color:var(--alert);" title="This pick does not fit the current roster settings. Undo it or add a compatible slot."':'';
       h+=`<div class="roster-slot filled-${posCls}">
         <div><div class="slot-label"${overflowStyle}>${label}</div><div class="slot-player">${posTag(p.position)} ${p.player_name||p.player_id}${injuryBadgeHtml(p)}${byeStr}</div></div>
-        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(canPreviewIntel()?(p.projected_points||0).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
+        <div class="slot-actions"><span class="slot-pts">${(p.position==='K'||p.position==='DEF')?(p.projected_points>0?p.projected_points.toFixed(0):'—'):(canPreviewIntel()?availabilityAdjustedProjection(p).toFixed(1):'🔒')}</span><button class="btn btn-sm btn-kill" onclick="undoDraft('${p.player_id}')" title="Undo">✕</button></div>
       </div>`;
     }else{
       h+=`<div class="roster-slot empty"><div><div class="slot-label">${label}</div><div class="slot-player" style="color:var(--smoke)">—</div></div></div>`;
     }
   });
   c.innerHTML=h;
-  const total=canPreviewIntel()?getMyTeamPlayers().reduce((s,p)=>s+(p.projected_points||0),0):0;
+  const total=canPreviewIntel()?getMyTeamPlayers().reduce((s,p)=>s+availabilityAdjustedProjection(p),0):0;
   document.getElementById('totalPts').textContent=canPreviewIntel()?total.toFixed(1):'🔒';
 }
 
@@ -3934,7 +3984,7 @@ function renderRecommendations(recs){
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${playerHeadingHtml(r)}</div>
-      <div class="intel-pts">${preview?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:(r.projected_points||0).toFixed(1)+' proj · '+(r.vbd||0).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
+      <div class="intel-pts">${preview?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'—'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:availabilityAdjustedProjection(r).toFixed(1)+' proj · '+availabilityAdjustedVbd(r).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
       <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'—'}`:`Model #${r.model_rank||'—'} · ${r.position}${r.model_pos_rank||'—'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'—'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">

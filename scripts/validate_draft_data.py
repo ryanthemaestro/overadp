@@ -85,16 +85,21 @@ def validate(max_age_hours: float) -> list[str]:
 
     injury_rows = [row for row in players if str(row.get("injury_status") or "").strip()]
     injuries_meta = metadata.get("injuries") or {}
-    expected_injury_source = (
+    expected_fallback_roster_source = (
         "https://github.com/nflverse/nflverse-data/releases/download/"
         "weekly_rosters/roster_weekly_2026.csv"
+    )
+    expected_injury_source = (
+        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
     )
     expected_report_source = (
         "https://github.com/nflverse/nflverse-data/releases/download/"
         "injuries/injuries_2026.csv"
     )
     if injuries_meta.get("source_url") != expected_injury_source:
-        errors.append("metadata.json: injury source provenance is missing")
+        errors.append("metadata.json: primary availability source provenance is missing")
+    if injuries_meta.get("fallback_roster_source_url") != expected_fallback_roster_source:
+        errors.append("metadata.json: fallback roster source provenance is missing")
     if injuries_meta.get("injury_report_source_url") != expected_report_source:
         errors.append("metadata.json: weekly injury-report provenance is missing")
     if injuries_meta.get("license") != "CC BY 4.0" or injuries_meta.get("attribution") != "nflverse":
@@ -112,8 +117,13 @@ def validate(max_age_hours: float) -> list[str]:
     report_week = injuries_meta.get("latest_injury_report_week")
     if not isinstance(report_available, bool) or report_available != (report_week is not None):
         errors.append("metadata.json: injury report availability/week is inconsistent")
+    primary_feed_rows = int(injuries_meta.get("primary_feed_rows", 0))
     expected_reporting_mode = (
-        "official_game_status" if report_available else "preseason_availability"
+        "live_availability"
+        if primary_feed_rows > 0
+        else "official_game_status"
+        if report_available
+        else "preseason_availability"
     )
     if injuries_meta.get("reporting_mode") != expected_reporting_mode:
         errors.append("metadata.json: injury reporting mode is inconsistent")
@@ -173,6 +183,14 @@ def validate(max_age_hours: float) -> list[str]:
                     date.fromisoformat(str(expected_return_date))
                 except ValueError:
                     errors.append(f"players.json: {name} has invalid expected_return_date")
+        suspension_games = row.get("suspension_games")
+        if suspension_games is not None:
+            try:
+                suspension_games = float(suspension_games)
+                if not math.isfinite(suspension_games) or not 0 <= suspension_games <= 17:
+                    raise ValueError
+            except (TypeError, ValueError):
+                errors.append(f"players.json: {name} has invalid suspension_games")
 
     position_counts = Counter(str(row.get("position") or "").upper() for row in players)
     minimums = {"QB": 100, "RB": 175, "WR": 325, "TE": 175}

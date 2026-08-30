@@ -21,7 +21,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -29,9 +29,12 @@ SITE_DATA_DIR = PROJECT_ROOT / "site" / "app" / "data"
 MODEL_DATA_DIR = PROJECT_ROOT / "src" / "api" / "static" / "data"
 FFC_URL = "https://fantasyfootballcalculator.com/api/v1/adp/half-ppr?teams=12&year=2026"
 SLEEPER_URL = "https://api.sleeper.app/v1/players/nfl"
+ESPN_INJURIES_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
 SCHEDULE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 MODEL_BASELINE_GENERATED_AT = "2026-07-20T14:49:24Z"
 PROJECTION_SEASON = 2026
+REGULAR_SEASON_FIRST_SUNDAY = date(PROJECTION_SEASON, 9, 13)
+REGULAR_SEASON_GAMES = 17
 NFLVERSE_WEEKLY_ROSTER_URL = (
     "https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/"
     f"roster_weekly_{PROJECTION_SEASON}.csv"
@@ -93,6 +96,7 @@ INJURY_EXPORT_FIELDS = {
     "roster_status",
     "season_outlook",
     "expected_games_missed",
+    "suspension_games",
     "expected_return_date",
     "outlook_confidence",
 }
@@ -364,12 +368,156 @@ def apply_preseason_injury_note(
     return "INJ"
 
 
+def expected_games_missed_from_return_date(value: Any) -> float | None:
+    """Translate a reported return date into regular-season games unavailable.
+
+    ESPN return dates usually identify the Sunday a player is expected to be
+    eligible. Counting Sundays strictly before that date preserves a Week 1
+    return as zero missed games and a Week 5 return as four missed games.
+    """
+    text = clean_feed_text(value, 10)
+    if not text:
+        return None
+    try:
+        return_date = date.fromisoformat(text)
+    except ValueError:
+        return None
+    days_after_week_one = (return_date - REGULAR_SEASON_FIRST_SUNDAY).days
+    if days_after_week_one <= 0:
+        return 0.0
+    return float(min(REGULAR_SEASON_GAMES, math.ceil(days_after_week_one / 7)))
+
+
+def flatten_espn_injuries(payload: Any) -> list[dict[str, Any]]:
+    """Normalize ESPN's team-grouped current availability response."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("injuries"), list):
+        return []
+    candidates: dict[tuple[str, str], dict[str, Any]] = {}
+    severity = {
+        "suspension": 8,
+        "injured reserve": 7,
+        "physically unable to perform": 7,
+        "out": 6,
+        "doubtful": 5,
+        "questionable": 4,
+        "probable": 2,
+    }
+    for team_group in payload["injuries"]:
+        if not isinstance(team_group, dict):
+            continue
+        for item in team_group.get("injuries") or []:
+            if not isinstance(item, dict):
+                continue
+            athlete = item.get("athlete") or {}
+            position = normalize_position((athlete.get("position") or {}).get("abbreviation"))
+            if position not in SKILL_POSITIONS | {"K"}:
+                continue
+            full_name = clean_feed_text(
+                athlete.get("displayName") or athlete.get("fullName"), 96
+            )
+            if not full_name:
+                continue
+            type_description = clean_feed_text(
+                (item.get("type") or {}).get("description"), 48
+            )
+            status = clean_feed_text(item.get("status") or type_description, 32)
+            if not status:
+                continue
+            if status.lower() == "active" and str(type_description or "").lower() == "active":
+                continue
+            details = item.get("details") or {}
+            return_date = clean_feed_text(details.get("returnDate"), 10)
+            expected_games_missed = expected_games_missed_from_return_date(return_date)
+            links = athlete.get("links") or []
+            source_url = ""
+            for link in links:
+                if not isinstance(link, dict):
+                    continue
+                rel = set(link.get("rel") or [])
+                if "news" in rel or "overview" in rel:
+                    source_url = clean_feed_text(link.get("href")) or ""
+                    if "news" in rel:
+                        break
+            team = normalize_team(
+                (athlete.get("team") or {}).get("abbreviation")
+                or team_group.get("abbreviation")
+            )
+            row = {
+                "espn_id": normalize_provider_id(athlete.get("id")),
+                "full_name": full_name,
+                "position": position,
+                "team": team,
+                "injury_status": status,
+                "injury_body_part": clean_feed_text(details.get("type"), 96),
+                "injury_notes": clean_feed_text(
+                    item.get("shortComment") or item.get("longComment"), 240
+                ),
+                "expected_return_date": return_date,
+                "expected_games_missed": expected_games_missed,
+                "source_updated_at": clean_feed_text(item.get("date"), 32),
+                "source_url": source_url,
+            }
+            if status.lower().startswith("susp") and expected_games_missed is not None:
+                row["suspension_games"] = expected_games_missed
+            key = player_key(full_name, position)
+            prior = candidates.get(key)
+            prior_rank = severity.get(str((prior or {}).get("injury_status") or "").lower(), 1)
+            row_rank = severity.get(status.lower(), 1)
+            if not prior or (row_rank, str(row.get("source_updated_at") or "")) > (
+                prior_rank,
+                str(prior.get("source_updated_at") or ""),
+            ):
+                candidates[key] = row
+    return list(candidates.values())
+
+
+def apply_espn_injury_fields(
+    player: dict[str, Any],
+    injury: dict[str, Any] | None,
+    refreshed_at: str,
+) -> str | None:
+    """Overlay current injury and suspension details from ESPN's public feed."""
+    if not injury:
+        return None
+    status = clean_feed_text(injury.get("injury_status"), 32)
+    if not status or status.lower() == "active":
+        return None
+    player["injury_status"] = status
+    for field in ("injury_body_part", "injury_notes", "expected_return_date"):
+        value = clean_feed_text(injury.get(field), 240 if field != "expected_return_date" else 10)
+        if value:
+            player[field] = value
+    expected_games_missed = injury.get("expected_games_missed")
+    if expected_games_missed is not None:
+        try:
+            missed = max(0.0, min(float(REGULAR_SEASON_GAMES), float(expected_games_missed)))
+        except (TypeError, ValueError):
+            missed = None
+        if missed is not None:
+            player["expected_games_missed"] = missed
+    if injury.get("suspension_games") is not None:
+        player["suspension_games"] = max(
+            0.0,
+            min(float(REGULAR_SEASON_GAMES), float(injury["suspension_games"])),
+        )
+    player["outlook_confidence"] = "reported"
+    player["injury_source_updated_at"] = (
+        clean_feed_text(injury.get("source_updated_at"), 32) or refreshed_at
+    )
+    source_url = clean_feed_text(injury.get("source_url"))
+    if source_url:
+        player["injury_source_url"] = source_url
+    player["injury_source_label"] = "Current player availability report"
+    return status
+
+
 def apply_injury_overlay(
     players: list[dict[str, Any]],
     roster_rows: list[dict[str, Any]],
     injury_report_rows: list[dict[str, Any]],
     source_updated_at: str,
     preseason_injury_rows: list[dict[str, Any]] | None = None,
+    espn_injury_payload: Any = None,
 ) -> dict[str, Any]:
     current_rosters, roster_week = latest_nflverse_week(roster_rows)
     current_injuries, injury_week = latest_nflverse_week(injury_report_rows)
@@ -386,7 +534,10 @@ def apply_injury_overlay(
     roster_indexes = nflverse_player_indexes(current_rosters)
     injury_indexes = nflverse_player_indexes(current_injuries)
     preseason_indexes = nflverse_player_indexes(preseason_injury_rows or [])
+    espn_rows = flatten_espn_injuries(espn_injury_payload)
+    espn_indexes = nflverse_player_indexes(espn_rows)
     matches = 0
+    espn_matches = 0
     preseason_notes_applied = 0
     status_counts: Counter[str] = Counter()
     for player in players:
@@ -402,6 +553,16 @@ def apply_injury_overlay(
             roster,
             source_updated_at,
         )
+        espn_injury = find_nflverse_player(player, espn_indexes)
+        if espn_injury:
+            espn_status = apply_espn_injury_fields(
+                player,
+                espn_injury,
+                source_updated_at,
+            )
+            if espn_status:
+                injury_status = espn_status
+                espn_matches += 1
         if not injury_status and not current_injuries:
             preseason_note = find_nflverse_player(player, preseason_indexes)
             injury_status = apply_preseason_injury_note(
@@ -424,6 +585,8 @@ def apply_injury_overlay(
         "latest_injury_report_week": injury_week,
         "injury_report_rows": len(current_injuries),
         "preseason_notes_applied": preseason_notes_applied,
+        "espn_rows": len(espn_rows),
+        "espn_matches": espn_matches,
     }
 
 
@@ -431,8 +594,10 @@ def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
     status_counts: Counter[str] = overlay["status_counts"]
     return {
         "fetched_at": now.isoformat().replace("+00:00", "Z"),
-        "source": "nflverse GitHub data releases",
-        "source_url": NFLVERSE_WEEKLY_ROSTER_URL,
+        "source": "current multi-source player availability",
+        "source_url": ESPN_INJURIES_URL,
+        "espn_source_url": ESPN_INJURIES_URL,
+        "fallback_roster_source_url": NFLVERSE_WEEKLY_ROSTER_URL,
         "injury_report_source_url": NFLVERSE_INJURY_URL,
         "injury_release_url": NFLVERSE_INJURY_RELEASE_URL,
         "license": "CC BY 4.0",
@@ -440,6 +605,8 @@ def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
         "attribution": "nflverse",
         "refresh_cadence": "daily",
         "matched_skill_players": overlay["matched_skill_players"],
+        "primary_feed_rows": overlay["espn_rows"],
+        "primary_feed_matches": overlay["espn_matches"],
         "skill_players_flagged": sum(status_counts.values()),
         "status_counts": dict(sorted(status_counts.items())),
         "latest_roster_week": overlay["latest_roster_week"],
@@ -451,13 +618,15 @@ def injury_metadata(now: datetime, overlay: dict[str, Any]) -> dict[str, Any]:
             "reviewed fantasy-relevant reports; no badge is not a health guarantee"
         ),
         "reporting_mode": (
-            "official_game_status"
+            "live_availability"
+            if overlay["espn_rows"] > 0
+            else "official_game_status"
             if overlay["injury_report_rows"] > 0
             else "preseason_availability"
         ),
         "draft_adjustment_policy": (
-            "reviewed preseason return outlooks adjust recommendations from "
-            "expected games missed; official reserve-list statuses remain hard penalties"
+            "weekly availability probability, replacement production, bench-slot "
+            "opportunity cost, and return uncertainty adjust draft value"
         ),
     }
 
@@ -467,6 +636,7 @@ def refresh_injuries_only(
     injury_report_rows: list[dict[str, Any]],
     now: datetime,
     preseason_injury_rows: list[dict[str, Any]] | None = None,
+    espn_injury_payload: Any = None,
 ) -> dict[str, Any]:
     """Update volatile injury fields without weakening the full release gates."""
     players = load_json(SITE_DATA_DIR / "players.json")
@@ -483,6 +653,7 @@ def refresh_injuries_only(
         injury_report_rows,
         fetched_at,
         preseason_injury_rows,
+        espn_injury_payload,
     )
     status_counts: Counter[str] = overlay["status_counts"]
     metadata["injuries"] = injury_metadata(now, overlay)
@@ -496,11 +667,19 @@ def refresh_injuries_only(
 
 
 def fetch_json(url: str) -> Any:
+    is_espn = "espn.com" in url
     request = urllib.request.Request(
         url,
         headers={
             "Accept": "application/json",
-            "User-Agent": "OverADP-DraftReadiness/1.0 (+https://overadp.com)",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+                if is_espn
+                else "OverADP-DraftReadiness/1.0 (+https://overadp.com)"
+            ),
+            **({"Referer": "https://www.espn.com/nfl/injuries"} if is_espn else {}),
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -531,6 +710,28 @@ def fetch_optional_csv(url: str) -> list[dict[str, str]]:
         if exc.code == 404:
             return []
         raise
+
+
+def fetch_optional_json(url: str) -> Any:
+    """Allow the live availability feed to fail over to cached public sources."""
+    if "espn.com" in url:
+        try:
+            import requests
+        except ImportError:
+            requests = None
+        if requests is not None:
+            try:
+                response = requests.get(url, timeout=30)
+                response.raise_for_status()
+                return response.json()
+            except requests.RequestException as exc:
+                print(f"Warning: optional JSON feed unavailable ({url}): {exc}")
+                return {}
+    try:
+        return fetch_json(url)
+    except (HTTPError, URLError, TimeoutError) as exc:
+        print(f"Warning: optional JSON feed unavailable ({url}): {exc}")
+        return {}
 
 
 def load_json(path: Path) -> Any:
@@ -1151,6 +1352,7 @@ def refresh(
     injury_report_rows: list[dict[str, Any]],
     now: datetime,
     preseason_injury_rows: list[dict[str, Any]] | None = None,
+    espn_injury_payload: Any = None,
 ) -> dict[str, Any]:
     players = load_json(SITE_DATA_DIR / "players.json")
     k_def = load_json(SITE_DATA_DIR / "k_def.json")
@@ -1180,6 +1382,7 @@ def refresh(
         injury_report_rows,
         generated_at,
         preseason_injury_rows,
+        espn_injury_payload,
     )
     injury_status_counts: Counter[str] = injury_overlay["status_counts"]
     sleeper_matches = 0
@@ -1461,6 +1664,11 @@ def main() -> None:
         help="Use reviewed preseason injury notes from a local JSON file",
     )
     parser.add_argument(
+        "--espn-injury-file",
+        type=Path,
+        help="Use a saved ESPN NFL availability response instead of the network",
+    )
+    parser.add_argument(
         "--injury-only",
         action="store_true",
         help="Refresh only the cached nflverse availability overlay and its metadata",
@@ -1479,12 +1687,18 @@ def main() -> None:
         else fetch_optional_csv(NFLVERSE_INJURY_URL)
     )
     preseason_injury_rows = load_preseason_injury_file(args.preseason_injury_file)
+    espn_injury_payload = (
+        load_json(args.espn_injury_file)
+        if args.espn_injury_file
+        else fetch_optional_json(ESPN_INJURIES_URL)
+    )
     if args.injury_only:
         metadata = refresh_injuries_only(
             injury_roster_rows,
             injury_report_rows,
             now,
             preseason_injury_rows,
+            espn_injury_payload,
         )
         injuries = metadata["injuries"]
         print(
@@ -1504,6 +1718,7 @@ def main() -> None:
         injury_report_rows,
         now,
         preseason_injury_rows,
+        espn_injury_payload,
     )
     counts = metadata["counts"]
     quality = metadata["quality"]

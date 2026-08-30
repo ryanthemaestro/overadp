@@ -3,9 +3,12 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from scripts.refresh_market_data import (
+    apply_espn_injury_fields,
     apply_nflverse_injury_fields,
     apply_preseason_injury_note,
+    expected_games_missed_from_return_date,
     fetch_optional_csv,
+    flatten_espn_injuries,
     load_preseason_injury_file,
     PRESEASON_INJURY_FILE,
 )
@@ -46,6 +49,49 @@ class InjuryOverlayTests(unittest.TestCase):
             "Limited Participation in Practice",
         )
         self.assertEqual(player["injury_source_updated_at"], "2026-09-10T12:00:00Z")
+
+    def test_espn_suspension_is_normalized_with_games_and_return(self):
+        payload = {
+            "injuries": [{
+                "injuries": [{
+                    "status": "Suspension",
+                    "date": "2026-08-29T12:00:00Z",
+                    "shortComment": "Unavailable for the first four games.",
+                    "athlete": {
+                        "id": "1234",
+                        "displayName": "Example Receiver",
+                        "position": {"abbreviation": "WR"},
+                        "team": {"abbreviation": "DAL"},
+                        "links": [{"rel": ["news"], "href": "https://example.com/news"}],
+                    },
+                    "type": {"description": "Suspension"},
+                    "details": {
+                        "type": "Suspension",
+                        "returnDate": "2026-10-11",
+                    },
+                }],
+            }],
+        }
+
+        rows = flatten_espn_injuries(payload)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["expected_games_missed"], 4.0)
+        self.assertEqual(rows[0]["suspension_games"], 4.0)
+
+        player = {"player_name": "Example Receiver", "position": "WR"}
+        status = apply_espn_injury_fields(
+            player,
+            rows[0],
+            "2026-08-29T13:00:00Z",
+        )
+        self.assertEqual(status, "Suspension")
+        self.assertEqual(player["suspension_games"], 4.0)
+        self.assertEqual(player["expected_return_date"], "2026-10-11")
+
+    def test_return_date_counts_games_before_eligible_sunday(self):
+        self.assertEqual(expected_games_missed_from_return_date("2026-09-13"), 0.0)
+        self.assertEqual(expected_games_missed_from_return_date("2026-09-20"), 1.0)
+        self.assertEqual(expected_games_missed_from_return_date("2026-10-11"), 4.0)
 
     def test_documented_injury_reserve_code_is_exposed(self):
         player = {"player_name": "Injured Reserve Player"}

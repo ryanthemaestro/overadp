@@ -16,8 +16,8 @@ uncertainty ranges, and live opportunity-cost Target Intel.
 
 ### Daily draft-market refresh
 
-Production refreshes current half-PPR ADP, teams, bye weeks, nflverse GitHub
-availability data, kicker depth charts, the K/DEF Week 1-3 schedule model, and
+Production refreshes current half-PPR ADP, teams, bye weeks, current player
+availability, kicker depth charts, the K/DEF Week 1-3 schedule model, and
 sleeper/bust labels every morning during draft season:
 
 ```bash
@@ -30,14 +30,14 @@ all freshness, player-count, team/bye, duplicate, and source-join gates pass.
 Daily market updates do not retrain or silently change the projection model,
 and they do not invalidate a saved in-progress draft.
 
-Availability status is adapted from nflverse's daily weekly-roster release and
-official weekly injury reports under CC BY 4.0. Sleeper remains a roster and
-depth-chart input, but is not used as an injury source. During preseason,
-official IR/PUP/NFI/reserve statuses can affect recommendations while neutral
-`INJ` reports carry a reviewed season-opening outlook. Target Intel converts
-expected games missed into lost projected value while leaving players expected
-back for Week 1 undiscounted. The refresh switches automatically to official
-Q/D/O game statuses when the season injury-report file is published.
+Availability status combines a current public NFL injury/suspension feed with
+nflverse's daily roster release and official weekly injury reports under CC BY
+4.0. Sleeper remains a roster and depth-chart input. During preseason, reviewed
+season-opening outlooks fill gaps in the live feeds. Target Intel converts each
+status into weekly availability probability, includes realistic replacement
+production during missed games, and prices return uncertainty plus bench-slot
+opportunity cost. Confirmed suspensions preserve post-return upside rather than
+receiving an arbitrary fixed ranking penalty.
 
 ### Full projection refresh
 
