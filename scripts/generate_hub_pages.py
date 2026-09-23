@@ -885,8 +885,8 @@ def build_methodology(accuracy: dict) -> str:
 <h2>What's next</h2>
 <p>Roster, depth-chart, ADP, and rookie inputs continue to change through training camp. We refresh the board as those sources stabilize and will report interval coverage again only after a future season remains untouched through evaluation.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
-<h2 id="draft-simulation">Draft simulations: what we found</h2>
-<p>An August 2026 paired simulation (2023–2024) found Target Intel teams finished top three more often than ADP-first teams. A September 2026 re-run of the current app on 2023–2025 did not reproduce it: ADP-first drafting finished top three 17 percentage points more often. We therefore do not claim OverADP beats ADP. A new model in testing for 2027 roughly matches ADP alone and, blended 50/50 with ADP, had lower error than ADP in 19 of 21 season-format tests; it is not live yet. <a class="inline" href="/2026/adp-vs-model/#september-rerun">Full results</a>.</p>
+<h2 id="draft-simulation">Draft simulations</h2>
+<p>We also test full drafts against ADP-first drafting. All results, including a re-run that did not reproduce an earlier study, are on the <a class="inline" href="/2026/adp-vs-model/">ADP vs Model page</a>.</p>
 <p>For the decision-system evidence, read the focused <a class="inline" href="/2026/adp-vs-model/">ADP vs model simulation study</a>. For a fast two-player check, use the <a class="inline" href="/2026/who-should-i-draft/">Who Should I Draft comparator</a>.</p>
 """
 
