@@ -179,6 +179,16 @@ export function parseLeagueTeams(raw, leagueKey, season) {
   }
   return [...result.values()].slice(0, 32);
 }
+// Only the opponent's key leaves the scoreboard; scores and projections are not relayed.
+export function parseMatchup(raw, teamKey, week) {
+  for (const value of nodes(raw, 'matchup')) {
+    const m = fields(value);
+    if (number(m.week) !== week) continue;
+    const keys = nodes(value, 'team').map(t => text(fields(t).team_key, 60)).filter(k => TEAM_KEY.test(k));
+    if (keys.length === 2 && keys.includes(teamKey)) return { week, opponentKey: keys.find(k => k !== teamKey) || null };
+  }
+  return null;
+}
 async function yahoo(path, accessToken, fetcher) {
   const response = await fetcher(API + path + '?format=json', {
     headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
@@ -238,10 +248,14 @@ export async function handle(kind, request, { env, fetcher = fetch, now = () => 
         const results = await Promise.allSettled([
           yahoo(`league/${team.leagueKey}/standings`, session.accessToken, fetcher),
           yahoo(`league/${team.leagueKey}/teams/roster;week=${league.currentWeek}/players/stats`, session.accessToken, fetcher),
+          yahoo(`league/${team.leagueKey}/scoreboard;week=${league.currentWeek}`, session.accessToken, fetcher),
         ]);
         // Never swallow an expired session, access denial, or rate limit as an empty roster.
-        for (const r of results) if (r.status === 'rejected' && [401, 403, 429].includes(r.reason?.status)) throw r.reason;
-        if (results.every(r => r.status === 'rejected')) throw new SafeError('YAHOO_UNAVAILABLE', 502);
+        for (const r of results.slice(0, 2)) if (r.status === 'rejected' && [401, 403, 429].includes(r.reason?.status)) throw r.reason;
+        // The scoreboard is optional (e.g. leagues without head-to-head), but an expired session or rate limit still stops here.
+        if (results[2].status === 'rejected' && [401, 429].includes(results[2].reason?.status)) throw results[2].reason;
+        if (results.slice(0, 2).every(r => r.status === 'rejected')) throw new SafeError('YAHOO_UNAVAILABLE', 502);
+        const matchup = results[2].status === 'fulfilled' ? parseMatchup(results[2].value, team.teamKey, league.currentWeek) : null;
         const standings = results[0].status === 'fulfilled' ? parseLeagueTeams(results[0].value, team.leagueKey, league.season) : [];
         const rosters = results[1].status === 'fulfilled' ? parseLeagueTeams(results[1].value, team.leagueKey, league.season) : [];
         for (const roster of rosters) {
@@ -260,6 +274,7 @@ export async function handle(kind, request, { env, fetcher = fetch, now = () => 
         if (allTeams.some(t => !t.rosterAvailable)) warnings.push('Some current lineups could not be loaded. Refresh to retry.');
         if (allTeams.length !== number(league.teams)) warnings.push('Yahoo returned partial team coverage. Do not treat this as a complete league comparison.');
         return reply({ team, league, teams: allTeams, warnings,
+          matchup: matchup && allTeams.some(t => t.teamKey === matchup.opponentKey) ? matchup : null,
           coverage: { returnedTeams: allTeams.length, expectedTeams: number(league.teams), rosterTeams: allTeams.filter(t => t.rosterAvailable).length },
           fetchedAt: new Date(now()).toISOString() });
       }
