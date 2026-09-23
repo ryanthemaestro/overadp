@@ -22,15 +22,15 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverADP — AI Fantasy Football Draft Model Tested Against ADP</title>
-<meta name="description" content="ADP tells you who everyone else is drafting. OverADP's AI recommends who to draft next. In 1,000 historical simulations, OverADP-guided teams finished top three 50.6% of the time versus 25.7% with ADP-first drafting.">
-<meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, opportunity cost draft strategy, VBD draft guide, beat ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
-<meta property="og:title" content="The AI Fantasy Football Draft Model Tested Against ADP">
+<title>OverADP — AI Fantasy Football Draft Assistant</title>
+<meta name="description" content="ADP tells you who everyone else is drafting. OverADP puts position-specific projections, 80% ranges and roster-aware next-pick help beside ADP—and publishes how the model is tested, including the misses.">
+<meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, opportunity cost draft strategy, VBD draft guide, fantasy football ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
+<meta property="og:title" content="The AI Fantasy Football Draft Assistant">
 <meta property="og:description" content="ADP tells you who everyone else is drafting. OverADP's AI reacts to your roster and every live pick to recommend who to draft next. Test one pick free.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://overadp.com">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="The AI Fantasy Football Draft Model Tested Against ADP">
+<meta name="twitter:title" content="The AI Fantasy Football Draft Assistant">
 <meta name="twitter:description" content="ADP follows the crowd. OverADP's AI reacts to your roster and every live pick to recommend who to draft next. Test one pick free.">
 <link rel="canonical" href="https://overadp.com">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -366,14 +366,14 @@ footer a:hover{color:var(--green);}
 <section class="hero">
   <div class="wrap">
     <div class="hero-tag anim"><span class="dot"></span> AUGUST 2026 REFRESH · TARGET INTEL · CURRENT ROSTERS · 824 SKILL-PLAYER PROJECTIONS</div>
-    <h1 class="anim anim-d1">THE AI DRAFT MODEL <span class="green">TESTED AGAINST ADP.</span></h1>
+    <h1 class="anim anim-d1">KNOW WHO TO DRAFT NEXT <span class="green">— AND WHO CAN WAIT.</span></h1>
     <p class="hero-sub anim anim-d2">
-      ADP tells you who everyone else is drafting. <strong>OverADP analyzes player projections, your roster and every live pick—then tells you who to draft next and who can wait.</strong> In 1,000 historical simulations, OverADP-guided teams finished top three 50.6% of the time versus 25.7% with ADP-first drafting.
+      ADP tells you who everyone else is drafting. <strong>OverADP analyzes player projections, your roster and every live pick—then tells you who to draft next and who can wait.</strong> Every projection comes with an 80% range and sits beside current ADP, so you can see where the model and the market disagree.
     </p>
-    <p class="hero-proof-note anim anim-d2">Historical draft-only simulation across 2023–2024; no in-season management. Results do not guarantee future performance.</p>
+    <p class="hero-proof-note anim anim-d2">Projections are estimates, not guarantees. We publish our test results—including a September 2026 re-run that did not reproduce an earlier draft-simulation win. <a href="/2026/adp-vs-model/#september-rerun" style="color:inherit;text-decoration:underline;">Read both results</a>.</p>
     <div class="hero-cta anim anim-d3">
       <a href="/app/" class="btn btn-go">ASK THE AI WHO TO DRAFT NEXT →</a>
-      <a href="#proof" class="btn btn-ghost">SEE THE PROOF</a>
+      <a href="#proof" class="btn btn-ghost">SEE HOW IT'S TESTED</a>
     </div>
 
     <!-- THE KILL STAT -->
@@ -398,7 +398,7 @@ footer a:hover{color:var(--green);}
 <!-- CONCRETE PROOF -->
 <section class="section" id="proof" style="background:var(--bg2);border-top:1px solid rgba(0,255,106,0.06);border-bottom:1px solid rgba(0,255,106,0.06);">
   <div class="wrap">
-    <div class="section-tag">Proof</div>
+    <div class="section-tag">Testing</div>
     <div class="section-title">Tested On Seasons It Hadn't Seen.</div>
     <div class="section-desc">The point model is evaluated chronologically: train on earlier seasons, predict the next season, then aggregate every player in both test folds.</div>
 
@@ -487,7 +487,7 @@ footer a:hover{color:var(--green);}
     </div>
 
     <div style="max-width:700px;margin:0 auto;text-align:center;">
-      <p style="color:var(--fg2);font-size:13px;line-height:1.7;">The table below reports the corrected point-model metrics across every 2024 and 2025 fold row. An exact-cohort ADP-only check is directionally positive, but we withhold an improvement percentage because the 2025 market input is an explicitly labeled preseason-rank proxy rather than a true ADP snapshot.</p>
+      <p style="color:var(--fg2);font-size:13px;line-height:1.7;">The table below reports the corrected point-model metrics across every 2024 and 2025 fold row. On a true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40), so projections are shown next to ADP as a second opinion rather than a replacement for it. A new model in testing for 2027 roughly matches ADP on its own and did better blended with ADP; it is not live yet. <a href="/2026/adp-vs-model/#model-2027" style="color:var(--green);">See all results</a>.</p>
     </div>
   </div>
 </section>

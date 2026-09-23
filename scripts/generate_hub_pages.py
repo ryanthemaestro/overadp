@@ -422,7 +422,7 @@ def build_position_ranking(
 </div>
 
 <h2>How the results were measured</h2>
-<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
+<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. On a true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP, so we show every projection next to ADP as a second opinion—not as a replacement for it.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 """
 
@@ -696,81 +696,80 @@ renderComparison();
 
 
 def build_adp_vs_model() -> str:
-    title = "ADP vs Model: 1,000 Historical Fantasy Draft Tests | OverADP"
-    desc = "In 1,000 paired 2023-2024 historical simulations, OverADP Target Intel produced a 50.6% top-three rate versus 25.7% for ADP-first drafting. See the method and limits."
+    title = "ADP vs Model: Our Draft Tests, Including the Re-run | OverADP"
+    desc = "What OverADP's draft simulations found: an August 2026 study, a September re-run that did not reproduce it, and early results for the 2027 model. Methods and limits."
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     display_date = datetime.now(UTC).strftime("%B %d, %Y")
     schema = f"""<script type="application/ld+json">
 [
-  {{"@context":"https://schema.org","@type":"Article","headline":"ADP vs Model: What 1,000 Historical Fantasy Drafts Found","description":"{desc}","author":{{"@type":"Organization","name":"OverADP Research"}},"publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},"datePublished":"2026-08-17","dateModified":"{today}","mainEntityOfPage":"https://overadp.com/2026/adp-vs-model/"}},
-  {{"@context":"https://schema.org","@type":"Dataset","name":"OverADP 2023-2024 paired fantasy draft simulation summary","description":"Summary outcomes from 1,000 paired 12-team half-PPR draft simulations comparing Target Intel with ADP-first drafting under a frozen Week-1 lineup.","creator":{{"@type":"Organization","name":"OverADP"}},"temporalCoverage":"2023/2024","distribution":{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://overadp.com/2026/adp-vs-model/simulation-summary.csv"}}}},
+  {{"@context":"https://schema.org","@type":"Article","headline":"ADP vs Model: Our Draft Tests, Including the Re-run","description":"{desc}","author":{{"@type":"Organization","name":"OverADP Research"}},"publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},"datePublished":"2026-08-17","dateModified":"{today}","mainEntityOfPage":"https://overadp.com/2026/adp-vs-model/"}},
+  {{"@context":"https://schema.org","@type":"Dataset","name":"OverADP August 2026 paired fantasy draft simulation summary (2023-2024)","description":"Summary outcomes from the original August 2026 study: 1,000 paired 12-team half-PPR draft simulations comparing Target Intel with ADP-first drafting under a frozen Week-1 lineup. A September 2026 re-run did not reproduce this result.","creator":{{"@type":"Organization","name":"OverADP"}},"temporalCoverage":"2023/2024","distribution":{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://overadp.com/2026/adp-vs-model/simulation-summary.csv"}}}},
   {{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-    {{"@type":"Question","name":"Does a fantasy football model beat ADP?","acceptedAnswer":{{"@type":"Answer","text":"OverADP's combined Target Intel decision strategy beat an ADP-first control in a retrospective 2023-2024 paired simulation. The result does not show that blindly following raw model ranks always beats ADP, and it does not guarantee future finishes."}}}},
-    {{"@type":"Question","name":"What did the OverADP simulation find?","acceptedAnswer":{{"@type":"Answer","text":"With Week-1 lineups frozen to isolate draft quality, Target Intel teams finished the regular season in the top three 50.6% of the time versus 25.7% for ADP-first teams across 1,000 paired simulations."}}}},
-    {{"@type":"Question","name":"Does OverADP guarantee a top-three fantasy finish?","acceptedAnswer":{{"@type":"Answer","text":"No. The study is a retrospective exploratory simulation, not a promise. Championship rates did not improve, and real leagues include injuries, waivers, trades, lineup choices and opponents that the simulation only approximates."}}}}
+    {{"@type":"Question","name":"Does OverADP beat ADP?","acceptedAnswer":{{"@type":"Answer","text":"We do not claim it does. An August 2026 simulation favored OverADP, but a September 2026 re-run of the current app on 2023-2025 did not reproduce it, and on true ADP the current point model ranks players less accurately than ADP. OverADP is designed to be used alongside ADP."}}}},
+    {{"@type":"Question","name":"What is the 2027 model?","acceptedAnswer":{{"@type":"Answer","text":"A new public-data projection model in testing. In walk-forward tests it roughly matched ADP on its own, and a 50/50 blend of the model and ADP had lower error than ADP in 19 of 21 season-format tests. It is not live yet and will be re-tested before launch."}}}},
+    {{"@type":"Question","name":"Does OverADP guarantee a top-three fantasy finish?","acceptedAnswer":{{"@type":"Answer","text":"No. These are retrospective simulations, not promises. Real leagues include injuries, waivers, trades, lineup choices and opponents that simulations only approximate."}}}}
   ]}}
 ]
 </script>"""
     body = f"""
 <div class="crumbs"><a href="/">Home</a> / 2026 Research / ADP vs Model</div>
 <div class="section-tag">Original OverADP Research</div>
-<h1>ADP vs Model: What <span class="accent">1,000 Drafts</span> Found</h1>
-<p class="lead">A paired historical simulation tested whether a roster-aware decision system could build stronger starting rosters than drafting from market ADP first.</p>
-<div class="answer-block"><span class="answer-label">Answer</span><p>Across 1,000 paired 12-team simulations using true 2023 and 2024 Fantasy Football Calculator ADP, Target Intel produced a 50.6% top-three regular-season finish rate versus 25.7% for ADP-first drafting when Week-1 lineups were frozen. That is evidence for the combined decision system—not a guarantee or proof that raw model ranks always beat ADP.</p></div>
-<div class="byline"><span>By OverADP Research</span><span>Published August 17, 2026</span><span>Updated {display_date}</span><span>Half-PPR · 12 teams</span></div>
+<h1>ADP vs Model: <span class="accent">What Held Up</span> and What Didn't</h1>
+<p class="lead">We test whether OverADP helps build better fantasy rosters than drafting from ADP. Here is every result we have—including the one that did not reproduce.</p>
+<div class="answer-block"><span class="answer-label">Answer</span><p><strong>We do not claim OverADP beats ADP.</strong> Our August 2026 simulation favored OverADP, but a September 2026 re-run of the current app on 2023–2025 did not reproduce it: ADP-first drafting finished top three more often. A new model in testing for 2027 roughly matches ADP on its own and does better when blended with ADP. Use OverADP alongside ADP, not instead of it.</p></div>
+<div class="byline"><span>By OverADP Research</span><span>Published August 17, 2026</span><span>Updated {display_date}</span><span>Half-PPR</span></div>
 
-<div class="evidence-grid">
-  <div class="evidence-card primary"><div class="evidence-number">50.6%</div><div class="evidence-label">Target Intel top-three regular-season rate with the Week-1 lineup frozen.</div></div>
-  <div class="evidence-card"><div class="evidence-number">25.7%</div><div class="evidence-label">ADP-first top-three regular-season rate under the same league conditions.</div></div>
-  <div class="evidence-card"><div class="evidence-number">+120.9</div><div class="evidence-label">Average frozen-lineup point difference for Target Intel versus ADP first.</div></div>
-</div>
+<h2 id="september-rerun">September 2026 re-run: the current app did not beat ADP</h2>
+<p>Our lab re-ran the draft test with a rebuilt copy of the production model and the live Target Intel policy: 144 paired drafts across the 2023, 2024 and 2025 seasons and several league sizes and flex settings, using true preseason ADP.</p>
+<table class="research-table">
+  <thead><tr><th>Draft strategy (2023–2025)</th><th>Top-three rate vs ADP-first</th><th>95% interval</th></tr></thead>
+  <tbody>
+    <tr><td>Current app policy</td><td>−17 percentage points (11.8% vs 29.2%)</td><td>−25 to −10</td></tr>
+    <tr><td>August 17 study policy, as archived</td><td>−15 percentage points</td><td>−22 to −6</td></tr>
+    <tr><td>Reconstruction of the original study recipe</td><td>+10 percentage points</td><td>+1 to +20</td></tr>
+  </tbody>
+</table>
+<p>We also compared the projections themselves with ADP on the same players. On true 2023–2025 ADP, the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40; average error 63.8 vs about 56 points). That is why every OverADP projection is shown next to ADP.</p>
+<p class="fine-print">The re-run is a provisional reconstruction of the production code, not the exact model fitted on August 29, and it uses synthetic opponents. It is still the most complete test we have, so we report it.</p>
 
-<div class="bar-compare" aria-label="Top-three regular-season rate comparison">
-  <div class="bar-row"><div class="bar-label">Target Intel</div><div class="bar-track"><span class="bar-fill green" style="width:84.3%"></span></div><div class="bar-value">50.6%</div></div>
-  <div class="bar-row"><div class="bar-label">ADP first</div><div class="bar-track"><span class="bar-fill" style="width:42.8%"></span></div><div class="bar-value">25.7%</div></div>
-</div>
+<h2 id="model-2027">Coming for 2027: a new model in testing</h2>
+<p>We built a new projection model from public NFL data, college production and route participation. It is <strong>not live yet</strong>. Each season below was predicted using only earlier seasons.</p>
+<table class="research-table">
+  <thead><tr><th>2023–2025, true-ADP players</th><th>Rank correlation</th><th>Average error (pts)</th></tr></thead>
+  <tbody>
+    <tr><td>Current model</td><td>0.29</td><td>63.8</td></tr>
+    <tr><td>ADP</td><td>0.40</td><td>about 56</td></tr>
+    <tr><td>New model</td><td>0.41</td><td>55.7</td></tr>
+    <tr><td><strong>New model + ADP, 50/50</strong></td><td><strong>0.43</strong></td><td><strong>54.3</strong></td></tr>
+  </tbody>
+</table>
+<p>Across 2019–2025 and three scoring formats, the 50/50 blend had lower error than ADP in 19 of 21 season-format tests and ranked players better in 14 of 21. In a simple best-ball draft simulation (12 teams, 2019–2025), blend-guided teams finished top three 51.7% of the time versus 33.8% for ADP-order drafting, ahead in 5 of 7 seasons. With only seven seasons, that is promising, not proven. We will re-test it in our full draft simulator before it powers the board.</p>
 
-<h2>The result by historical season</h2>
+<h2>The original August 2026 study</h2>
+<p>For the record, the original study found that across 1,000 paired 12-team simulations using true 2023 and 2024 Fantasy Football Calculator ADP, Target Intel produced a 50.6% top-three regular-season rate versus 25.7% for ADP-first drafting with Week-1 lineups frozen. The September re-run above did not reproduce this with the current app.</p>
 <table class="research-table">
   <thead><tr><th>Season</th><th>Strategy</th><th>Simulations</th><th>Avg. rank</th><th>Top-three rate</th><th>Frozen-lineup points</th></tr></thead>
   <tbody>
     <tr><td>2023</td><td>ADP first</td><td>500</td><td>6.63</td><td>26.4%</td><td>1,102.5</td></tr>
-    <tr><td>2023</td><td><strong>Target Intel</strong></td><td>500</td><td><strong>4.26</strong></td><td><strong>48.8%</strong></td><td><strong>1,223.0</strong></td></tr>
+    <tr><td>2023</td><td>Target Intel</td><td>500</td><td>4.26</td><td>48.8%</td><td>1,223.0</td></tr>
     <tr><td>2024</td><td>ADP first</td><td>500</td><td>6.72</td><td>25.0%</td><td>1,129.0</td></tr>
-    <tr><td>2024</td><td><strong>Target Intel</strong></td><td>500</td><td><strong>4.04</strong></td><td><strong>52.4%</strong></td><td><strong>1,250.4</strong></td></tr>
+    <tr><td>2024</td><td>Target Intel</td><td>500</td><td>4.04</td><td>52.4%</td><td>1,250.4</td></tr>
   </tbody>
 </table>
-<p class="fine-print">Pooled headline: 1,000 simulations per strategy across the two true-ADP seasons. Percentages are regular-season results. <a class="inline" href="/2026/adp-vs-model/simulation-summary.csv">Download the summary CSV</a>.</p>
+<p class="fine-print">Original August 2026 study, kept for transparency. <a class="inline" href="/2026/adp-vs-model/simulation-summary.csv">Download the summary CSV</a>.</p>
 
-<h2>What actually beat ADP?</h2>
-<p>Not a raw projection sort. The strongest policy used ADP as a market price and selectively overrode it when position-specific projection value, roster need, positional scarcity and the probability a player would disappear before the next turn aligned.</p>
-<div class="callout"><h3>The practical difference</h3><p><strong>ADP tells you who the room is drafting. OverADP helps decide who your roster should draft now and who can wait.</strong> That decision layer is the part supported by the simulation.</p></div>
-
-<h2>How the paired simulation worked</h2>
-<ol style="padding-left:22px;color:var(--fg2);">
-  <li style="margin:10px 0;">Each strategy entered 500 paired 12-team, 15-round snake drafts in 2023 and another 500 in 2024.</li>
-  <li style="margin:10px 0;">Each pair used the same season, draft slot, random seed, opponent logic, schedule and actual weekly player outcomes.</li>
-  <li style="margin:10px 0;">Opponents drafted from noisy ADP plus roster need and never used OverADP projections.</li>
-  <li style="margin:10px 0;">The primary result froze the Week-1 lineup for Weeks 1-14 to isolate the roster created by the draft.</li>
-  <li style="margin:10px 0;">Injuries, missed games and breakouts entered through real historical weekly fantasy points.</li>
-</ol>
-
-<h2>What the study does not prove</h2>
-<p>This was a retrospective exploratory backtest, not an untouched future-season experiment. Opponents approximate home-league behavior rather than replaying observed draft rooms. The simulation omits trades, FAAB auctions, kickers, defenses and explicit injury designations. Championship rates did not improve, so the evidence supports stronger drafted rosters and regular-season position—not guaranteed titles.</p>
-<p>The 2025 sensitivity season is intentionally excluded from the headline because it uses an ESPN preseason-rank proxy rather than true historical ADP. Read the complete <a class="inline" href="/methodology/#draft-simulation">test design and limitations</a>.</p>
-
-<h2>How to use the result in a 2026 draft</h2>
+<h2>How to use ADP and OverADP together</h2>
 <div class="card-grid">
-  <article class="card"><h4>Keep ADP on the screen</h4><div class="sub">PRICE SIGNAL</div><p class="reason">ADP is useful for predicting the room and estimating which players may reach your next turn. It becomes dangerous only when it is treated as a projection or universal answer.</p></article>
-  <article class="card"><h4>Compare position-adjusted value</h4><div class="sub">NOT RAW POINTS</div><p class="reason">Use VBD and position-specific projections to compare players whose raw scoring scales are different.</p></article>
-  <article class="card"><h4>Draft for this roster</h4><div class="sub">LIVE CONTEXT</div><p class="reason">Starter holes, flex paths, existing volatility and positional cliffs can change the best selection after every pick.</p></article>
+  <article class="card"><h4>Keep ADP on the screen</h4><div class="sub">PRICE SIGNAL</div><p class="reason">ADP is a strong signal of player value and predicts which players may reach your next turn. Our tests say to respect it.</p></article>
+  <article class="card"><h4>Treat disagreements as research</h4><div class="sub">SECOND OPINION</div><p class="reason">When the model and ADP disagree, check the range, depth chart and news before acting. A gap is a question, not an answer.</p></article>
+  <article class="card"><h4>Draft for this roster</h4><div class="sub">LIVE CONTEXT</div><p class="reason">Starter holes, flex paths and positional cliffs can change the best selection after every pick.</p></article>
 </div>
 
 <h2>Frequently asked questions</h2>
 <div class="faq-list">
-  <details><summary>Does a fantasy football model beat ADP?</summary><p>This simulation found that the combined Target Intel strategy beat an ADP-first control across the 2023-2024 true-ADP sample. It did not find that a raw model-only sort universally beats ADP, and it cannot guarantee future performance.</p></details>
-  <details><summary>Why freeze the Week-1 lineup?</summary><p>Freezing the initial lineup separates the roster created at the draft from later start/sit and waiver decisions. That makes the headline result more directly about draft quality.</p></details>
-  <details><summary>Did Target Intel win more championships?</summary><p>No reliable championship improvement appeared in this test. A short playoff is highly variable, and the study is not evidence for guaranteed titles or prize money.</p></details>
+  <details><summary>Does OverADP beat ADP?</summary><p>We do not claim it does. The August 2026 study favored OverADP, but the September re-run of the current app did not reproduce it, and the current point model ranks players less accurately than ADP.</p></details>
+  <details><summary>Why publish a result that went against you?</summary><p>Because you are trusting these numbers in your draft. A test that only reports wins is not a test.</p></details>
+  <details><summary>When will the new model be live?</summary><p>We plan to test it in our full draft simulator and launch it for 2027 drafts only if it holds up. This page will be updated either way.</p></details>
 </div>
 """
     related = [
@@ -871,7 +870,7 @@ def build_methodology(accuracy: dict) -> str:
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
 <h2>The {test_season_label} walk-forward results</h2>
-<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. The exact-cohort market check uses true FFC ADP in 2024 but an explicitly labeled ESPN preseason-rank proxy in 2025, so no ADP improvement percentage is published here.</p>
+<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. On a separate true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40), so projections are presented next to ADP as a second opinion.</p>
 <table class="rank">
   <thead><tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr></thead>
   <tbody>{metric_table_rows}</tbody>
@@ -886,6 +885,8 @@ def build_methodology(accuracy: dict) -> str:
 <h2>What's next</h2>
 <p>Roster, depth-chart, ADP, and rookie inputs continue to change through training camp. We refresh the board as those sources stabilize and will report interval coverage again only after a future season remains untouched through evaluation.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
+<h2 id="draft-simulation">Draft simulations: what we found</h2>
+<p>An August 2026 paired simulation (2023–2024) found Target Intel teams finished top three more often than ADP-first teams. A September 2026 re-run of the current app on 2023–2025 did not reproduce it: ADP-first drafting finished top three 17 percentage points more often. We therefore do not claim OverADP beats ADP. A new model in testing for 2027 roughly matches ADP alone and, blended 50/50 with ADP, had lower error than ADP in 19 of 21 season-format tests; it is not live yet. <a class="inline" href="/2026/adp-vs-model/#september-rerun">Full results</a>.</p>
 <p>For the decision-system evidence, read the focused <a class="inline" href="/2026/adp-vs-model/">ADP vs model simulation study</a>. For a fast two-player check, use the <a class="inline" href="/2026/who-should-i-draft/">Who Should I Draft comparator</a>.</p>
 """
 
