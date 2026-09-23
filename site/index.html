@@ -22,8 +22,8 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverADP — AI Fantasy Football Draft Assistant</title>
-<meta name="description" content="ADP tells you who everyone else is drafting. OverADP puts position-specific projections, 80% ranges and roster-aware next-pick help beside ADP—and publishes how the model is tested, including the misses.">
+<title>OverADP | AI Fantasy Football Draft Assistant</title>
+<meta name="description" content="ADP tells you who everyone else is drafting. OverADP puts position-specific projections, 80% ranges and roster-aware next-pick help beside ADP, and publishes how the model is tested.">
 <meta name="keywords" content="fantasy football draft assistant, fantasy football AI predictions, opportunity cost draft strategy, VBD draft guide, fantasy football ADP, fantasy football sleepers, fantasy draft tool, fantasy football busts">
 <meta property="og:title" content="The AI Fantasy Football Draft Assistant">
 <meta property="og:description" content="ADP tells you who everyone else is drafting. OverADP's AI reacts to your roster and every live pick to recommend who to draft next. Test one pick free.">
@@ -159,14 +159,14 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
 .hero-cta{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:64px;}
 .hero-cta .btn{font-size:15px;padding:14px 32px;}
 
-/* KILL STAT — the conversion moment */
+/* KILL STAT */
 .kill-stat{
-  display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;
+  display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:center;
   max-width:800px;border:1px solid rgba(0,255,106,0.1);border-radius:4px;overflow:hidden;
   background:var(--bg2);
 }
 .ks-col{padding:32px 40px;text-align:center;}
-.ks-col.adp{opacity:0.6;}
+.ks-col.adp{border-left:1px solid rgba(0,255,106,0.1);}
 .ks-vs{
   font-family:var(--mono);font-size:11px;letter-spacing:0;color:var(--fg3);
   padding:16px 8px;text-transform:uppercase;
@@ -194,6 +194,7 @@ nav .wrap{display:flex;align-items:center;justify-content:space-between;height:5
   .kill-stat{grid-template-columns:1fr;max-width:100%;}
   .ks-vs{flex-direction:row;gap:0;letter-spacing:2px;width:auto;min-width:0;padding:8px 20px;}
   .ks-col.model{border-bottom:1px solid rgba(0,255,106,0.1);}
+  .ks-col.adp{border-left:none;}
   .ks-vs{border-left:none;border-right:none;border-top:1px solid rgba(0,255,106,0.1);border-bottom:1px solid rgba(0,255,106,0.1);}
 }
 
@@ -321,7 +322,8 @@ footer a:hover{color:var(--green);}
   .section-title{font-size:clamp(24px,6vw,36px);}
   .section-desc{font-size:15px;margin-bottom:32px;}
   .metrics-table{font-size:11px;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .metrics-table th,.metrics-table td{padding:12px 14px;white-space:nowrap;}
+  .metrics-table th,.metrics-table td{padding:12px 10px;white-space:nowrap;}
+  .metrics-table th:nth-child(3),.metrics-table td:nth-child(3){display:none;}
   .metric-bar{width:60px;}
   .pos-r2{font-size:24px;}
   .pos-card{padding:16px;}
@@ -365,10 +367,10 @@ footer a:hover{color:var(--green);}
 <main id="main">
 <section class="hero">
   <div class="wrap">
-    <div class="hero-tag anim"><span class="dot"></span> AUGUST 2026 REFRESH · TARGET INTEL · CURRENT ROSTERS · 824 SKILL-PLAYER PROJECTIONS</div>
-    <h1 class="anim anim-d1">KNOW WHO TO DRAFT NEXT <span class="green">— AND WHO CAN WAIT.</span></h1>
+    <div class="hero-tag anim"><span class="dot"></span> 2026 BOARD · TARGET INTEL · CURRENT ROSTERS · 824 SKILL-PLAYER PROJECTIONS</div>
+    <h1 class="anim anim-d1">KNOW WHO TO DRAFT NEXT. <span class="green">AND WHO CAN WAIT.</span></h1>
     <p class="hero-sub anim anim-d2">
-      ADP tells you who everyone else is drafting. <strong>OverADP analyzes player projections, your roster and every live pick—then tells you who to draft next and who can wait.</strong> Every projection comes with an 80% range and sits beside current ADP, so you can see where the model and the market disagree.
+      ADP tells you who everyone else is drafting. <strong>OverADP analyzes player projections, your roster and every live pick, then tells you who to draft next and who can wait.</strong> Every projection comes with an 80% range and sits beside current ADP, so you can see where the model and the market disagree.
     </p>
     <p class="hero-proof-note anim anim-d2">Projections are estimates, not guarantees. <a href="#proof" style="color:inherit;text-decoration:underline;">How we test the model</a>.</p>
     <div class="hero-cta anim anim-d3">
@@ -377,19 +379,18 @@ footer a:hover{color:var(--green);}
     </div>
 
     <!-- THE KILL STAT -->
-    <div class="kill-stat anim anim-d4" role="figure" aria-label="1,052 player-season predictions across two held-out test seasons">
+    <div class="kill-stat anim anim-d4" role="figure" aria-label="1,052 held-out predictions and an 80% range on every projection">
       <div class="ks-col model">
-        <div class="ks-label">OverADP Model</div>
+        <div class="ks-label">Tested On Unseen Seasons</div>
         <div class="ks-num green count-pulse" aria-label="1,052 held-out predictions">1,052</div>
-        <div class="ks-sub">held-out player-season predictions</div>
-        <div class="ks-badge win">✓ PLAYER-WEIGHTED</div>
-      </div>
-      <div class="ks-vs"><span>V</span><span>S</span></div>
-      <div class="ks-col adp">
-        <div class="ks-label">Out-of-Sample Tests</div>
-        <div class="ks-num green" aria-label="two held-out seasons">2</div>
-        <div class="ks-sub">2024 and 2025 NFL seasons</div>
+        <div class="ks-sub">player-season predictions, 2024 and 2025</div>
         <div class="ks-badge win">✓ TRAIN PAST → TEST FUTURE</div>
+      </div>
+      <div class="ks-col adp">
+        <div class="ks-label">Every Projection</div>
+        <div class="ks-num green" aria-label="80 percent target range">80%</div>
+        <div class="ks-sub">target range, shown beside current ADP</div>
+        <div class="ks-badge win">✓ UNCERTAINTY INCLUDED</div>
       </div>
     </div>
   </div>
@@ -487,7 +488,7 @@ footer a:hover{color:var(--green);}
     </div>
 
     <div style="max-width:700px;margin:0 auto;text-align:center;">
-      <p style="color:var(--fg2);font-size:13px;line-height:1.7;">The table below reports the corrected point-model metrics across every 2024 and 2025 fold row. Projections are shown next to ADP as a second opinion, not a replacement for it. <a href="/2026/adp-vs-model/" style="color:var(--green);">How the model compares with ADP</a>.</p>
+      <p style="color:var(--fg2);font-size:13px;line-height:1.7;">The table below reports held-out accuracy for every player in the 2024 and 2025 test seasons. Projections are shown next to ADP as a second opinion, not a replacement for it. <a href="/2026/adp-vs-model/" style="color:var(--green);">How the model compares with ADP</a>.</p>
     </div>
   </div>
 </section>
@@ -495,9 +496,9 @@ footer a:hover{color:var(--green);}
 <!-- FULL METRICS TABLE -->
 <section class="section metrics">
   <div class="wrap">
-    <div class="section-tag">Performance Audit</div>
+    <div class="section-tag">Accuracy</div>
     <div class="section-title">The Full Numbers</div>
-    <div class="section-desc">Player-weighted results from the 2024 and 2025 walk-forward test folds. The August 2026 board contains 824 QB/RB/WR/TE projections, plus separate K/DEF consensus support in the War Room.</div>
+    <div class="section-desc">Player-weighted results from the 2024 and 2025 walk-forward test folds. The 2026 board contains 824 QB/RB/WR/TE projections, plus separate K/DEF consensus support in the War Room.</div>
 
     <table class="metrics-table">
       <thead>
@@ -526,9 +527,9 @@ footer a:hover{color:var(--green);}
         </tr>
         <tr>
           <td class="metric-name">Wide Receiver</td>
-          <td class="metric-ours">31.90</td>
-          <td>43.78</td>
-          <td class="metric-delta">0.57</td>
+          <td class="metric-ours">31.81</td>
+          <td>43.53</td>
+          <td class="metric-delta">0.58</td>
           <td>426</td>
         </tr>
         <tr>
@@ -539,9 +540,9 @@ footer a:hover{color:var(--green);}
           <td>223</td>
         </tr>
         <tr>
-          <td class="metric-name">Player-Weighted Summary</td>
-          <td class="metric-ours">36.34</td>
-          <td>51.14</td>
+          <td class="metric-name">All Positions</td>
+          <td class="metric-ours">36.30</td>
+          <td>51.05</td>
           <td class="metric-delta">0.56</td>
           <td>1,052</td>
         </tr>
@@ -550,62 +551,27 @@ footer a:hover{color:var(--green);}
   </div>
 </section>
 
-<!-- PER POSITION -->
-<section class="section" id="positions">
-  <div class="wrap">
-    <div class="section-tag">Position Breakdown</div>
-    <div class="section-title">Different Positions. Different Error Profiles.</div>
-    <div class="section-desc">Each position has its own CatBoost model and feature set. These are the player-weighted R² and MAE values across the same 2024-2025 test folds.</div>
-    <div class="pos-grid">
-      <div class="pos-card" data-pos="QB">
-        <div class="pos-label qb">Quarterback</div>
-        <div class="pos-r2">0.61</div>
-        <div class="pos-r2-label">model R²</div>
-        <div class="pos-vs">Held-out MAE: <strong>57.15 points</strong></div>
-      </div>
-      <div class="pos-card" data-pos="RB">
-        <div class="pos-label rb">Running Back</div>
-        <div class="pos-r2">0.51</div>
-        <div class="pos-r2-label">model R²</div>
-        <div class="pos-vs">Held-out MAE: <strong>43.39 points</strong></div>
-      </div>
-      <div class="pos-card" data-pos="WR">
-        <div class="pos-label wr">Wide Receiver</div>
-        <div class="pos-r2">0.57</div>
-        <div class="pos-r2-label">model R²</div>
-        <div class="pos-vs">Held-out MAE: <strong>31.90 points</strong></div>
-      </div>
-      <div class="pos-card" data-pos="TE">
-        <div class="pos-label te">Tight End</div>
-        <div class="pos-r2">0.56</div>
-        <div class="pos-r2-label">model R²</div>
-        <div class="pos-vs">Held-out MAE: <strong>23.79 points</strong></div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- FEATURES -->
 <section class="section" id="features" style="background:var(--bg2);border-top:1px solid rgba(0,255,106,0.06);border-bottom:1px solid rgba(0,255,106,0.06);">
   <div class="wrap">
-    <div class="section-tag">Arsenal</div>
+    <div class="section-tag">Features</div>
     <div class="section-title">Your Draft Weapons</div>
     <div class="section-desc">Split-conformal ranges. Depth-chart awareness. College context for rookies. Opportunity-cost Target Intel. Live draft tracking.</div>
     <div class="feat-grid">
       <div class="feat-card">
         <div class="feat-icon">▸ COLLEGE</div>
         <div class="feat-title">College/Draft Pipeline</div>
-        <div class="feat-desc">Draft capital, draft-pick value, combine athleticism, college production per game, and Power 5 conference flags. The model knows your rookies before they take a snap — college data helps project players with no NFL track record.</div>
+        <div class="feat-desc">Draft capital, draft-pick value, combine athleticism, college production per game, and Power 5 conference flags. College data gives the model something to work with for rookies who have no NFL track record.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ ROLES</div>
         <div class="feat-title">Roster, Depth &amp; Competition</div>
-        <div class="feat-desc">WR1 vs WR3 isn't a footnote — it's the whole story. We overlay current Sleeper roster/depth data so post-draft movement gets reflected on the board. We compute <strong>teammate target competition</strong> from prior-season production on the current roster.</div>
+        <div class="feat-desc">WR1 vs WR3 changes everything. We overlay current Sleeper roster/depth data so post-draft movement gets reflected on the board. We compute <strong>teammate target competition</strong> from prior-season production on the current roster.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ VBD</div>
         <div class="feat-title">Value-Based Draft Board</div>
-        <div class="feat-desc">Players ranked by Value Based Drafting — not raw points. Knows when positions are running thin. Draft the right position at the right time.</div>
+        <div class="feat-desc">Players ranked by Value Based Drafting, not raw points. Knows when positions are running thin. Draft the right position at the right time.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ TARGET</div>
@@ -620,7 +586,7 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ BUSTS</div>
         <div class="feat-title">Bust Alerts</div>
-        <div class="feat-desc">ADP overvalues name recognition. Our model spots players the market is overpaying for — before you waste a pick on them.</div>
+        <div class="feat-desc">Flags players going well ahead of their projection, so you can double-check the price before you spend the pick.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ SCARCITY</div>
@@ -630,12 +596,12 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ INJURY</div>
         <div class="feat-title">Injury-Adjusted Regression</div>
-        <div class="feat-desc">Not every decline is a bust. The model detects injury-driven drops and dampens regression signals — so injured stars get projected for bounce-backs, not collapse.</div>
+        <div class="feat-desc">Not every decline is a bust. The model separates injury-shortened seasons from real declines, so a missed half-season is not automatically read as lost talent.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ CONTRACTS</div>
         <div class="feat-title">Contract Context</div>
-        <div class="feat-desc">Prior-year contract signals help separate stable roles from shaky market assumptions, especially in the WR/TE experiments that improved the current build.</div>
+        <div class="feat-desc">Prior-year contract signals help separate stable roles from shaky ones, especially at WR and TE.</div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">▸ TARGET RANGES</div>
@@ -650,7 +616,7 @@ footer a:hover{color:var(--green);}
       <div class="feat-card">
         <div class="feat-icon">▸ BYE</div>
         <div class="feat-title">Bye Week Conflict Detection</div>
-        <div class="feat-desc">Warns when drafting a player creates a bye week hole in your lineup. Never start a week with an empty roster spot.</div>
+        <div class="feat-desc">Warns when drafting a player creates a bye week hole in your lineup. Helps you avoid an empty lineup spot.</div>
       </div>
     </div>
   </div>
@@ -659,8 +625,8 @@ footer a:hover{color:var(--green);}
 <!-- SOCIAL PROOF -->
 <section class="section social">
   <div class="wrap">
-    <div class="section-tag">Validated</div>
-    <div class="section-title">Battle-Tested Numbers</div>
+    <div class="section-tag">At a Glance</div>
+    <div class="section-title">By the Numbers</div>
     <div class="social-stats">
       <div class="social-stat">
         <div class="num">4</div>
@@ -671,12 +637,12 @@ footer a:hover{color:var(--green);}
         <div class="label">Skill Projections</div>
       </div>
       <div class="social-stat">
-        <div class="num">1,052</div>
-        <div class="label">Held-Out Rows</div>
+        <div class="num">80%</div>
+        <div class="label">Target Ranges</div>
       </div>
       <div class="social-stat">
-        <div class="num">2</div>
-        <div class="label">Test Seasons</div>
+        <div class="num">$6.99</div>
+        <div class="label">Per Draft</div>
       </div>
     </div>
   </div>
@@ -686,7 +652,7 @@ footer a:hover{color:var(--green);}
 <!-- FINAL CTA -->
 <section class="section cta">
   <div class="wrap">
-    <div class="section-tag">Deploy</div>
+    <div class="section-tag">Try It</div>
     <div class="section-title">Ask The AI.<br><span style="color:var(--green)">See Its Answer Change.</span></div>
     <p class="section-desc">Mark players taken, watch the AI recalculate, then record one pick free. Unlock every projection, 80%-target range, sleeper candidate, bust candidate, handcuff, and recommendation rationale for <strong>$6.99 for one complete draft</strong>. Projections are decision aids, not guarantees.</p>
     <a href="/app/" class="btn btn-go">ASK THE AI WHO TO DRAFT NEXT →</a>
@@ -739,7 +705,7 @@ footer a:hover{color:var(--green);}
     "@context":"https://schema.org",
     "@type":"FAQPage",
     "mainEntity":[
-      {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP's point-model metrics aggregate 1,052 player-season predictions from held-out 2024 and 2025 walk-forward folds. Player-weighted MAE is 36.34 points and the weighted position-level R² summary is 0.56. Projection ranges use split-conformal calibration with an 80% marginal-coverage target."}},
+      {"@type":"Question","name":"How accurate is OverADP?","acceptedAnswer":{"@type":"Answer","text":"OverADP's point-model metrics aggregate 1,052 player-season predictions from held-out 2024 and 2025 walk-forward folds. Player-weighted MAE is 36.30 points and the weighted position-level R² summary is 0.56. Projection ranges use split-conformal calibration with an 80% marginal-coverage target."}},
       {"@type":"Question","name":"Is OverADP free?","acceptedAnswer":{"@type":"Answer","text":"You can browse the board, mark live picks taken, watch Target Intel recalculate, and record one preview pick free. Unlock full projections, 80%-target ranges, sleeper and bust candidates, and handcuff alerts for $6.99 for one complete draft."}},
       {"@type":"Question","name":"What positions does OverADP cover?","acceptedAnswer":{"@type":"Answer","text":"OverADP covers QB, RB, WR, and TE with tuned position-specific CatBoost models. K and DEF use consensus/regression-to-mean board support because they are statistically noisy. College, draft-value, roster/depth, and contract data power rookie and current-board projections."}},
       {"@type":"Question","name":"What is Target Intel?","acceptedAnswer":{"@type":"Answer","text":"Target Intel is roster-aware opportunity-cost draft math. It updates after every pick and combines ADP, VBD, roster holes, flex fit, live draft state, scarcity, and next-turn availability to recommend the next target."}}
