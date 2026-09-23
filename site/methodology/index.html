@@ -12,17 +12,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Methodology: How OverADP's Walk-Forward Fantasy Football Model Works | OverADP</title>
-<meta name="description" content="How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations.">
+<meta name="description" content="How OverADP projects fantasy football: season-by-season walk-forward testing, a gradient-boosted model blended with ADP, empirical 80% ranges, depth-chart and college context, and published limitations.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://overadp.com/methodology/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="Methodology: How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
-<meta property="og:description" content="How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations.">
+<meta property="og:description" content="How OverADP projects fantasy football: season-by-season walk-forward testing, a gradient-boosted model blended with ADP, empirical 80% ranges, depth-chart and college context, and published limitations.">
 <meta property="og:url" content="https://overadp.com/methodology/">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Methodology: How OverADP's Walk-Forward Fantasy Football Model Works | OverADP">
-<meta name="twitter:description" content="How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations.">
+<meta name="twitter:description" content="How OverADP projects fantasy football: season-by-season walk-forward testing, a gradient-boosted model blended with ADP, empirical 80% ranges, depth-chart and college context, and published limitations.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -163,7 +163,7 @@ footer a:hover{color:var(--green);}
   "@context":"https://schema.org",
   "@type":"TechArticle",
   "headline":"Methodology: How OverADP's Walk-Forward Fantasy Football Model Works | OverADP",
-  "description":"How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations.",
+  "description":"How OverADP projects fantasy football: season-by-season walk-forward testing, a gradient-boosted model blended with ADP, empirical 80% ranges, depth-chart and college context, and published limitations.",
   "author":{"@type":"Organization","name":"OverADP"},
   "publisher":{"@type":"Organization","name":"OverADP","url":"https://overadp.com"},
   "datePublished":"2026-07-20",
@@ -205,48 +205,46 @@ function toggleHubNav(button){
 <div class="byline"><span>By OverADP Research</span><span>Updated September 23, 2026</span><span>Methods and limitations</span></div>
 
 <h2>The one-sentence version</h2>
-<p>We train one CatBoost point model per position on completed NFL seasons, test it chronologically on the next season, and pair the point estimate with a separate split-conformal quantile range targeting 80% marginal coverage.</p>
+<p>We train one gradient-boosted model on completed NFL seasons (2014 onward), test it season by season on years it never saw, then blend each projection 50/50 with the points implied by current ADP, because that combination tested better than either the model or ADP alone.</p>
 
 <h2>1. Walk-forward validation (not random splits)</h2>
-<p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information. The model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
-<p>Walk-forward validation prevents this. The published point-model results use two folds: train through 2023 and test on 2024, then train through 2024 and test on 2025. The aggregate includes every eligible QB/RB/WR/TE row in those folds.</p>
+<p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard random train-test split would leak future information. The model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
+<p>Walk-forward validation prevents this. Every test season is predicted by a model trained only on earlier seasons. We tested seven seasons this way (2019 to 2025) and chose the design using 2019 to 2024 before looking at 2025.</p>
 
-<h2>2. One CatBoost model per position</h2>
-<p>QB, RB, WR, and TE are trained separately because their production scales and useful features differ. The production point model is CatBoost for all four positions, with position-specific feature lists and temporal sample weighting so newer training seasons matter more.</p>
+<h2>2. One model, three scoring formats</h2>
+<p>The point model is a bag of gradient-boosted trees averaged with a two-stage version that predicts games played and points per game separately, so a season shortened by injury is not automatically read as lost talent. One model is trained across QB, RB, WR and TE with position as an input, which tested better than separate position models, especially at TE. Standard, half-PPR and PPR are each trained directly.</p>
 
-<h2>3. Conformal quantile regression (CQR) for honest 80% intervals</h2>
-<p>Point predictions alone are dangerous in fantasy. Every projection is wrong; the question is <em>by how much</em>. We train separate quantile CatBoost models at the 10th and 90th percentiles, then calibrate on the most recent held-out season using split-conformal CQR.</p>
-<p>The final adjustment is learned from 2025 calibration rows and targets <strong>80% marginal coverage</strong>. Because that same season is used for final calibration, its post-adjustment coverage is a calibration diagnostic, not an independent test-set guarantee. Coverage for an individual player is never guaranteed.</p>
+<h2>3. What goes into it</h2>
+<p><strong>Production and usage:</strong> three seasons of stats, per-game rates, target share, air-yards share, snap share and route participation (routes run, targets and yards per route).</p>
+<p><strong>Opportunity quality:</strong> expected fantasy points from play-by-play, red-zone and goal-line work, deep and end-zone targets, and touchdowns over expected to catch regression.</p>
+<p><strong>Role:</strong> the preseason depth chart, last season's closing depth chart and each player's order in his position room. The depth chart is the strongest single signal after past production.</p>
+<p><strong>Rookies:</strong> draft capital, combine results, age and college production (share of team receiving yards and touchdowns, breakout age, yards per team pass attempt, recruiting rating).</p>
+<p><strong>Team context:</strong> the new team's pace, pass rate and scoring, vacated targets and carries, returning competition at the position and the quality of the team's quarterback.</p>
 
-<h2>4. Depth-chart awareness (Week 1 snapshot)</h2>
-<p>One of our biggest 2026 feature additions. We pull pre-season depth charts from nflverse (Week 1 snapshot for 2019-2024; nearest-to-September-5 snapshot for 2025+) and encode each player's depth rank (1=starter, 2=backup, 3+=depth), plus binary is_starter and is_backup flags.</p>
-<p>Used for QB, WR, and TE projections. Excluded from RB because RBBC (running-back-by-committee) makes a nominal depth rank less reliable than actual prior workload and teammate carry competition.</p>
+<h2>4. Blending with ADP</h2>
+<p>ADP carries information public stats do not, such as camp news and injury recovery timelines. We convert each player's ADP into implied points (a log-ADP curve fitted by position on past seasons) and average it with the model. On 2019 to 2025, across three scoring formats, the blend had lower error than ADP alone in 19 of 21 season-format tests and ranked players better in 14 of 21. Players without real ADP use the model alone.</p>
 
-<h2>5. Target-competition features (prevent phantom breakouts)</h2>
-<p>Using prior-season teammate targets, we compute each WR's teammate_targets_prev and teammate_rec_yards_prev on their <em>current</em> team (so a receiver who joins a team with a 150-target WR1 is projected with that competition in mind). We also compute teammate_carries_prev for RBs.</p>
-<p>The feature uses prior-season teammate production on the current roster, never the target season's outcomes. This re-runs after free-agent and draft changes are reflected in the projection-season roster.</p>
+<h2>5. 80% ranges</h2>
+<p>Every projection is wrong; the question is <em>by how much</em>. Each range comes from how far past projections at the same position and projection level missed, measured only on earlier seasons. In 2024 and 2025 about 77% of outcomes landed inside the 80% range (lower at TE and QB), so treat the ranges as a guide, not a guarantee.</p>
 
-<h2>6. Conservative monotonic constraints</h2>
-<p>Aggregate production lags (prior-season fantasy points, targets, receptions, carries) should never have a <em>negative</em> marginal effect on projections. We encode positive monotonic constraints on exactly these features and leave everything else unconstrained. This adds sanity guardrails without overfitting. MAE stays within noise, but the model can't produce pathological projections where scoring more the prior year makes you project lower.</p>
-
-<h2>7. College + draft capital features for rookies</h2>
-<p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
+<h2>6. What we tested and left out</h2>
+<p>Injury-report features, coaching changes, week-1 betting lines, a model that predicts yards and touchdowns separately, and a learned (rather than 50/50) ADP combination were all tested season by season. None beat the current design by more than noise, so none were added.</p>
 
 <h2>The 2024, 2025 walk-forward results</h2>
-<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. On a separate true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40), so projections are presented next to ADP as a second opinion.</p>
+<p>These are the live board's numbers (model blended with ADP, half-PPR) for players with a prior NFL season or a top-150 draft pick, each season predicted using only earlier seasons. Because the player pool differs from the previous model's published table, the error values are not directly comparable to older versions of this page. On the same true-ADP players in 2023 to 2025, the previous model had a rank correlation of 0.29 and the new blend 0.43.</p>
 <table class="rank">
   <thead><tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr></thead>
-  <tbody><tr><td>QB</td><td class="positive">57.15</td><td>72.43</td><td class="positive">0.61</td><td>134</td></tr><tr><td>RB</td><td class="positive">43.39</td><td>60.47</td><td class="positive">0.51</td><td>269</td></tr><tr><td>WR</td><td class="positive">31.81</td><td>43.53</td><td class="positive">0.58</td><td>426</td></tr><tr><td>TE</td><td class="positive">23.79</td><td>33.35</td><td class="positive">0.56</td><td>223</td></tr><tr><td><strong>Player-weighted summary</strong></td><td class="positive">36.30</td><td>51.05</td><td class="positive">0.56</td><td>1,052</td></tr></tbody>
+  <tbody><tr><td>QB</td><td class="positive">42.93</td><td>62.45</td><td class="positive">0.71</td><td>184</td></tr><tr><td>RB</td><td class="positive">31.40</td><td>47.85</td><td class="positive">0.68</td><td>328</td></tr><tr><td>WR</td><td class="positive">25.21</td><td>38.32</td><td class="positive">0.67</td><td>515</td></tr><tr><td>TE</td><td class="positive">17.99</td><td>28.14</td><td class="positive">0.67</td><td>276</td></tr><tr><td><strong>Player-weighted summary</strong></td><td class="positive">27.74</td><td>43.30</td><td class="positive">0.68</td><td>1,303</td></tr></tbody>
 </table>
 
 <h2>What the model doesn't do</h2>
 <p>Honest limitations:</p>
-<p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call. It was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
-<p><strong>It's only as good as the data.</strong> UDFAs and late-round rookies with missing college data get wider intervals and lower confidence. Coaching-change features were tested and rejected after walk-forward validation showed them adding noise rather than signal.</p>
-<p><strong>Fantasy football is high-variance.</strong> Even a strong aggregate model misses individual players. The interval pipeline targets 80% marginal coverage after calibration, but that target is not a player-level promise and still needs monitoring on future untouched seasons.</p>
+<p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call. It was a bone bruise. The model does learn from games played in past seasons, but week-to-week injuries are noise.</p>
+<p><strong>It's only as good as the data.</strong> Undrafted and late-round rookies with thin college data carry more uncertainty. Players not in the model's roster snapshot keep the previous model's projection.</p>
+<p><strong>Fantasy football is high-variance.</strong> Even a strong aggregate model misses individual players. Stars coming back from injury are the biggest known blind spot for public stats, which is one reason the board leans on ADP too.</p>
 
 <h2>What's next</h2>
-<p>Roster, depth-chart, ADP, and rookie inputs continue to change through training camp. We refresh the board as those sources stabilize and will report interval coverage again only after a future season remains untouched through evaluation.</p>
+<p>For 2027 we plan to rebuild the board from draft-day rosters and depth charts through training camp and to re-test the full draft simulator before August. This page will be updated with the results.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
 <h2 id="draft-simulation">Draft simulations</h2>
 <p>We also test full drafts against ADP-first drafting. All results, including a re-run that did not reproduce an earlier study, are on the <a class="inline" href="/2026/adp-vs-model/">ADP vs Model page</a>.</p>
