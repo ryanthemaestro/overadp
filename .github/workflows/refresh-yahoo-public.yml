@@ -1,0 +1,61 @@
+name: Refresh Team Hub public stats
+
+# The Yahoo Team Hub pauses its estimates when site/yahoo/nflverse-2026.json is
+# more than 48 hours old, so rebuild it from public nflverse data twice a day.
+on:
+  schedule:
+    # 11:37 UTC = 7:37 AM Eastern (after overnight stat corrections);
+    # 21:37 UTC = 5:37 PM Eastern (after the day's injury reports).
+    - cron: "37 11 * * *"
+    - cron: "37 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-yahoo-public
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out production
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Download public nflverse data
+        run: |
+          base=https://github.com/nflverse/nflverse-data/releases/download
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/players.csv" "$base/stats_player/stats_player_week_2026.csv"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/teams.csv" "$base/stats_team/stats_team_week_2026.csv"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/injuries.csv" "$base/injuries/injuries_2026.csv"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/games.csv" "$base/schedules/games.csv"
+
+      - name: Rebuild the public snapshot
+        run: node scripts/build_yahoo_public_context.mjs "$RUNNER_TEMP/players.csv" "$RUNNER_TEMP/teams.csv" "$RUNNER_TEMP/injuries.csv" "$RUNNER_TEMP/games.csv"
+
+      - name: Validate before publishing
+        run: node --test tests/snapshot.test.mjs tests/jev-compare.test.mjs tests/public-context.test.mjs
+
+      - name: Publish the refreshed snapshot
+        run: |
+          if git diff --quiet -- site/yahoo/nflverse-2026.json; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+          git config user.name "overadp-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add site/yahoo/nflverse-2026.json
+          git commit -m "Refresh Team Hub public stats $(date -u +%F)"
+          # The draft-market refresh also pushes to main; rebase onto it if it landed first.
+          git pull --rebase origin main
+          git push origin HEAD:main
