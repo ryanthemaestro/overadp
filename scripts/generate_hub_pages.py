@@ -232,7 +232,7 @@ def html_foot(related_pairs: list[tuple[str, str]] | None = None) -> str:
     <div class="cta-block">
       <div class="section-tag">The Draft Tool</div>
       <h2>Get the Full Model in Your Draft Room</h2>
-      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80%-target range, risk tier, and sleeper/bust call — live, in a single-page draft command center. Free to browse. Unlock one complete draft for $6.99 with no subscription.</p>
+      <p style="max-width:560px;margin:0 auto 24px;">Every projection, 80%-target range, risk tier, and sleeper/bust call, live, in a single-page draft command center. Free to browse. Unlock one complete draft for $6.99 with no subscription.</p>
       <a href="/app/" class="btn btn-primary">ENTER THE WAR ROOM →</a>
     </div>
     """
@@ -261,7 +261,7 @@ def load_data():
 
 
 def filter_active(players: list, min_proj: float = 20.0) -> list:
-    """Filter to players likely relevant for 2026 drafts — non-zero projection and valid ADP or top projection."""
+    """Filter to players likely relevant for 2026 drafts: non-zero projection and valid ADP or top projection."""
     out = []
     for p in players:
         proj = p.get("projected_points", 0) or 0
@@ -277,7 +277,7 @@ def tier_verdict(p: dict) -> tuple[str, str]:
     """Return (verdict_class, verdict_text) based on model vs ADP + risk."""
     adp = p.get("adp", 999) or 999
     risk = (p.get("risk") or "medium").lower()
-    # Need model rank to determine sleeper/bust — we approximate using projected_points rank later
+    # Need model rank to determine sleeper/bust; we approximate using projected_points rank later
     if risk == "low":
         return "safe", "LOW RISK"
     if risk == "high":
@@ -292,7 +292,7 @@ def fmt_proj(p: dict) -> str:
 def fmt_adp(p: dict) -> str:
     adp = p.get("adp", 0) or 0
     if adp >= 200:
-        return "—"
+        return "-"
     return f"{adp:.0f}"
 
 
@@ -334,7 +334,7 @@ def build_position_ranking(
         # Determine if model disagrees with ADP (rough)
         verdict = ""
         if adp < 200:
-            # compute approx model overall rank vs adp overall rank — crude: use pts percentile
+            # compute approx model overall rank vs adp overall rank (crude): use pts percentile
             pass
         adp_display = fmt_adp(p)
         proj = fmt_proj(p)
@@ -380,7 +380,7 @@ def build_position_ranking(
     }[position]
     intro += f" Across the 2024-2025 test folds, {position} posted <strong>{mae:.2f} MAE</strong> and <strong>{r2:.2f} R²</strong> over {n_players:,} player-season predictions."
 
-    title_full = f"2026 Fantasy Football {title_pos} Rankings — Walk-Forward Validated Projections | OverADP"
+    title_full = f"2026 Fantasy Football {title_pos} Rankings: Walk-Forward Validated Projections | OverADP"
     desc = f"Top {limit} 2026 fantasy football {position} rankings with 80%-target split-conformal ranges. Held-out 2024-2025 MAE: {mae:.2f}; R²: {r2:.2f}. Updated {datetime.now(UTC).strftime('%B %Y')}."
 
     schema = f"""<script type="application/ld+json">
@@ -402,7 +402,7 @@ def build_position_ranking(
 <div class="section-tag">2026 {title_pos} Rankings</div>
 <h1>2026 Fantasy <span class="accent">{title_pos} Rankings</span></h1>
 <p class="lead">The top {limit} {position}s for 2026 half-PPR leagues, ranked by projected fantasy points. Each projection includes a split-conformal range targeting 80% marginal coverage, calibrated on held-out 2025 rows. A target range is not a guarantee for an individual player.</p>
-<div class="answer-block"><span class="answer-label">Quick answer</span><p>These rankings order 2026 {position}s by OverADP's position-specific point model, then show current ADP and uncertainty beside every player. Use the projection as an independent estimate, the range as risk context, and ADP as market price—not as three interchangeable rankings.</p></div>
+<div class="answer-block"><span class="answer-label">Quick answer</span><p>These rankings order 2026 {position}s by OverADP's position-specific point model, then show current ADP and uncertainty beside every player. Use the projection as an independent estimate, the range as risk context, and ADP as market price, not as three interchangeable rankings.</p></div>
 <div class="byline"><span>By OverADP Research</span><span>Updated {datetime.now(UTC).strftime('%B %d, %Y')}</span><span>Half-PPR</span></div>
 
 <div class="meta-strip">
@@ -422,7 +422,7 @@ def build_position_ranking(
 </div>
 
 <h2>How the results were measured</h2>
-<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. An exact-cohort ADP-only check is directionally positive, but we withhold a market-beating percentage because the 2025 input is a preseason-rank proxy rather than true ADP.</p>
+<p>The point model was trained only on earlier seasons and evaluated on the next season. The published metrics aggregate every eligible player row from the 2024 and 2025 test folds. On a true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP, so we show every projection next to ADP as a second opinion, not as a replacement for it.</p>
 <p>The biggest gaps between model and ADP are surfaced on our <a class="inline" href="/2026/top-sleepers/">Top Sleepers</a> and <a class="inline" href="/2026/top-busts/">Top Busts</a> pages. The <a class="inline" href="/app/">full War Room</a> shows every player with filtering, VBD, scarcity, and draft-tracking.</p>
 """
 
@@ -440,6 +440,13 @@ def build_position_ranking(
     related = [r for r in related if r]
 
     return html_head(title_full, desc, f"/2026/{slug}/", schema) + body + html_foot(related)
+
+
+def gap_text(reason: str) -> str:
+    """Describe a rank gap neutrally instead of asserting a player is under/overvalued."""
+    import re
+    reason = re.sub(r"\(undervalued by (\d+) spots\)", r"(model ranks him \1 spots higher)", reason)
+    return re.sub(r"\(overvalued by (\d+) spots\)", r"(model ranks him \1 spots lower)", reason)
 
 
 def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
@@ -473,22 +480,22 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
   <div class="stat">{adp_line}</div>
   <div class="stat">Projected pts: <strong>{p.get('projected_points', 0):.1f}</strong></div>
   <div class="stat" style="color:var(--{color});">Gap vs ADP: <strong style="color:var(--{color});">{gap_display}</strong></div>
-  <div class="reason">{p.get('reason', '')}</div>
+  <div class="reason">{gap_text(p.get('reason', ''))}</div>
 </div>""")
 
     if is_sleeper:
-        title_full = "2026 Fantasy Football Sleepers — ML Model Calls vs ADP | OverADP"
+        title_full = "2026 Fantasy Football Sleepers: Model vs ADP Price Gaps | OverADP"
         desc = "Top 2026 fantasy football sleeper candidates: players whose current model rank is meaningfully higher than current half-PPR ADP. Updated from the live projection board."
         intro_lead = "The 2026 players our model ranks <strong>above current ADP</strong>. These are model-vs-market disagreements to investigate, not promises that a player will outperform."
         proof_hed = "What this signal means"
-        proof_body = """A sleeper label measures a current rank gap: the point model values the player more highly than the draft market does. It can surface changing roles, prior production, depth-chart movement, or a cheap price. It does not estimate a hit probability, and the model can be wrong — use the projection range, roster fit, and current news alongside the label."""
+        proof_body = """A sleeper label measures a current rank gap: the point model values the player more highly than the draft market does. It can surface changing roles, prior production, depth-chart movement, or a cheap price. It does not estimate a hit probability, and the model can be wrong. Use the projection range, roster fit, and current news alongside the label."""
         slug = "top-sleepers"
     else:
-        title_full = "2026 Fantasy Football Busts — Overvalued by ADP | OverADP"
+        title_full = "2026 Fantasy Football Busts: Model vs ADP Price Gaps | OverADP"
         desc = "Top 2026 fantasy football bust candidates: players whose current model rank is meaningfully lower than current half-PPR ADP. Updated from the live projection board."
         intro_lead = "The 2026 players our model ranks <strong>below current ADP</strong>. These are prices to question, not declarations that a player will fail."
         proof_hed = "What this signal means"
-        proof_body = """A bust label measures a current rank gap: the market price is richer than the model's production rank. That can reflect role competition, prior volume, age, depth context, or simply an aggressive draft price. It is not an injury forecast or a certainty — use the projection range and current team news before making a pick."""
+        proof_body = """A bust label measures a current rank gap: the market price is richer than the model's production rank. That can reflect role competition, prior volume, age, depth context, or simply an aggressive draft price. It is not an injury forecast or a certainty. Use the projection range and current team news before making a pick."""
         slug = "top-busts"
 
     schema = f"""<script type="application/ld+json">
@@ -508,9 +515,9 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
     body = f"""
 <div class="crumbs"><a href="/">Home</a> / 2026 / {'Top Sleepers' if is_sleeper else 'Top Busts'}</div>
 <div class="section-tag">{arrow} 2026 {'Sleepers' if is_sleeper else 'Busts'}</div>
-<h1>2026 Fantasy <span class="accent">{'Sleepers' if is_sleeper else 'Busts'}</span> — Model vs ADP</h1>
+<h1>2026 Fantasy <span class="accent">{'Sleepers' if is_sleeper else 'Busts'}</span>: Model vs ADP</h1>
 <p class="lead">{intro_lead}</p>
-<div class="answer-block"><span class="answer-label">Quick answer</span><p>{'A 2026 sleeper is a player the current OverADP model ranks materially above the draft market. The gap can reveal an inexpensive path to production, but it is a research signal—not a hit guarantee. Check the player range, current news, roster fit, and the cost of waiting.' if is_sleeper else 'A 2026 bust candidate is a player whose current ADP is materially earlier than the OverADP model rank. That means the market price looks aggressive relative to the projection; it does not mean the player is certain to fail or should never be drafted.'}</p></div>
+<div class="answer-block"><span class="answer-label">Quick answer</span><p>{'A 2026 sleeper is a player the current OverADP model ranks materially above the draft market. The gap can reveal an inexpensive path to production, but it is a research signal, not a hit guarantee. Check the player range, current news, roster fit, and the cost of waiting.' if is_sleeper else 'A 2026 bust candidate is a player whose current ADP is materially earlier than the OverADP model rank. That means the market price looks aggressive relative to the projection; it does not mean the player is certain to fail or should never be drafted.'}</p></div>
 <div class="byline"><span>By OverADP Research</span><span>Updated {datetime.now(UTC).strftime('%B %d, %Y')}</span><span>Half-PPR</span></div>
 
 <div class="meta-strip">
@@ -525,11 +532,11 @@ def build_sleepers_or_busts(sleepers_busts: list, kind: str) -> str:
 
 <h2>{proof_hed}</h2>
 <p>{proof_body}</p>
-<p>Methodology is public — chronological point-model tests, split-conformal 80%-target ranges, and current depth-chart context. Read the full <a class="inline" href="/methodology/">model methodology</a> or open the <a class="inline" href="/app/">free draft board</a>.</p>
+<p>Methodology is public: chronological point-model tests, split-conformal 80%-target ranges, and current depth-chart context. Read the full <a class="inline" href="/methodology/">model methodology</a> or open the <a class="inline" href="/app/">free draft board</a>.</p>
 
 <div class="callout">
   <h3>How "sleeper" and "bust" are defined here</h3>
-  <p>A <strong>sleeper</strong> is a player whose model rank is meaningfully higher than ADP rank — they're being drafted later than we think they should be. A <strong>bust</strong> is the opposite: drafted earlier than the model thinks is justified. We rank by the absolute size of the gap. Players with no ADP (undrafted) are excluded.</p>
+  <p>A <strong>sleeper</strong> is a player whose model rank is meaningfully higher than ADP rank: they're being drafted later than we think they should be. A <strong>bust</strong> is the opposite: drafted earlier than the model thinks is justified. We rank by the absolute size of the gap. Players with no ADP (undrafted) are excluded.</p>
 </div>
 """
 
@@ -574,13 +581,13 @@ def build_who_should_i_draft(players: list) -> str:
             "adp": round(float(p.get("adp") or 200), 1),
             "vbd": round(float(p.get("vbd") or 0), 1),
             "risk": (p.get("risk") or "medium").lower(),
-            "bye": p.get("bye") or "—",
+            "bye": p.get("bye") or "-",
         }
         for p in eligible
     ]
     player_json = json.dumps(compact, separators=(",", ":")).replace("</", "<\\/")
     options = "".join(
-        f'<option value="{i}">{p["name"]} — {p["position"]}, {p["team"]}</option>'
+        f'<option value="{i}">{p["name"]} ({p["position"]}, {p["team"]})</option>'
         for i, p in enumerate(compact)
     )
 
@@ -606,7 +613,7 @@ def build_who_should_i_draft(players: list) -> str:
         )
 
     title = "Who Should I Draft in 2026? Fantasy Player Comparison | OverADP"
-    desc = "Compare two 2026 fantasy football players by projection, value above replacement, ADP, risk range and bye week—then get a roster-aware live recommendation."
+    desc = "Compare two 2026 fantasy football players by projection, value above replacement, ADP, risk range and bye week, then get a roster-aware live recommendation."
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     display_date = datetime.now(UTC).strftime("%B %d, %Y")
     schema = f"""<script type="application/ld+json">
@@ -625,7 +632,7 @@ def build_who_should_i_draft(players: list) -> str:
 <div class="section-tag">Free 2026 Player Comparison</div>
 <h1>Who Should I <span class="accent">Draft?</span></h1>
 <p class="lead">Compare any two current 2026 players by projection, value above replacement, ADP, uncertainty and risk. Then bring the decision into the War Room for the roster-aware answer.</p>
-<div class="answer-block"><span class="answer-label">The short answer</span><p>Draft the player who gives your roster the most value at the current pick—not simply the first name on ADP or the highest raw projection. Start with value above replacement, check the uncertainty range and market cost, then account for roster needs and whether the alternative is likely to survive until your next turn.</p></div>
+<div class="answer-block"><span class="answer-label">The short answer</span><p>Draft the player who gives your roster the most value at the current pick, not simply the first name on ADP or the highest raw projection. Start with value above replacement, check the uncertainty range and market cost, then account for roster needs and whether the alternative is likely to survive until your next turn.</p></div>
 <div class="byline"><span>By OverADP Research</span><span>Updated {display_date}</span><span>Current half-PPR board</span></div>
 
 <section class="compare-tool" aria-labelledby="compare-heading">
@@ -696,81 +703,80 @@ renderComparison();
 
 
 def build_adp_vs_model() -> str:
-    title = "ADP vs Model: 1,000 Historical Fantasy Draft Tests | OverADP"
-    desc = "In 1,000 paired 2023-2024 historical simulations, OverADP Target Intel produced a 50.6% top-three rate versus 25.7% for ADP-first drafting. See the method and limits."
+    title = "ADP vs Model: Our Draft Tests, Including the Re-run | OverADP"
+    desc = "What OverADP's draft simulations found: an August 2026 study, a September re-run that did not reproduce it, and early results for the 2027 model. Methods and limits."
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     display_date = datetime.now(UTC).strftime("%B %d, %Y")
     schema = f"""<script type="application/ld+json">
 [
-  {{"@context":"https://schema.org","@type":"Article","headline":"ADP vs Model: What 1,000 Historical Fantasy Drafts Found","description":"{desc}","author":{{"@type":"Organization","name":"OverADP Research"}},"publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},"datePublished":"2026-08-17","dateModified":"{today}","mainEntityOfPage":"https://overadp.com/2026/adp-vs-model/"}},
-  {{"@context":"https://schema.org","@type":"Dataset","name":"OverADP 2023-2024 paired fantasy draft simulation summary","description":"Summary outcomes from 1,000 paired 12-team half-PPR draft simulations comparing Target Intel with ADP-first drafting under a frozen Week-1 lineup.","creator":{{"@type":"Organization","name":"OverADP"}},"temporalCoverage":"2023/2024","distribution":{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://overadp.com/2026/adp-vs-model/simulation-summary.csv"}}}},
+  {{"@context":"https://schema.org","@type":"Article","headline":"ADP vs Model: Our Draft Tests, Including the Re-run","description":"{desc}","author":{{"@type":"Organization","name":"OverADP Research"}},"publisher":{{"@type":"Organization","name":"OverADP","url":"https://overadp.com"}},"datePublished":"2026-08-17","dateModified":"{today}","mainEntityOfPage":"https://overadp.com/2026/adp-vs-model/"}},
+  {{"@context":"https://schema.org","@type":"Dataset","name":"OverADP August 2026 paired fantasy draft simulation summary (2023-2024)","description":"Summary outcomes from the original August 2026 study: 1,000 paired 12-team half-PPR draft simulations comparing Target Intel with ADP-first drafting under a frozen Week-1 lineup. A September 2026 re-run did not reproduce this result.","creator":{{"@type":"Organization","name":"OverADP"}},"temporalCoverage":"2023/2024","distribution":{{"@type":"DataDownload","encodingFormat":"text/csv","contentUrl":"https://overadp.com/2026/adp-vs-model/simulation-summary.csv"}}}},
   {{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-    {{"@type":"Question","name":"Does a fantasy football model beat ADP?","acceptedAnswer":{{"@type":"Answer","text":"OverADP's combined Target Intel decision strategy beat an ADP-first control in a retrospective 2023-2024 paired simulation. The result does not show that blindly following raw model ranks always beats ADP, and it does not guarantee future finishes."}}}},
-    {{"@type":"Question","name":"What did the OverADP simulation find?","acceptedAnswer":{{"@type":"Answer","text":"With Week-1 lineups frozen to isolate draft quality, Target Intel teams finished the regular season in the top three 50.6% of the time versus 25.7% for ADP-first teams across 1,000 paired simulations."}}}},
-    {{"@type":"Question","name":"Does OverADP guarantee a top-three fantasy finish?","acceptedAnswer":{{"@type":"Answer","text":"No. The study is a retrospective exploratory simulation, not a promise. Championship rates did not improve, and real leagues include injuries, waivers, trades, lineup choices and opponents that the simulation only approximates."}}}}
+    {{"@type":"Question","name":"Does OverADP beat ADP?","acceptedAnswer":{{"@type":"Answer","text":"We do not claim it does. An August 2026 simulation favored OverADP, but a September 2026 re-run of the current app on 2023-2025 did not reproduce it, and on true ADP the current point model ranks players less accurately than ADP. OverADP is designed to be used alongside ADP."}}}},
+    {{"@type":"Question","name":"What is the 2027 model?","acceptedAnswer":{{"@type":"Answer","text":"A new public-data projection model in testing. In walk-forward tests it roughly matched ADP on its own, and a 50/50 blend of the model and ADP had lower error than ADP in 19 of 21 season-format tests. It is not live yet and will be re-tested before launch."}}}},
+    {{"@type":"Question","name":"Does OverADP guarantee a top-three fantasy finish?","acceptedAnswer":{{"@type":"Answer","text":"No. These are retrospective simulations, not promises. Real leagues include injuries, waivers, trades, lineup choices and opponents that simulations only approximate."}}}}
   ]}}
 ]
 </script>"""
     body = f"""
 <div class="crumbs"><a href="/">Home</a> / 2026 Research / ADP vs Model</div>
 <div class="section-tag">Original OverADP Research</div>
-<h1>ADP vs Model: What <span class="accent">1,000 Drafts</span> Found</h1>
-<p class="lead">A paired historical simulation tested whether a roster-aware decision system could build stronger starting rosters than drafting from market ADP first.</p>
-<div class="answer-block"><span class="answer-label">Answer</span><p>Across 1,000 paired 12-team simulations using true 2023 and 2024 Fantasy Football Calculator ADP, Target Intel produced a 50.6% top-three regular-season finish rate versus 25.7% for ADP-first drafting when Week-1 lineups were frozen. That is evidence for the combined decision system—not a guarantee or proof that raw model ranks always beat ADP.</p></div>
-<div class="byline"><span>By OverADP Research</span><span>Published August 17, 2026</span><span>Updated {display_date}</span><span>Half-PPR · 12 teams</span></div>
+<h1>ADP vs Model: <span class="accent">What Held Up</span> and What Didn't</h1>
+<p class="lead">We test whether OverADP helps build better fantasy rosters than drafting from ADP. Here is every result we have, including the one that did not reproduce.</p>
+<div class="answer-block"><span class="answer-label">Answer</span><p><strong>We do not claim OverADP beats ADP.</strong> Our August 2026 simulation favored OverADP, but a September 2026 re-run of the current app on 2023–2025 did not reproduce it: ADP-first drafting finished top three more often. A new model in testing for 2027 roughly matches ADP on its own and does better when blended with ADP. Use OverADP alongside ADP, not instead of it.</p></div>
+<div class="byline"><span>By OverADP Research</span><span>Published August 17, 2026</span><span>Updated {display_date}</span><span>Half-PPR</span></div>
 
-<div class="evidence-grid">
-  <div class="evidence-card primary"><div class="evidence-number">50.6%</div><div class="evidence-label">Target Intel top-three regular-season rate with the Week-1 lineup frozen.</div></div>
-  <div class="evidence-card"><div class="evidence-number">25.7%</div><div class="evidence-label">ADP-first top-three regular-season rate under the same league conditions.</div></div>
-  <div class="evidence-card"><div class="evidence-number">+120.9</div><div class="evidence-label">Average frozen-lineup point difference for Target Intel versus ADP first.</div></div>
-</div>
+<h2 id="september-rerun">September 2026 re-run: the current app did not beat ADP</h2>
+<p>Our lab re-ran the draft test with a rebuilt copy of the production model and the live Target Intel policy: 144 paired drafts across the 2023, 2024 and 2025 seasons and several league sizes and flex settings, using true preseason ADP.</p>
+<table class="research-table">
+  <thead><tr><th>Draft strategy (2023–2025)</th><th>Top-three rate vs ADP-first</th><th>95% interval</th></tr></thead>
+  <tbody>
+    <tr><td>Current app policy</td><td>−17 percentage points (11.8% vs 29.2%)</td><td>−25 to −10</td></tr>
+    <tr><td>August 17 study policy, as archived</td><td>−15 percentage points</td><td>−22 to −6</td></tr>
+    <tr><td>Reconstruction of the original study recipe</td><td>+10 percentage points</td><td>+1 to +20</td></tr>
+  </tbody>
+</table>
+<p>We also compared the projections themselves with ADP on the same players. On true 2023–2025 ADP, the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40; average error 63.8 vs about 56 points). That is why every OverADP projection is shown next to ADP.</p>
+<p class="fine-print">The re-run is a provisional reconstruction of the production code, not the exact model fitted on August 29, and it uses synthetic opponents. It is still the most complete test we have, so we report it.</p>
 
-<div class="bar-compare" aria-label="Top-three regular-season rate comparison">
-  <div class="bar-row"><div class="bar-label">Target Intel</div><div class="bar-track"><span class="bar-fill green" style="width:84.3%"></span></div><div class="bar-value">50.6%</div></div>
-  <div class="bar-row"><div class="bar-label">ADP first</div><div class="bar-track"><span class="bar-fill" style="width:42.8%"></span></div><div class="bar-value">25.7%</div></div>
-</div>
+<h2 id="model-2027">Coming for 2027: a new model in testing</h2>
+<p>We built a new projection model from public NFL data, college production and route participation. It is <strong>not live yet</strong>. Each season below was predicted using only earlier seasons.</p>
+<table class="research-table">
+  <thead><tr><th>2023–2025, true-ADP players</th><th>Rank correlation</th><th>Average error (pts)</th></tr></thead>
+  <tbody>
+    <tr><td>Current model</td><td>0.29</td><td>63.8</td></tr>
+    <tr><td>ADP</td><td>0.40</td><td>about 56</td></tr>
+    <tr><td>New model</td><td>0.41</td><td>55.7</td></tr>
+    <tr><td><strong>New model + ADP, 50/50</strong></td><td><strong>0.43</strong></td><td><strong>54.3</strong></td></tr>
+  </tbody>
+</table>
+<p>Across 2019–2025 and three scoring formats, the 50/50 blend had lower error than ADP in 19 of 21 season-format tests and ranked players better in 14 of 21. In a simple best-ball draft simulation (12 teams, 2019–2025), blend-guided teams finished top three 51.7% of the time versus 33.8% for ADP-order drafting, ahead in 5 of 7 seasons. With only seven seasons, that is promising, not proven. We will re-test it in our full draft simulator before it powers the board.</p>
 
-<h2>The result by historical season</h2>
+<h2>The original August 2026 study</h2>
+<p>For the record, the original study found that across 1,000 paired 12-team simulations using true 2023 and 2024 Fantasy Football Calculator ADP, Target Intel produced a 50.6% top-three regular-season rate versus 25.7% for ADP-first drafting with Week-1 lineups frozen. The September re-run above did not reproduce this with the current app.</p>
 <table class="research-table">
   <thead><tr><th>Season</th><th>Strategy</th><th>Simulations</th><th>Avg. rank</th><th>Top-three rate</th><th>Frozen-lineup points</th></tr></thead>
   <tbody>
     <tr><td>2023</td><td>ADP first</td><td>500</td><td>6.63</td><td>26.4%</td><td>1,102.5</td></tr>
-    <tr><td>2023</td><td><strong>Target Intel</strong></td><td>500</td><td><strong>4.26</strong></td><td><strong>48.8%</strong></td><td><strong>1,223.0</strong></td></tr>
+    <tr><td>2023</td><td>Target Intel</td><td>500</td><td>4.26</td><td>48.8%</td><td>1,223.0</td></tr>
     <tr><td>2024</td><td>ADP first</td><td>500</td><td>6.72</td><td>25.0%</td><td>1,129.0</td></tr>
-    <tr><td>2024</td><td><strong>Target Intel</strong></td><td>500</td><td><strong>4.04</strong></td><td><strong>52.4%</strong></td><td><strong>1,250.4</strong></td></tr>
+    <tr><td>2024</td><td>Target Intel</td><td>500</td><td>4.04</td><td>52.4%</td><td>1,250.4</td></tr>
   </tbody>
 </table>
-<p class="fine-print">Pooled headline: 1,000 simulations per strategy across the two true-ADP seasons. Percentages are regular-season results. <a class="inline" href="/2026/adp-vs-model/simulation-summary.csv">Download the summary CSV</a>.</p>
+<p class="fine-print">Original August 2026 study, kept for transparency. <a class="inline" href="/2026/adp-vs-model/simulation-summary.csv">Download the summary CSV</a>.</p>
 
-<h2>What actually beat ADP?</h2>
-<p>Not a raw projection sort. The strongest policy used ADP as a market price and selectively overrode it when position-specific projection value, roster need, positional scarcity and the probability a player would disappear before the next turn aligned.</p>
-<div class="callout"><h3>The practical difference</h3><p><strong>ADP tells you who the room is drafting. OverADP helps decide who your roster should draft now and who can wait.</strong> That decision layer is the part supported by the simulation.</p></div>
-
-<h2>How the paired simulation worked</h2>
-<ol style="padding-left:22px;color:var(--fg2);">
-  <li style="margin:10px 0;">Each strategy entered 500 paired 12-team, 15-round snake drafts in 2023 and another 500 in 2024.</li>
-  <li style="margin:10px 0;">Each pair used the same season, draft slot, random seed, opponent logic, schedule and actual weekly player outcomes.</li>
-  <li style="margin:10px 0;">Opponents drafted from noisy ADP plus roster need and never used OverADP projections.</li>
-  <li style="margin:10px 0;">The primary result froze the Week-1 lineup for Weeks 1-14 to isolate the roster created by the draft.</li>
-  <li style="margin:10px 0;">Injuries, missed games and breakouts entered through real historical weekly fantasy points.</li>
-</ol>
-
-<h2>What the study does not prove</h2>
-<p>This was a retrospective exploratory backtest, not an untouched future-season experiment. Opponents approximate home-league behavior rather than replaying observed draft rooms. The simulation omits trades, FAAB auctions, kickers, defenses and explicit injury designations. Championship rates did not improve, so the evidence supports stronger drafted rosters and regular-season position—not guaranteed titles.</p>
-<p>The 2025 sensitivity season is intentionally excluded from the headline because it uses an ESPN preseason-rank proxy rather than true historical ADP. Read the complete <a class="inline" href="/methodology/#draft-simulation">test design and limitations</a>.</p>
-
-<h2>How to use the result in a 2026 draft</h2>
+<h2>How to use ADP and OverADP together</h2>
 <div class="card-grid">
-  <article class="card"><h4>Keep ADP on the screen</h4><div class="sub">PRICE SIGNAL</div><p class="reason">ADP is useful for predicting the room and estimating which players may reach your next turn. It becomes dangerous only when it is treated as a projection or universal answer.</p></article>
-  <article class="card"><h4>Compare position-adjusted value</h4><div class="sub">NOT RAW POINTS</div><p class="reason">Use VBD and position-specific projections to compare players whose raw scoring scales are different.</p></article>
-  <article class="card"><h4>Draft for this roster</h4><div class="sub">LIVE CONTEXT</div><p class="reason">Starter holes, flex paths, existing volatility and positional cliffs can change the best selection after every pick.</p></article>
+  <article class="card"><h4>Keep ADP on the screen</h4><div class="sub">PRICE SIGNAL</div><p class="reason">ADP is a strong signal of player value and predicts which players may reach your next turn. Our tests say to respect it.</p></article>
+  <article class="card"><h4>Treat disagreements as research</h4><div class="sub">SECOND OPINION</div><p class="reason">When the model and ADP disagree, check the range, depth chart and news before acting. A gap is a question, not an answer.</p></article>
+  <article class="card"><h4>Draft for this roster</h4><div class="sub">LIVE CONTEXT</div><p class="reason">Starter holes, flex paths and positional cliffs can change the best selection after every pick.</p></article>
 </div>
 
 <h2>Frequently asked questions</h2>
 <div class="faq-list">
-  <details><summary>Does a fantasy football model beat ADP?</summary><p>This simulation found that the combined Target Intel strategy beat an ADP-first control across the 2023-2024 true-ADP sample. It did not find that a raw model-only sort universally beats ADP, and it cannot guarantee future performance.</p></details>
-  <details><summary>Why freeze the Week-1 lineup?</summary><p>Freezing the initial lineup separates the roster created at the draft from later start/sit and waiver decisions. That makes the headline result more directly about draft quality.</p></details>
-  <details><summary>Did Target Intel win more championships?</summary><p>No reliable championship improvement appeared in this test. A short playoff is highly variable, and the study is not evidence for guaranteed titles or prize money.</p></details>
+  <details><summary>Does OverADP beat ADP?</summary><p>We do not claim it does. The August 2026 study favored OverADP, but the September re-run of the current app did not reproduce it, and the current point model ranks players less accurately than ADP.</p></details>
+  <details><summary>Why publish a result that went against you?</summary><p>Because you are trusting these numbers in your draft. A test that only reports wins is not a test.</p></details>
+  <details><summary>When will the new model be live?</summary><p>We plan to test it in our full draft simulator and launch it for 2027 drafts only if it holds up. This page will be updated either way.</p></details>
 </div>
 """
     related = [
@@ -783,7 +789,7 @@ def build_adp_vs_model() -> str:
 
 
 def build_methodology(accuracy: dict) -> str:
-    title_full = "Methodology — How OverADP's Walk-Forward Fantasy Football Model Works | OverADP"
+    title_full = "Methodology: How OverADP's Walk-Forward Fantasy Football Model Works | OverADP"
     desc = "How OverADP projects fantasy football: chronological walk-forward testing, position-specific CatBoost models, split-conformal 80%-target ranges, current depth-chart context, and published limitations."
 
     metric_rows = []
@@ -839,21 +845,21 @@ def build_methodology(accuracy: dict) -> str:
 <div class="crumbs"><a href="/">Home</a> / Methodology</div>
 <div class="section-tag">Transparency</div>
 <h1>How the <span class="accent">Model</span> Works</h1>
-<p class="lead">A full technical breakdown of OverADP's machine-learning pipeline — how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
+<p class="lead">A full technical breakdown of OverADP's machine-learning pipeline: how we project fantasy points, how we quantify uncertainty, and how we validate without leaking future information into the past.</p>
 <div class="byline"><span>By OverADP Research</span><span>Updated {datetime.now(UTC).strftime('%B %d, %Y')}</span><span>Methods and limitations</span></div>
 
 <h2>The one-sentence version</h2>
 <p>We train one CatBoost point model per position on completed NFL seasons, test it chronologically on the next season, and pair the point estimate with a separate split-conformal quantile range targeting 80% marginal coverage.</p>
 
 <h2>1. Walk-forward validation (not random splits)</h2>
-<p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information — the model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
+<p>Fantasy football data is temporal: player stats in 2023 are <em>not</em> independent of stats in 2022. A standard 80/20 random train-test split would leak future information. The model would see a player's 2024 season during training and then be "tested" on his 2025 season, but it already knows the player's career trajectory.</p>
 <p>Walk-forward validation prevents this. The published point-model results use two folds: train through 2023 and test on 2024, then train through 2024 and test on 2025. The aggregate includes every eligible QB/RB/WR/TE row in those folds.</p>
 
 <h2>2. One CatBoost model per position</h2>
 <p>QB, RB, WR, and TE are trained separately because their production scales and useful features differ. The production point model is CatBoost for all four positions, with position-specific feature lists and temporal sample weighting so newer training seasons matter more.</p>
 
 <h2>3. Conformal quantile regression (CQR) for honest 80% intervals</h2>
-<p>Point predictions alone are dangerous in fantasy — every projection is wrong, the question is <em>by how much</em>. We train separate quantile CatBoost models at the 10th and 90th percentiles, then calibrate on the most recent held-out season using split-conformal CQR.</p>
+<p>Point predictions alone are dangerous in fantasy. Every projection is wrong; the question is <em>by how much</em>. We train separate quantile CatBoost models at the 10th and 90th percentiles, then calibrate on the most recent held-out season using split-conformal CQR.</p>
 <p>The final adjustment is learned from 2025 calibration rows and targets <strong>80% marginal coverage</strong>. Because that same season is used for final calibration, its post-adjustment coverage is a calibration diagnostic, not an independent test-set guarantee. Coverage for an individual player is never guaranteed.</p>
 
 <h2>4. Depth-chart awareness (Week 1 snapshot)</h2>
@@ -861,17 +867,17 @@ def build_methodology(accuracy: dict) -> str:
 <p>Used for QB, WR, and TE projections. Excluded from RB because RBBC (running-back-by-committee) makes a nominal depth rank less reliable than actual prior workload and teammate carry competition.</p>
 
 <h2>5. Target-competition features (prevent phantom breakouts)</h2>
-<p>Using prior-season teammate targets, we compute each WR's teammate_targets_prev and teammate_rec_yards_prev on their <em>current</em> team (so if Chase Claypool signs with the Jaguars, his projections reflect BTJ's 200+ targets ahead of him). We also compute teammate_carries_prev for RBs.</p>
+<p>Using prior-season teammate targets, we compute each WR's teammate_targets_prev and teammate_rec_yards_prev on their <em>current</em> team (so a receiver who joins a team with a 150-target WR1 is projected with that competition in mind). We also compute teammate_carries_prev for RBs.</p>
 <p>The feature uses prior-season teammate production on the current roster, never the target season's outcomes. This re-runs after free-agent and draft changes are reflected in the projection-season roster.</p>
 
 <h2>6. Conservative monotonic constraints</h2>
-<p>Aggregate production lags (prior-season fantasy points, targets, receptions, carries) should never have a <em>negative</em> marginal effect on projections. We encode positive monotonic constraints on exactly these features and leave everything else unconstrained. This adds sanity guardrails without overfitting — MAE stays within noise, but the model can't produce pathological projections where scoring more the prior year makes you project lower.</p>
+<p>Aggregate production lags (prior-season fantasy points, targets, receptions, carries) should never have a <em>negative</em> marginal effect on projections. We encode positive monotonic constraints on exactly these features and leave everything else unconstrained. This adds sanity guardrails without overfitting. MAE stays within noise, but the model can't produce pathological projections where scoring more the prior year makes you project lower.</p>
 
 <h2>7. College + draft capital features for rookies</h2>
 <p>For rookies and second-year players, we merge draft picks, combine metrics, college production, and interaction features (college_x_rookie, draft_cap_x_rookie, athletic_x_rookie). Athletic score is a position-weighted composite of combine z-scores. These features give the model signal before an NFL stat line exists.</p>
 
 <h2>The {test_season_label} walk-forward results</h2>
-<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. The exact-cohort market check uses true FFC ADP in 2024 but an explicitly labeled ESPN preseason-rank proxy in 2025, so no ADP improvement percentage is published here.</p>
+<p>All numbers below are aggregated from the exported validation results and weighted by the number of player-season predictions in each fold. On a separate true-ADP check (2023–2025, 12-team half-PPR ADP), the current point model ranked players less accurately than ADP (rank correlation 0.29 vs 0.40), so projections are presented next to ADP as a second opinion.</p>
 <table class="rank">
   <thead><tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr></thead>
   <tbody>{metric_table_rows}</tbody>
@@ -879,14 +885,16 @@ def build_methodology(accuracy: dict) -> str:
 
 <h2>What the model doesn't do</h2>
 <p>Honest limitations:</p>
-<p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call — it was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
+<p><strong>It can't predict injuries.</strong> Malik Nabers finishing 2025 with 4 games played wasn't a model call. It was a bone bruise. We DO model injury rates from prior-season games-missed features, but week-to-week injuries are noise.</p>
 <p><strong>It's only as good as the data.</strong> UDFAs and late-round rookies with missing college data get wider intervals and lower confidence. Coaching-change features were tested and rejected after walk-forward validation showed them adding noise rather than signal.</p>
 <p><strong>Fantasy football is high-variance.</strong> Even a strong aggregate model misses individual players. The interval pipeline targets 80% marginal coverage after calibration, but that target is not a player-level promise and still needs monitoring on future untouched seasons.</p>
 
 <h2>What's next</h2>
 <p>Roster, depth-chart, ADP, and rookie inputs continue to change through training camp. We refresh the board as those sources stabilize and will report interval coverage again only after a future season remains untouched through evaluation.</p>
 <p>See the current results in <a class="inline" href="/app/">the free War Room</a>, or dive into the <a class="inline" href="/2026/top-sleepers/">top sleepers</a> and <a class="inline" href="/2026/top-busts/">top busts</a>.</p>
-<p>For the decision-system evidence, read the focused <a class="inline" href="/2026/adp-vs-model/">ADP vs model simulation study</a>. For a fast two-player check, use the <a class="inline" href="/2026/who-should-i-draft/">Who Should I Draft comparator</a>.</p>
+<h2 id="draft-simulation">Draft simulations</h2>
+<p>We also test full drafts against ADP-first drafting. All results, including a re-run that did not reproduce an earlier study, are on the <a class="inline" href="/2026/adp-vs-model/">ADP vs Model page</a>.</p>
+<p>For a fast two-player check, use the <a class="inline" href="/2026/who-should-i-draft/">Who Should I Draft comparator</a>.</p>
 """
 
     related = [
