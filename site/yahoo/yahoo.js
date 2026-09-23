@@ -1,10 +1,11 @@
-import { positionSummary, rosterNeeds, pickupCandidates, mergeAvailablePages, availability, isBench, isStarter, canFill } from './insights.mjs';
-import { indexPublicPlayers, matchPublicPlayer, publicSummary, publicInjuryNote, normalTeam, formatKickoff } from './public-context.mjs';
+import { isBench, isStarter, pickupCandidates, mergeAvailablePages } from './insights.mjs';
+import { indexPublicPlayers, matchPublicPlayer, normalTeam } from './public-context.mjs';
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, dropCandidate, buildMoves, movesGain, positionRanks, tradeIdea } from './hub.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
-const fmt = n => Number.isFinite(n) ? n.toFixed(1) : 'Unavailable';
+const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
 const messages = {
   NOT_CONFIGURED: 'The Yahoo connection is being set up. Please check back shortly.',
   SESSION_EXPIRED: 'Your Yahoo connection expired. Connect again to continue.',
@@ -25,16 +26,18 @@ const denialMessages = Object.freeze({
   HTML_REJECTION: 'Yahoo returned a web-page rejection instead of an API error. Diagnostic: HTML_REJECTION.',
   UNCLASSIFIED: messages.YAHOO_ACCESS_DENIED,
 });
-let generation = 0, controller, expiry, command = null, page = 0, availableGeneration = 0, availableController;
-let loadedCandidates = [];
+const POS_CLASS = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'D/ST': 'DEF' };
+let generation = 0, controller, expiry, command = null, availableGeneration = 0, availableController;
+let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null;
 let cooldownUntil = 0, rateLimitCount = 0;
-let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null;
+let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null, contextReady = null;
 function publicCurrent() {
   return publicSnapshot && Number(command?.league?.season) === publicSnapshot.season &&
     publicSnapshot.nextWeek === command?.league?.currentWeek &&
     Number.isFinite(Date.parse(publicSnapshot.generatedAt)) &&
     Date.now() - Date.parse(publicSnapshot.generatedAt) <= 48 * 3600000;
 }
+function publicMatch(player) { return publicSnapshot?.season === Number(command?.league?.season) ? matchPublicPlayer(player, publicIndex) : null; }
 function weekly(player) {
   if (!publicCurrent()) return { points: null, playable: false, reason: 'Current-week public snapshot unavailable or stale' };
   const matched = publicMatch(player);
@@ -48,59 +51,36 @@ function actualScore(player) {
     return scorePlayer({ position: 'DEF', team: normalTeam(player.team) }, command.league, publicSnapshot.teamStats);
   return scorePlayer(publicMatch(player), command.league, publicSnapshot.teamStats);
 }
-async function loadJevPublicContext() {
-  try {
-    const response = await fetch('/yahoo/jev-public-2026.json', { cache: 'no-cache' });
-    if (!response.ok) throw Error('Jev public snapshot unavailable');
-    const data = await response.json();
-    if (data.source !== 'Jev analysis of public nflverse data only' || data.season !== 2026 || data.week !== 3) throw Error('Jev public snapshot invalid');
-    const choices = Object.values(data.decisions || {});
-    const uncertain = choices.filter(value => value === 'uncertain').length;
-    $('jev-coverage').textContent = `Jev public-only Week ${data.week} review: ${uncertain}/${choices.length} games uncertain with two weeks of evidence · not used to rank your lineup`;
-    $('jev-note').textContent = `Jev's public-only review found ${uncertain} of ${choices.length} games too uncertain to adjust the lineup estimate. It never receives your Yahoo roster.`;
-  } catch {
-    $('jev-coverage').textContent = 'Independent Jev context unavailable; no AI result is assumed.';
-    $('jev-note').textContent = 'Jev public context is unavailable; no AI adjustment is assumed.';
-  }
-}
-function publicMatch(player) { return publicSnapshot?.season === Number(command?.league?.season) ? matchPublicPlayer(player, publicIndex) : null; }
-async function loadPublicContext() {
-  try {
-    const response = await fetch('/yahoo/nflverse-2026.json', { cache: 'no-cache' });
-    if (!response.ok) throw Error('Public snapshot unavailable');
-    const data = await response.json();
-    if (data.source !== 'nflverse' || data.season !== 2026 || !Array.isArray(data.players)) throw Error('Public snapshot invalid');
-    publicSnapshot = data; publicIndex = indexPublicPlayers(data);
-    populateJevPlayers();
-    const ageHours = (Date.now() - Date.parse(data.generatedAt)) / 3600000;
-    const stale = !Number.isFinite(ageHours) || ageHours > 48;
-    $('public-coverage').textContent = `Independent nflverse 2026: Weeks 1–${data.latestCompletedWeek} actuals · Week ${data.nextWeek} schedule · ${data.players.length} players · snapshot ${new Date(data.generatedAt).toLocaleString()}${stale ? ' · STALE: verify current status in Yahoo' : ''}`;
-    if (command) { renderRoster(); renderComparison(); }
-  } catch {
-    $('public-coverage').textContent = 'Independent nflverse context unavailable. Yahoo roster information remains usable.';
-    $('jev-status').textContent = 'Public player list unavailable. Please try again later.';
-  }
-}
-async function loadPriorContext() {
-  try {
-    const response = await fetch('/yahoo/nflverse-prior-2025.json', { cache: 'no-cache' });
-    if (!response.ok) throw Error('Prior season unavailable');
-    const data = await response.json();
-    if (data.source !== 'nflverse' || data.season !== 2025 || !Array.isArray(data.players)) throw Error('Prior season invalid');
-    priorSnapshot = data; priorPlayers = priorIndex(data);
-    if (command) { renderRoster(); renderComparison(); }
-  } catch { priorSnapshot = null; priorPlayers = null; }
-}
+function nextGame(player) { return publicMatch(player)?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)] || null; }
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
+function error(e) {
+  if (e.name === 'AbortError') return;
+  if (e.code === 'SESSION_EXPIRED') connected(false);
+  const message = e.code === 'YAHOO_RATE_LIMIT' ? 'Yahoo is limiting requests. Try again after ' + new Date(cooldownUntil).toLocaleTimeString() + '.'
+    : e.code === 'YAHOO_ACCESS_DENIED' && Object.hasOwn(denialMessages, e.diagnostic) ? denialMessages[e.diagnostic]
+    : messages[e.code] || 'Yahoo could not finish this read. Missing information has not been treated as zero.';
+  status(message, true); return message;
+}
+function arrowIcon() {
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), path = document.createElementNS(ns, 'path');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); path.setAttribute('d', 'M7 17 17 7M8 7h9v9');
+  svg.append(path); return svg;
+}
+function yahooButton(label, href, primary = true) {
+  const a = el('a', label, 'button' + (primary ? ' primary' : ''));
+  a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.append(arrowIcon()); return a;
+}
+function posClass(position) { return 'pos-' + (POS_CLASS[String(position).toUpperCase().split(/[,/]/)[0]] || 'FLEX'); }
+function tagEl(tag) { return tag ? el('span', tag.text, 'tag ' + tag.tone) : null; }
+
 function resetCandidates() {
-  availableGeneration++; availableController?.abort(); availableController = null; page = 0;
-  loadedCandidates = [];
-  $('candidates').replaceChildren(); $('previous').hidden = true; $('next').hidden = true; $('find').disabled = false;
-  $('pickup-status').textContent = 'Choose a position or find available players.';
+  availableGeneration++; availableController?.abort(); availableController = null;
+  candidates = []; addsShown = 6; $('candidates').replaceChildren(); $('more-adds').hidden = true; $('pickup-status').textContent = '';
 }
 function clearWorkspace() {
-  command = null; document.body.classList.remove('loaded'); resetCandidates(); $('workspace').hidden = true; $('empty').hidden = false;
-  for (const id of ['comparison', 'roster', 'needs', 'swaps', 'weekly-lineup', 'settings', 'league-heading', 'coverage', 'warnings']) $(id).replaceChildren();
+  command = null; document.body.classList.remove('loaded'); resetCandidates();
+  $('hub').hidden = true; $('tabbar').hidden = true;
+  for (const id of ['matchup', 'moves', 'glance', 'starters', 'bench', 'ranks', 'trade', 'settings', 'warnings']) $(id).replaceChildren();
 }
 function clearData() {
   generation++; controller?.abort(); controller = null; clearTimeout(expiry); clearWorkspace();
@@ -108,8 +88,8 @@ function clearData() {
 }
 function connected(on) {
   document.body.classList.toggle('connected', on);
-  $('connect').hidden = on; $('disconnect').hidden = !on; $('refresh').hidden = !on;
-  if (!on) { clearData(); $('empty-message').textContent = 'Connect Yahoo to see your lineup, available players, and league comparison.'; }
+  $('connect-panel').hidden = on; $('yahoo-chip').hidden = !on; $('disconnect').hidden = !on; $('refresh').hidden = !on;
+  if (!on) { clearData(); $('empty-message').textContent = 'OverADP only reads your team. You make every change in Yahoo.'; }
 }
 function setExpiry(timestamp) {
   if (!Number.isFinite(timestamp)) return;
@@ -117,6 +97,7 @@ function setExpiry(timestamp) {
   expiry = setTimeout(() => { connected(false); status('Your Yahoo session expired. The displayed league information was cleared.'); }, Math.max(0, timestamp - Date.now()));
 }
 async function request(action, extra = {}, signal) {
+  if (demo) return action === 'command' ? demo.command : action === 'teams' ? { teams: demo.teams } : demo.available(extra);
   if (action !== 'disconnect' && Date.now() < cooldownUntil) throw { code: 'YAHOO_RATE_LIMIT' };
   const r = await fetch('/.netlify/functions/yahoo-api', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) });
@@ -128,223 +109,237 @@ async function request(action, extra = {}, signal) {
   if (!r.ok) throw { code: body.error, diagnostic: body.diagnostic };
   rateLimitCount = 0; setExpiry(body.expiresAt); return body;
 }
-function error(e) {
-  if (e.name === 'AbortError') return;
-  if (e.code === 'SESSION_EXPIRED') connected(false);
-  const message = e.code === 'YAHOO_RATE_LIMIT' ? 'Yahoo is limiting requests. Try again after ' + new Date(cooldownUntil).toLocaleTimeString() + '.'
-    : e.code === 'YAHOO_ACCESS_DENIED' && Object.hasOwn(denialMessages, e.diagnostic) ? denialMessages[e.diagnostic]
-    : messages[e.code] || 'Yahoo could not finish this read. Missing information has not been treated as zero.';
-  status(message, true); return message;
-}
-async function teams() {
-  clearData(); const id = generation; controller = new AbortController(); $('refresh').disabled = true;
-  status('Reading your current Yahoo football teams…');
-  $('empty-message').textContent = 'Opening your league…';
-  try {
-    const data = await request('teams', {}, controller.signal); if (id !== generation) return;
-    for (const team of data.teams) $('team').append(new Option(team.name + ' · league ' + team.leagueKey.split('.l.')[1], team.teamKey));
-    $('teams-section').hidden = data.teams.length <= 1;
-    if (data.teams.length === 1) {
-      $('team').value = data.teams[0].teamKey;
-      $('refresh').disabled = false;
-      await loadLeague();
-    } else if (data.teams.length > 1) {
-      $('empty-message').textContent = 'Choose your team above to open your lineup, available players, and league comparison.';
-      status('Connected. Choose the team you want to review.');
-    } else {
-      $('empty-message').textContent = 'No current NFL team was found for this Yahoo account.';
-      status('Connected, but Yahoo returned no current NFL teams for this account.');
-    }
-  } catch (e) { if (id === generation) { $('empty-message').textContent = 'Could not load your Yahoo teams. Try Refresh teams.'; error(e); } }
-  finally { if (id === generation) $('refresh').disabled = false; }
-}
-function makeTable(headings, rows, compact = false) {
-  const wrap = el('div', null, 'table-wrap' + (compact ? ' compact' : '')), table = el('table');
-  const head = el('thead'), tr = el('tr');
-  for (const h of headings) { const th = el('th', h); th.scope = 'col'; tr.append(th); }
-  head.append(tr); table.append(head); const body = el('tbody');
-  for (const { cells, mine } of rows) {
-    const row = el('tr', null, mine ? 'you' : '');
-    for (const v of cells) { const td = el('td'); if (v instanceof Node) td.append(v); else td.textContent = v == null || v === '' ? 'Unavailable' : String(v); row.append(td); }
-    body.append(row);
-  }
-  table.append(body); wrap.append(table); return wrap;
-}
-function playerList(players, available) {
-  const list = el('div', null, 'player-list');
-  if (!available) return el('span', 'Lineup unavailable', 'muted');
-  if (!players.length) return el('span', 'None selected', 'muted');
-  for (const p of players) {
-    const row = el('div', p.name), flag = availability(p, command.league.currentWeek);
-    row.append(el('small', p.slot + (flag.caution ? ' · ' + flag.label : ''))); list.append(row);
-  }
-  return list;
-}
-function playerCard(player, { candidate = false, reason = '', impact = null, sortMode = 'gain' } = {}) {
-  const pub = publicMatch(player), score = actualScore(player), state = availability(player, command.league.currentWeek);
-  const card = el('article', null, 'player-card' + (state.caution ? ' player-alert' : ''));
-  const top = el('div', null, 'player-top'), who = el('div');
-  who.append(el('strong', player.name), el('span', `${player.position} · ${player.team || 'NFL team not reported'}${candidate ? '' : ` · ${player.slot || 'Slot unknown'}`}`, 'player-meta'));
-  const scoreBox = el('div', null, 'score-box');
-  const pastPoints = Number.isFinite(score?.points) ? fmt(score.points) : score?.partial && Number.isFinite(score.weekly?.[0]?.knownPoints) ? 'Partial' : '—';
-  if (candidate && sortMode === 'gain') {
-    scoreBox.append(el('strong', Number.isFinite(impact?.gain) ? `${impact.gain >= 0 ? '+' : ''}${fmt(impact.gain)}` : '—'));
-    scoreBox.append(el('small', 'est. lineup gain'));
-  } else {
-    scoreBox.append(el('strong', pastPoints));
-    scoreBox.append(el('small', candidate ? 'past points' : Number.isFinite(score?.points) ? `${score.games} game${score.games === 1 ? '' : 's'} · through W${publicSnapshot.latestCompletedWeek}` : score?.partial ? 'incomplete scoring' : 'no verified score'));
-  }
-  top.append(who, scoreBox); card.append(top);
-  if (candidate) card.append(el('p', sortMode === 'gain'
-    ? `Past points: ${pastPoints}${Number.isFinite(score?.points) ? ` through Week ${publicSnapshot.latestCompletedWeek}` : ''}`
-    : `Estimated lineup gain: ${Number.isFinite(impact?.gain) ? `${impact.gain >= 0 ? '+' : ''}${fmt(impact.gain)}` : 'unavailable'}`, 'schedule-line'));
-  if (state.caution) card.append(el('span', `Yahoo: ${state.label}`, state.blocked ? 'status-blocked flag' : 'status-caution flag'));
-  if (candidate) card.append(el('span', player.ownership === 'waivers' ? `Waivers${player.waiverDate ? ` · ${player.waiverDate}` : ''}` : 'Free agent', 'availability-pill'));
-  const nextGame = pub?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)];
-  if (nextGame) card.append(el('p', `Next: vs ${nextGame.opponent} · ${formatKickoff(nextGame) || 'kickoff unavailable'}`, 'schedule-line'));
-  if (reason) card.append(el('p', reason, 'card-reason'));
-  const details = el('details', null, 'player-detail'); details.append(el('summary', 'Recent stats and scoring detail'));
-  details.append(el('p', pub ? publicSummary(pub, publicSnapshot) : player.position === 'DEF' ? 'Team defense stats are incomplete; points allowed cannot be verified here.' : 'No exact public name, team and position match.'));
-  if (score?.weekly?.length) details.append(el('p', score.weekly.map(w => `Week ${w.week}: ${Number.isFinite(w.points) ? fmt(w.points) : 'incomplete'} league pts`).join(' · ')));
-  if (score?.partial && score.reason) details.append(el('p', `Score incomplete: ${score.reason}. Do not compare as a full total.`, 'warning-text'));
-  const injury = publicInjuryNote(pub, publicSnapshot); if (injury) details.append(el('p', injury, 'history-note'));
-  card.append(details); return card;
-}
+
 function ownTeam() { return command?.teams.find(t => t.teamKey === command.team.teamKey); }
-function renderComparison() {
-  if (!command) return;
-  const pos = $('compare-position').value;
-  const summaries = command.teams.map(team => {
-    const s = positionSummary(team, pos, command.league.season, p => weekly(p).points);
-    return { team, score: s.total, missing: s.missing, starters: s.starters.length };
-  });
-  const mine = summaries.find(item => item.team.teamKey === command.team.teamKey);
-  const comparable = summaries.filter(item => Number.isFinite(item.score) && item.starters === mine?.starters);
-  const sorted = [...comparable].sort((a, b) => b.score - a.score);
-  const rank = sorted.findIndex(item => item.team.teamKey === command.team.teamKey) + 1;
-  const box = el('div', null, 'comparison-summary');
-  box.append(el('strong', rank ? `#${rank} of ${sorted.length}` : 'Not rankable', 'comparison-rank'));
-  box.append(el('p', `Your ${pos === 'ALL' ? 'current starters' : pos + ' starters'}: ${Number.isFinite(mine?.score) ? fmt(mine.score) + ' provisional points' : 'incomplete estimate'}. ${mine?.starters ?? 0} slot${mine?.starters === 1 ? '' : 's'} represented.`));
-  box.append(el('p', `${sorted.length} of ${summaries.length} teams have the same number of starters and complete public scoring in this view. Other teams' rosters are not displayed.`, 'fine'));
-  if (pos === 'DEF') box.append(el('p', 'Public defense scoring is incomplete in this league. No defensive rank is inferred.', 'warning'));
-  $('comparison').replaceChildren(box);
+function currentLineup(team) {
+  return { moves: [], assignments: team.roster.filter(isStarter).map(p => ({ slot: p.slot, player: p, estimate: weekly(p) })) };
 }
-function renderWeekly(mine) {
-  const target = $('weekly-lineup');
-  if (!mine?.rosterAvailable || !publicCurrent()) {
-    target.replaceChildren(el('p', 'A fresh, verified current-week public schedule and roster are needed for lineup advice. No stale recommendation is shown.')); return;
-  }
-  const result = optimizeLineup(mine, command.league, weekly);
-  const list = el('div', null, 'lineup-rows');
-  for (const item of result.assignments) {
-    const row = el('div', null, 'lineup-row');
-    row.append(el('span', item.slot, 'slot-badge'));
-    const person = el('div'), name = el('strong', item.player?.name || 'EMPTY');
-    person.append(name);
-    if (item.estimate?.caution) person.append(el('small', `Status: ${item.estimate.reason}`, 'status-caution'));
-    else if (item.estimate?.basis) person.append(el('small', item.estimate.basis, 'estimate-basis'));
-    row.append(person);
-    row.append(el('span', Number.isFinite(item.estimate?.points) ? `${fmt(item.estimate.points)} est.` : 'No estimate', 'numeric'));
-    list.append(row);
-  }
-  const explanation = el('p', null, 'fine');
-  explanation.textContent = `${result.moves.length ? result.moves.map(move => `${move.player.name} into ${move.slot}${move.replaces ? ` over ${move.replaces.name}` : ' (empty slot)'}`).join('; ') + '. ' : 'No clear eligible change beyond status checks. '}${result.unknown ? `${result.unknown} slot(s) lack complete scoring; no full team total shown.` : `Known estimated starter sum ${fmt(result.knownPoints)}.`}`;
-  const cautions = result.assignments.filter(item => item.estimate?.caution);
-  const contingencies = cautions.map(item => {
-    const alternate = optimizeLineup(mine, command.league, p => p.playerKey === item.player.playerKey
-      ? { ...weekly(p), playable: false } : weekly(p));
-    if (alternate.assignments.some(x => x.player?.playerKey === item.player.playerKey))
-      return `${item.player.name} is already locked in this slot; a lineup change is no longer assumed possible.`;
-    const currentKeys = new Set(result.assignments.map(x => x.player?.playerKey).filter(Boolean));
-    const added = alternate.assignments.filter(x => x.player && !currentKeys.has(x.player.playerKey));
-    if (!added.length) return `${item.player.name}: no eligible healthy roster replacement was found. Check waivers.`;
-    const first = [...added].sort((a, b) => (a.estimate?.kickoff ?? Infinity) - (b.estimate?.kickoff ?? Infinity))[0];
-    const game = publicMatch(first.player)?.nextGame || publicSnapshot.schedule?.[normalTeam(first.player.team)];
-    const deadline = game ? formatKickoff(game) : null;
-    const early = Number.isFinite(first.estimate?.kickoff) && first.estimate.kickoff < item.estimate.kickoff;
-    return `${item.player.name} unavailable → bring in ${added.map(x => `${x.player.name} (${x.slot})`).join(', ')}.${early && deadline ? ` Decide before ${deadline}, when your alternative locks.` : ' Verify the alternative before kickoff.'}`;
-  });
-  target.replaceChildren(list, explanation,
-    ...(cautions.length ? [el('p', `${cautions.map(item => item.player.name).join(', ')}: this plan is conditional on playing. Verify status before each kickoff.`, 'warning')] : []),
-    ...contingencies.map(note => el('p', note, 'contingency')));
+function plan() {
+  const mine = ownTeam();
+  const fresh = publicCurrent();
+  const lineup = mine?.rosterAvailable ? (fresh ? optimizeLineup(mine, command.league, weekly) : currentLineup(mine)) : null;
+  const drop = mine ? dropCandidate(mine, command.league, weekly) : null;
+  const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), drop, links: yahooLinks(mine.teamKey) }) : [];
+  return { mine, lineup, drop, moves, fresh };
 }
-function renderRoster() {
-  const mine = ownTeam(), needs = rosterNeeds(mine, command.league);
-  const list = el('ul', null, 'need-list');
-  needs.forEach(n => list.append(el('li', n.text)));
-  $('needs').replaceChildren(!mine.rosterAvailable ? el('p', 'Your lineup could not be loaded. Needs have not been assessed.')
-    : needs.length ? list : el('p', 'No unfilled slots or status/bye flags found in the returned current lineup. This does not confirm every starter will play.'));
-  renderWeekly(mine);
-  const flagged = mine.rosterAvailable ? mine.roster.filter(p => isStarter(p) && availability(p, command.league.currentWeek).caution) : [];
-  const swaps = el('div', null, 'swap-list');
-  for (const starter of flagged) {
-    const options = mine.roster.filter(p => isBench(p) && canFill(p, starter.slot) && !availability(p, command.league.currentWeek).caution);
-    const risky = mine.roster.filter(p => isBench(p) && canFill(p, starter.slot) && availability(p, command.league.currentWeek).caution && !availability(p, command.league.currentWeek).blocked);
-    const card = el('div', null, 'swap-item');
-    const state = availability(starter, command.league.currentWeek);
-    card.append(el('strong', `${state.blocked ? 'Sit or replace' : 'Monitor'} ${starter.name} · Yahoo ${state.label}`));
-    card.append(el('p', options.length ? `Unflagged eligible bench cover: ${options.map(p => p.name).join(', ')}.` : 'No unflagged eligible bench cover was returned. Review the waiver list.'));
-    if (risky.length) card.append(el('p', `Also eligible but status-flagged: ${risky.map(p => `${p.name} (${availability(p, command.league.currentWeek).label})`).join(', ')}. Verify before kickoff.`));
-    const look = el('button', `Check ${starter.slot} options`, 'text-button'); look.addEventListener('click', () => searchNeed(starter.slot)); card.append(look);
-    swaps.append(card);
+
+function renderMatchup(mine, moves) {
+  const box = $('matchup'), opponent = command.teams.find(t => t.teamKey === command.matchup?.opponentKey);
+  const me = starterTotal(mine, weekly), them = opponent ? starterTotal(opponent, weekly) : null;
+  const top = el('div', null, 'matchup-top');
+  top.append(el('span', opponent ? "This week's matchup" : 'Your starters this week', 'eyebrow'));
+  const kickoffs = mine.roster.filter(isStarter).map(p => weekly(p)).filter(e => Number.isFinite(e.kickoff) && e.kickoff > Date.now()).map(e => e.kickoff);
+  const first = mine.roster.filter(isStarter).map(p => ({ p, e: weekly(p) })).filter(x => x.e.kickoff === Math.min(...kickoffs))[0];
+  if (first) top.append(el('span', `First game ${gameLine(first.p.team, nextGame(first.p))?.split(' · ')[1] || ''}`, 'fine'));
+  const sides = el('div', null, 'matchup-sides');
+  const side = (label, total, cls) => {
+    const s = el('div', null, 'side ' + cls);
+    s.append(el('span', label, 'side-name'), el('span', total?.points != null ? fmt(total.points) : '—', 'side-pts'),
+      el('span', total?.missing ? `est. points · ${total.missing} without an estimate` : 'est. points', 'fine'));
+    return s;
+  };
+  sides.append(side('You', me, 'mine'));
+  if (opponent) sides.append(side(`${opponent.name}${Number.isFinite(opponent.wins) ? ` · ${opponent.wins}–${opponent.losses}` : ''}`, them, 'right'));
+  box.replaceChildren(top, sides);
+  if (opponent && Number.isFinite(me.points) && Number.isFinite(them?.points)) {
+    const bar = el('div', null, 'bar'), a = el('span'), b = el('span');
+    a.style.flexGrow = String(me.points); b.style.flexGrow = String(them.points); bar.append(a, b); box.append(bar);
   }
-  for (const need of needs.filter(n => n.type === 'empty')) {
-    const options = mine.roster.filter(p => isBench(p) && canFill(p, need.slot) && !availability(p, command.league.currentWeek).caution);
-    const risky = mine.roster.filter(p => isBench(p) && canFill(p, need.slot) && availability(p, command.league.currentWeek).caution && !availability(p, command.league.currentWeek).blocked);
-    const card = el('div', null, 'swap-item');
-    card.append(el('strong', `${need.slot} starting slot empty`));
-    card.append(el('p', options.length ? `Unflagged eligible bench option${options.length === 1 ? '' : 's'}: ${options.map(p => p.name).join(', ')}.` : `No unflagged bench cover. Review ${need.slot}-eligible waivers before kickoff.`));
-    if (risky.length) card.append(el('p', `Status-flagged option${risky.length === 1 ? '' : 's'}: ${risky.map(p => `${p.name} (${availability(p, command.league.currentWeek).label})`).join(', ')}. Do not rely on availability without confirmation.`));
-    const look = el('button', `Check ${need.slot} options`, 'text-button'); look.addEventListener('click', () => searchNeed(need.slot)); card.append(look);
-    swaps.append(card);
+  const gain = movesGain(moves), note = el('p', null, 'matchup-note');
+  if (!publicCurrent()) note.textContent = 'Point estimates are paused until the public stats update. Yahoo statuses below are current.';
+  else if (gain > 0) { note.append('Making the moves below adds about '); note.append(el('strong', `${fmt(gain)} points`)); note.append('.'); }
+  else note.textContent = opponent && Number.isFinite(me.points) && Number.isFinite(them?.points)
+    ? (me.points >= them.points ? 'You are the projected favorite as set.' : 'You are the projected underdog as set. Check Waivers for upgrades.')
+    : 'Your lineup is set as well as your roster allows.';
+  box.append(note);
+}
+function renderMoves(moves, fresh) {
+  $('moves-title').textContent = moves.length ? `${moves.length} move${moves.length === 1 ? '' : 's'} this week` : 'Moves this week';
+  $('moves-sub').textContent = moves.length > 1 ? 'Most important first' : '';
+  if (!moves.length) {
+    const box = el('div', null, 'card all-clear'), ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), path = document.createElementNS(ns, 'path');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); path.setAttribute('d', 'M20 6 9 17l-5-5'); svg.append(path);
+    const text = el('div'); text.append(el('strong', fresh ? 'Nothing to change right now' : 'No status problems in your lineup'),
+      el('p', fresh ? 'Your best healthy players are starting and no free agent clearly beats them. Check back after injury reports.' : 'Point estimates are paused until the public stats update, so only Yahoo injury tags were checked.'));
+    box.append(svg, text); $('moves').replaceChildren(box); return;
   }
-  $('swaps').replaceChildren(!mine.rosterAvailable ? el('p', 'Lineup unavailable.') : swaps.childElementCount ? swaps : el('p', 'No flagged starter or empty starting slot requires an immediate cover review. Monitor statuses before each kickoff.'));
-  const roster = el('div', null, 'roster-groups');
-  for (const [label, members] of [['Starting', mine.roster.filter(isStarter)], ['Bench & reserve', mine.roster.filter(isBench)]]) {
-    const group = el('section'); group.append(el('h3', `${label} · ${members.length}`));
-    const grid = el('div', null, 'player-grid'); members.forEach(p => grid.append(playerCard(p))); group.append(grid); roster.append(group);
+  $('moves').replaceChildren(...moves.map(m => {
+    const card = el('article', null, 'move'), top = el('div', null, 'move-top');
+    top.append(el('span', m.kind === 'lineup' ? 'Start / sit' : m.kind === 'pickup' ? 'Pick up' : 'Watch', 'kind ' + m.kind), el('span', m.impact, 'impact'));
+    const actions = el('div', null, 'move-actions');
+    actions.append(yahooButton(m.action, m.href));
+    card.append(top, el('p', m.headline, 'move-title'), el('p', m.why, 'move-why'), actions);
+    if (m.basis) { const d = el('details', null, 'basis'); d.append(el('summary', 'How is this estimated?'), el('p', `Based on ${m.basis} under your league's scoring.`)); card.append(d); }
+    return card;
+  }));
+}
+function playerRow(p, { slot = p.slot, extraTag = null, compact = false } = {}) {
+  const e = weekly(p), row = el('div', null, 'row' + (compact ? ' compact' : ''));
+  const tag = statusTag(p, command.league.currentWeek);
+  if (tag) row.classList.add('flagged');
+  const slotName = String(slot || p.position).toUpperCase().replace('W/R/T', 'FLEX');
+  row.append(el('span', slotName, 'slot ' + (slotName === 'FLEX' || slotName === 'BN' ? posClass(p.position) : posClass(slotName))));
+  const who = el('div', null, 'who'), line = el('div', null, 'name-line');
+  line.append(el('span', p.name, 'name'));
+  for (const t of [tag, extraTag, e.locked && Number.isFinite(e.kickoff) ? { text: 'LOCKED', tone: 'lock' } : null]) if (t) line.append(tagEl(t));
+  who.append(line);
+  if (!compact) who.append(el('span', gameLine(p.team, nextGame(p)) || `${p.team || 'Team'} · no game found`, 'game'));
+  row.append(who, el('span', fmt(e.points), 'pts'));
+  return row;
+}
+function renderLineup(mine, lineup) {
+  $('edit-lineup').href = yahooLinks(mine.teamKey).team;
+  if (!mine.rosterAvailable) { $('starters').replaceChildren(el('p', 'Yahoo did not return your current lineup. Try Refresh.', 'empty')); $('bench').replaceChildren(); return; }
+  const order = command.league.positions.map(p => String(p.position).toUpperCase());
+  const starters = mine.roster.filter(isStarter).sort((a, b) => order.indexOf(String(a.slot).toUpperCase()) - order.indexOf(String(b.slot).toUpperCase()));
+  const bench = mine.roster.filter(isBench);
+  const incoming = new Set((lineup?.moves || []).map(m => m.player.playerKey));
+  const outgoing = new Set((lineup?.moves || []).map(m => m.replaces?.playerKey).filter(Boolean));
+  $('starters').replaceChildren(...starters.map(p => playerRow(p, { extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
+  $('bench').replaceChildren(...(bench.length ? bench.map(p => playerRow(p, { extraTag: incoming.has(p.playerKey) ? { text: 'START', tone: 'good' } : null }))
+    : [el('p', 'No bench players.', 'empty')]));
+  $('glance').replaceChildren(...starters.map(p => playerRow(p, { compact: true, extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
+  const asSet = starterTotal(mine, weekly), best = lineup?.knownPoints;
+  const summary = $('lineup-summary'); summary.replaceChildren();
+  if (!publicCurrent()) summary.textContent = 'Point estimates are paused until the public stats update. Injury tags come straight from Yahoo.';
+  else {
+    summary.append('Est. ', el('strong', fmt(asSet.points)), ' as set');
+    if (lineup?.moves?.length && Number.isFinite(best) && best > asSet.points) { const s = el('strong', fmt(best), 'hi'); summary.append(' · ', s, ' with the suggested changes'); }
   }
-  $('roster').replaceChildren(mine.rosterAvailable ? roster : el('p', 'Roster unavailable.'));
-  const setup = makeTable(['Slot', 'Required'], command.league.positions.map(p => ({ cells: [p.position, p.count] })), true);
-  const scoring = el('details', null, 'method'); scoring.append(el('summary', 'See league scoring'));
-  scoring.append(makeTable(['Category', 'Points'], command.league.scoring.map(s => ({ cells: [s.name, s.value] })), true));
-  $('settings').replaceChildren(setup, scoring);
+}
+function renderLeague() {
+  const { ranks, byTeam } = positionRanks(command, weekly);
+  $('ranks').replaceChildren(...ranks.map(r => {
+    const row = el('div', null, 'rank-row'), body = el('div', null, 'rank-body'), line = el('div', null, 'rank-line');
+    const label = !r.rank ? 'Not enough data to rank' : r.of < 5 ? `Only ${r.of} teams could be compared` : r.rank <= 3 ? 'Strength' : r.rank > r.of - 3 ? 'Weak spot' : 'Middle of the pack';
+    line.append(el('span', label), el('span', r.rank ? `${r.rank} of ${r.of}` : '—'));
+    const meter = el('div', null, 'meter'), fill = el('span', null, r.rank && r.of >= 5 && r.rank <= 3 ? 'strong' : r.rank && r.of >= 5 && r.rank > r.of - 3 ? 'weak' : '');
+    fill.style.width = r.rank ? `${Math.round(100 * (r.of - r.rank + 1) / r.of)}%` : '0%'; meter.append(fill);
+    body.append(line, meter); row.append(el('span', r.pos, 'slot ' + posClass(r.pos)), body); return row;
+  }));
+  const idea = tradeIdea({ ranks, byTeam }, command.team.teamKey);
+  $('trade').hidden = !idea;
+  if (idea) $('trade').replaceChildren(el('p', 'Trade idea', 'eyebrow'), el('p', `You're deep at ${idea.strong} and thin at ${idea.weak}`, 'title'),
+    el('p', idea.partners ? `${idea.partners} team${idea.partners === 1 ? ' is' : 's are'} the reverse: strong at ${idea.weak}, weak at ${idea.strong}. That's where a trade is most likely to help both sides.`
+      : `No team is clearly the reverse right now, so a ${idea.strong}-for-${idea.weak} trade may take a sweetener.`, 'body'));
+  const table = (headings, rows) => {
+    const t = el('table'), head = el('tr'); headings.forEach(h => { const th = el('th', h); th.scope = 'col'; head.append(th); }); t.append(head);
+    rows.forEach(cells => { const tr = el('tr'); cells.forEach(c => tr.append(el('td', c))); t.append(tr); }); return t;
+  };
+  $('settings').replaceChildren(table(['Slot', 'Count'], command.league.positions.map(p => [p.position, p.count])),
+    table(['Scoring', 'Points'], command.league.scoring.map(s => [s.name, s.value])));
 }
 function renderCommand() {
   document.body.classList.add('loaded');
-  $('league-heading').replaceChildren(el('h2', command.league.name), el('p', command.team.name + ' · ' + command.league.season + ' · Week ' + command.league.currentWeek + ' · ' + command.league.scoringType, 'fine'));
-  const c = command.coverage;
-  $('coverage').textContent = c.returnedTeams + ' of ' + (c.expectedTeams ?? 'unknown') + ' teams · ' + c.rosterTeams + ' lineups loaded · Read ' + new Date(command.fetchedAt).toLocaleString();
+  const mine = ownTeam();
+  $('team-meta').textContent = `${command.league.name} · Week ${command.league.currentWeek}${Number.isFinite(mine?.wins) ? ` · ${mine.wins}–${mine.losses}${mine.ties ? `–${mine.ties}` : ''}` : ''}`;
+  $('team-name').textContent = command.team.name;
   $('warnings').replaceChildren(...command.warnings.map(w => el('p', w, 'warning')));
-  renderComparison(); renderRoster();
-  const firstNeed = rosterNeeds(ownTeam(), command.league)[0]?.slot;
-  $('pickup-position').value = ['QB','RB','WR','TE','K','DEF'].includes(firstNeed) ? firstNeed : 'ALL';
-  $('workspace').hidden = false; $('empty').hidden = true; selectView('roster');
+  renderPlan(); renderLeague();
+  $('hub').hidden = false; $('tabbar').hidden = false; $('teams-section').hidden = $('team').options.length <= 2;
+}
+function renderPlan() {
+  const { mine, lineup, moves, fresh } = plan();
+  renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup);
 }
 function selectView(view) {
-  for (const button of document.querySelectorAll('[data-view]')) {
-    const active = button.dataset.view === view; button.setAttribute('aria-pressed', String(active)); $(button.dataset.view + '-view').hidden = !active;
-  }
-  if (view === 'pickups' && command && !$('candidates').childElementCount && !$('find').disabled) findPlayers(0);
+  document.body.dataset.view = view;
+  for (const b of document.querySelectorAll('#tabbar [data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+  window.scrollTo({ top: 0 });
 }
+
+function rankedCandidates() {
+  return [...candidates].sort((a, b) => (b.impact?.gain ?? -Infinity) - (a.impact?.gain ?? -Infinity)
+    || (b.estimate?.points ?? -Infinity) - (a.estimate?.points ?? -Infinity) || a.player.name.localeCompare(b.player.name));
+}
+function renderAdds() {
+  const sorted = rankedCandidates(), drop = dropCandidate(ownTeam(), command.league, weekly), links = yahooLinks(command.team.teamKey);
+  $('candidates').replaceChildren(...(sorted.length ? sorted.slice(0, addsShown).map((c, i) => {
+    const p = c.player, gain = c.impact?.gain, helps = Number.isFinite(gain) && gain > 0;
+    const card = el('article', null, 'add' + (i === 0 && helps ? ' top' : '')), head = el('div', null, 'add-head');
+    const who = el('div', null, 'who'), line = el('div', null, 'name-line');
+    line.append(el('span', String(p.position).split(',')[0], 'slot ' + posClass(p.position)), el('span', p.name, 'name'));
+    const tag = statusTag(p, command.league.currentWeek); if (tag) line.append(tagEl(tag));
+    who.append(line, el('span', `${p.team || 'FA'} · ${p.ownership === 'waivers' ? `Waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent'}`, 'game'));
+    const g = el('div', null, 'add-gain');
+    g.append(el('strong', helps ? `+${fmt(gain)}` : fmt(c.estimate?.points), helps ? '' : 'none'), el('span', helps ? 'pts this week' : 'est. pts'));
+    head.append(el('span', String(i + 1), 'add-rank'), who, g);
+    const why = !c.impact ? (c.estimate?.playable ? 'No estimate for this week yet.' : c.estimate?.reason || 'Not eligible for your open slots.')
+      : !c.impact.replaced ? `Fills your empty ${c.impact.slot} slot.`
+        : helps ? `Would start at ${c.impact.slot} over ${c.impact.replaced}.` : `Bench depth. Doesn't beat ${c.impact.replaced} this week.`;
+    const foot = el('div', null, 'add-foot'), dropText = el('span');
+    if (helps && drop) dropText.append('Drop ', el('strong', drop.name)); else dropText.textContent = helps ? 'Needs an open roster spot' : '';
+    foot.append(dropText, yahooButton(p.ownership === 'waivers' ? 'Claim' : 'Add', links.add(p.playerKey) || links.league));
+    card.append(head, el('p', why, 'add-why'), foot); return card;
+  }) : [el('p', 'No available players matched this filter.', 'empty card')]));
+  $('more-adds').hidden = sorted.length <= addsShown;
+}
+async function findPlayers() {
+  if (!command) return;
+  availableController?.abort(); availableController = new AbortController();
+  const id = ++availableGeneration, leagueGeneration = generation;
+  const teamKey = command.team.teamKey, position = pickupPosition;
+  $('pickup-status').textContent = 'Checking free agents and waivers…';
+  try {
+    const pages = [];
+    for (const pool of ['FA', 'W']) {
+      const d = await request('available', { teamKey, pool, position, start: 0 }, availableController.signal);
+      if (id !== availableGeneration || leagueGeneration !== generation) return;
+      if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== position) throw Error('Mismatched response');
+      pages.push(d);
+    }
+    const lineup = publicCurrent() ? optimizeLineup(ownTeam(), command.league, weekly) : null;
+    candidates = pickupCandidates(mergeAvailablePages(pages), ownTeam(), command.league, actualScore).map(c => {
+      const estimate = weekly(c.player);
+      return { ...c, estimate, impact: lineup ? candidateImpact(c.player, lineup, estimate) : null };
+    });
+    addsShown = 6; renderAdds();
+    $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}`;
+    if (position === 'ALL') renderPlan();
+  } catch (e) {
+    if (id === availableGeneration && leagueGeneration === generation) { const message = error(e); if (message) $('pickup-status').textContent = message; }
+  }
+}
+
+async function teams() {
+  clearData(); const id = generation; controller = new AbortController(); $('refresh').disabled = true;
+  status('Reading your Yahoo football teams…');
+  try {
+    const data = await request('teams', {}, controller.signal); if (id !== generation) return;
+    for (const team of data.teams) $('team').append(new Option(team.name + ' · league ' + team.leagueKey.split('.l.')[1], team.teamKey));
+    if (data.teams.length === 1) { $('team').value = data.teams[0].teamKey; await loadLeague(); }
+    else if (data.teams.length > 1) { $('teams-section').hidden = false; status('Connected. Choose the team you want to open.'); }
+    else status('Connected, but Yahoo returned no current NFL teams for this account.');
+  } catch (e) { if (id === generation) error(e); }
+  finally { if (id === generation) $('refresh').disabled = false; }
+}
+async function loadLeague() {
+  const id = ++generation; controller?.abort(); controller = new AbortController(); clearWorkspace(); $('load').disabled = true;
+  status('Reading your league, lineup and matchup…');
+  try {
+    const data = await request('command', { teamKey: $('team').value }, controller.signal);
+    await contextReady; if (id !== generation) return;
+    command = data; renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
+    findPlayers();
+  } catch (e) { if (id === generation) { $('teams-section').hidden = false; error(e); } }
+  finally { if (id === generation) $('load').disabled = !$('team').value; }
+}
+
 function populateJevPlayers() {
   const position = $('jev-position').value;
-  const players = (publicSnapshot?.players || []).filter(p => p.position === position && p.nextGame)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const players = (publicSnapshot?.players || []).filter(p => p.position === position && p.nextGame).sort((a, b) => a.name.localeCompare(b.name));
   for (const id of ['jev-a', 'jev-b']) {
     $(id).replaceChildren(new Option('Choose a player', ''));
     for (const player of players) $(id).append(new Option(`${player.name} · ${player.team}`, player.id));
   }
-  $('jev-status').textContent = players.length ? `${players.length} public ${position} players available for comparison.` : 'No public players available at this position.';
+  $('jev-status').textContent = players.length ? '' : 'No public players available at this position.';
   $('jev-result').replaceChildren(); updateJevButton();
 }
-function updateJevButton() {
-  $('jev-run').disabled = !publicSnapshot || !$('jev-a').value || !$('jev-b').value || $('jev-a').value === $('jev-b').value;
-}
+function updateJevButton() { $('jev-run').disabled = !publicSnapshot || !$('jev-a').value || !$('jev-b').value || $('jev-a').value === $('jev-b').value; }
 async function compareWithJev() {
   const input = { playerAId: $('jev-a').value, playerBId: $('jev-b').value, scoring: $('jev-scoring').value };
   if (!input.playerAId || !input.playerBId || input.playerAId === input.playerBId) return;
-  $('jev-run').disabled = true; $('jev-result').replaceChildren(); $('jev-status').textContent = 'Asking Jev using public player data…';
+  $('jev-run').disabled = true; $('jev-result').replaceChildren(); $('jev-status').textContent = 'Asking Jev…';
   try {
     const response = await fetch('/.netlify/functions/jev-compare', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
@@ -352,88 +347,42 @@ async function compareWithJev() {
     if (!response.ok) throw Error(data.error || 'JEV_UNAVAILABLE');
     const chosen = data.choice === 'a' ? data.players.a : data.choice === 'b' ? data.players.b : null;
     const card = el('div', null, 'jev-answer');
-    card.append(el('strong', chosen ? `Jev leans: start ${chosen}` : 'Jev cannot make a defensible choice yet'));
-    card.append(el('p', `Model decisiveness: ${Math.round(100 * data.confidence)}%. This is not the chance the pick will be right.`));
-    card.append(el('p', `Evidence: ${data.evidence === 'stale' ? 'stale public snapshot' : data.evidence === 'limited' ? 'limited, early-season data or injury uncertainty' : 'moderate public sample'}. Public snapshot: ${new Date(data.snapshotAt).toLocaleString()}.`));
+    card.append(el('strong', chosen ? `Jev leans: start ${chosen}` : 'Too close to call with the data so far'));
+    card.append(el('p', `${data.evidence === 'stale' ? 'Public stats are out of date.' : data.evidence === 'limited' ? 'Early-season or injury uncertainty, so treat this as a lean.' : 'Based on a moderate public sample.'} Decisiveness ${Math.round(100 * data.confidence)}%, which is not a win probability.`));
     if (data.historicalInjuryNotes?.length) card.append(el('p', data.historicalInjuryNotes.join(' · '), 'warning-text'));
-    card.append(el('p', `Jev option weights: ${data.players.a} ${Math.round(100 * data.probabilities.a)}%, ${data.players.b} ${Math.round(100 * data.probabilities.b)}%, too uncertain ${Math.round(100 * data.probabilities.uncertain)}%. These are model weights, not calibrated outcome probabilities.`, 'fine'));
-    $('jev-result').replaceChildren(card); $('jev-status').textContent = 'Comparison complete. Verify current player availability before acting.';
+    $('jev-result').replaceChildren(card); $('jev-status').textContent = 'Confirm injury status in Yahoo before kickoff.';
   } catch (e) {
-    const explanations = { CONNECT_YAHOO_FIRST: 'Connect Yahoo again before comparing players.', STALE_PUBLIC_DATA: 'Public stats are stale. Refresh the nflverse snapshot before using this comparison.', JEV_NOT_CONFIGURED: 'Jev is not configured on the server yet.', JEV_UNAVAILABLE: 'Jev did not complete this comparison. Please try again later.' };
+    const explanations = { CONNECT_YAHOO_FIRST: 'Connect Yahoo again before comparing players.', STALE_PUBLIC_DATA: 'Public stats are stale, so Jev is paused until they update.', JEV_NOT_CONFIGURED: 'Jev is not configured on the server yet.', JEV_UNAVAILABLE: 'Jev did not finish this comparison. Please try again later.' };
     $('jev-status').textContent = explanations[e.message] || 'Comparison unavailable. No recommendation was assumed.';
   } finally { updateJevButton(); }
 }
-function searchNeed(slot) {
-  $('pool').value = 'BOTH';
-  $('pickup-position').value = ['QB','RB','WR','TE','K','DEF'].includes(slot) ? slot : 'ALL';
-  resetCandidates(); selectView('pickups');
-}
-async function loadLeague() {
-  const id = ++generation; controller?.abort(); controller = new AbortController(); clearWorkspace(); $('load').disabled = true;
-  status('Reading league settings, standings, and current lineups…');
+async function loadPublicContext() {
   try {
-    const data = await request('command', { teamKey: $('team').value }, controller.signal); if (id !== generation) return;
-    command = data; renderCommand(); status('League loaded. Read-only, nothing in Yahoo was changed.');
-  } catch (e) { if (id === generation) { $('teams-section').hidden = false; $('empty-message').textContent = 'Could not open this league. Try Open league again, or refresh your teams.'; error(e); } }
-  finally { if (id === generation) $('load').disabled = !$('team').value; }
+    const response = await fetch('/yahoo/nflverse-2026.json', { cache: 'no-cache' });
+    if (!response.ok) throw Error('Public snapshot unavailable');
+    const data = await response.json();
+    if (data.source !== 'nflverse' || data.season !== 2026 || !Array.isArray(data.players)) throw Error('Public snapshot invalid');
+    publicSnapshot = data; publicIndex = indexPublicPlayers(data); populateJevPlayers();
+    const ageHours = (Date.now() - Date.parse(data.generatedAt)) / 3600000;
+    $('public-coverage').textContent = `Public stats: nflverse through Week ${data.latestCompletedWeek} · updated ${new Date(data.generatedAt).toLocaleString()}${!Number.isFinite(ageHours) || ageHours > 48 ? ' · out of date, estimates paused' : ''}`;
+    if (command) { renderPlan(); renderLeague(); }
+  } catch {
+    $('public-coverage').textContent = 'Public stats unavailable. Yahoo roster information remains usable.';
+    $('jev-status').textContent = 'Public player list unavailable. Please try again later.';
+  }
 }
-async function findPlayers(start = 0) {
-  if (!command) return;
-  availableController?.abort(); availableController = new AbortController();
-  const id = ++availableGeneration, leagueGeneration = generation;
-  const teamKey = command.team.teamKey, pool = $('pool').value, position = $('pickup-position').value;
-  $('find').disabled = true; $('previous').hidden = true; $('next').hidden = true; $('candidates').replaceChildren();
-  $('pickup-status').textContent = pool === 'BOTH' ? 'Checking free agents and waivers…' : 'Checking available players…';
+async function loadPriorContext() {
   try {
-    const pools = pool === 'BOTH' ? ['FA', 'W'] : [pool];
-    const pages = [];
-    for (const onePool of pools) {
-      const d = await request('available', { teamKey, pool: onePool, position, start: pool === 'BOTH' ? 0 : start }, availableController.signal);
-      if (id !== availableGeneration || leagueGeneration !== generation) return;
-      if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== onePool || d.position !== position) throw Error('Mismatched response');
-      pages.push(d);
-    }
-    if (id !== availableGeneration || leagueGeneration !== generation) return;
-    page = pool === 'BOTH' ? 0 : pages[0].start;
-    const unique = mergeAvailablePages(pages);
-    const ranked = pickupCandidates(unique, ownTeam(), command.league, actualScore);
-    const lineup = optimizeLineup(ownTeam(), command.league, weekly);
-    for (const candidate of ranked) {
-      const projected = weekly(candidate.player);
-      candidate.estimate = projected;
-      candidate.impact = candidateImpact(candidate.player, lineup, projected);
-      if (Number.isFinite(projected.points)) {
-        candidate.reason += ` Provisional weekly estimate: ${fmt(projected.points)} points${projected.caution ? ', conditional on playing' : ''}.`;
-        if (candidate.impact && Number.isFinite(candidate.impact.gain))
-          candidate.reason += candidate.impact.replaced
-            ? ` Compared with ${candidate.impact.replaced} at ${candidate.impact.slot}: ${candidate.impact.gain >= 0 ? '+' : ''}${fmt(candidate.impact.gain)} estimated points. This does not account for a required drop.`
-            : ` Could fill the vacant ${candidate.impact.slot} slot.`;
-      }
-    }
-    loadedCandidates = ranked;
-    renderCandidateCards();
-    const count = pages.map(d => `${d.players.length} ${d.pool === 'FA' ? 'free agents' : 'waiver players'}`).join(' + ');
-    $('pickup-status').textContent = `${ranked.length} distinct players · ${count} · ${position === 'ALL' ? 'all positions' : position} · ${pool === 'BOTH' ? 'first 25 per pool' : `page ${page / 25 + 1}`} · Read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}${pages.some(d => d.limitReached) ? ' · Browse limit reached; narrow position.' : ''}`;
-    $('previous').hidden = pool === 'BOTH' || page === 0; $('next').hidden = pool === 'BOTH' || !pages[0].hasMore;
-  } catch (e) {
-    if (id === availableGeneration && leagueGeneration === generation) {
-      const message = error(e); if (message) $('pickup-status').textContent = message;
-    }
-  } finally { if (id === availableGeneration) $('find').disabled = false; }
-}
-function renderCandidateCards() {
-  const mode = $('candidate-sort').value;
-  $('candidate-sort-label').textContent = mode === 'past' ? 'Sorted by past points' : 'Sorted by estimated lineup gain';
-  const sorted = [...loadedCandidates].sort((a, b) => mode === 'past'
-    ? (b.points ?? -Infinity) - (a.points ?? -Infinity) || (b.impact?.gain ?? -Infinity) - (a.impact?.gain ?? -Infinity) || a.player.name.localeCompare(b.player.name)
-    : (b.impact?.gain ?? -Infinity) - (a.impact?.gain ?? -Infinity) || b.priority - a.priority
-      || (b.estimate?.points ?? -Infinity) - (a.estimate?.points ?? -Infinity) || a.player.name.localeCompare(b.player.name));
-  const grid = el('div', null, 'player-grid candidate-grid');
-  sorted.forEach(c => grid.append(playerCard(c.player, { candidate: true, reason: c.reason, impact: c.impact, sortMode: mode })));
-  $('candidates').replaceChildren(sorted.length ? grid : el('div', 'Neither selected pool returned matching players on this page. Try another position or browse the individual pools.', 'empty-result'));
+    const response = await fetch('/yahoo/nflverse-prior-2025.json', { cache: 'no-cache' });
+    if (!response.ok) throw Error('Prior season unavailable');
+    const data = await response.json();
+    if (data.source !== 'nflverse' || data.season !== 2025 || !Array.isArray(data.players)) throw Error('Prior season invalid');
+    priorSnapshot = data; priorPlayers = priorIndex(data);
+    if (command) { renderPlan(); renderLeague(); }
+  } catch { priorSnapshot = null; priorPlayers = null; }
 }
 $('connect').addEventListener('click', async () => {
-  $('connect').disabled = true; status('Opening Yahoo’s authorization page…');
+  $('connect').disabled = true; status('Opening Yahoo’s sign-in page…');
   try {
     const r = await fetch('/.netlify/functions/yahoo-start', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' }, body: '{}' });
@@ -451,35 +400,36 @@ $('disconnect').addEventListener('click', async () => {
 $('refresh').addEventListener('click', teams);
 $('team').addEventListener('change', () => { generation++; controller?.abort(); clearWorkspace(); $('load').disabled = !$('team').value; });
 $('load').addEventListener('click', loadLeague);
-$('compare-position').addEventListener('change', renderComparison);
-document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => selectView(button.dataset.view)));
-$('find').addEventListener('click', () => findPlayers(0));
-$('previous').addEventListener('click', () => findPlayers(Math.max(0, page - 25)));
-$('next').addEventListener('click', () => findPlayers(page + 25));
-$('pool').addEventListener('change', resetCandidates);
-$('pickup-position').addEventListener('change', resetCandidates);
-$('candidate-sort').addEventListener('change', renderCandidateCards);
+document.querySelectorAll('#tabbar [data-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.go)));
+document.querySelectorAll('.chip[data-pos]').forEach(chip => chip.addEventListener('click', () => {
+  pickupPosition = chip.dataset.pos;
+  document.querySelectorAll('.chip[data-pos]').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+  resetCandidates(); findPlayers();
+}));
+$('more-adds').addEventListener('click', () => { addsShown += 6; renderAdds(); });
 $('jev-position').addEventListener('change', populateJevPlayers);
 for (const id of ['jev-a', 'jev-b']) $(id).addEventListener('change', updateJevButton);
 $('jev-run').addEventListener('click', compareWithJev);
 async function init() {
-  loadPublicContext();
-  loadPriorContext();
-  loadJevPublicContext();
+  const publicReady = loadPublicContext();
+  // Estimates depend on both public files; wait for them so rankings never change under the reader.
+  contextReady = Promise.allSettled([publicReady, loadPriorContext()]);
   if (location.origin !== 'https://overadp.com') {
     connected(false); $('connect').disabled = true;
     if (new URL(location.href).searchParams.get('demo') === '1' && /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(location.origin)) {
-      const { demoCommand } = await import('./demo-fixture.mjs');
-      command = demoCommand; renderCommand(); status('SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.');
+      await publicReady;
+      const { buildDemo } = await import('./demo-fixture.mjs');
+      demo = buildDemo(publicSnapshot); connected(true); await teams();
       return;
     }
-    status('Preview only. Yahoo authorization will be available on overadp.com after review and publication. No live league data has been loaded.');
+    status('Preview only. Yahoo sign-in works on overadp.com. No live league data has been loaded.');
     return;
   }
   const reason = new URL(location.href).searchParams.get('error'); history.replaceState(null, '', '/yahoo/');
   try {
     const s = await request('status'); connected(s.connected);
-    if (s.connected) await teams(); else status(reason ? messages[reason] || 'Yahoo could not finish authorization. Please try again.' : 'Not connected. Start with the button below.', Boolean(reason));
+    if (s.connected) await teams(); else if (reason) status(messages[reason] || 'Yahoo could not finish authorization. Please try again.', true);
   } catch (e) { connected(false); error(e); if (e.code === 'NOT_CONFIGURED') $('connect').disabled = true; }
 }
 window.addEventListener('pagehide', clearData);

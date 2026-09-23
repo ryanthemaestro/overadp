@@ -6,70 +6,143 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'">
-  <title>League Command Center | OverADP</title>
+  <title>Team Hub | OverADP</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/yahoo/yahoo.css">
   <script type="module" src="/yahoo/yahoo.js"></script>
 </head>
-<body>
-  <main>
-    <header><a class="brand" href="/app/">OVERADP <span>/ LEAGUE INTEL</span></a><a href="/app/">Back to the draft board ↗</a></header>
-    <div class="hero"><div><p class="eyebrow">YAHOO FANTASY · READ ONLY</p><h1>Your team, one clear next move.</h1>
-      <p class="intro">Start with your lineup. See the injury checks, bench cover, upcoming kickoffs, and waiver options that matter to you.</p></div><span class="pill">Private session</span></div>
-    <section class="connection card" aria-labelledby="connection-title">
-      <div><h2 id="connection-title">Yahoo connection</h2><p id="status" role="status" aria-live="polite">Checking connection…</p></div>
-      <div class="actions"><button id="connect" hidden>Connect Yahoo</button><button id="disconnect" class="secondary" hidden>Disconnect</button><button id="refresh" class="secondary" hidden>Refresh teams</button></div>
-      <div id="teams-section" class="team-picker" hidden><label for="team">Your team<select id="team"><option value="">Select your team</option></select></label><button id="load" disabled>Open league</button></div>
-      <p class="fine">Read-only access. No purchases, waiver claims, trades, lineup changes, or changes to Target Intel.</p>
+<body data-view="week">
+<header class="topbar">
+  <a class="logo" href="/">OVER<span>ADP</span> <small>/ TEAM HUB</small></a>
+  <nav class="desk-nav" aria-label="Team hub sections">
+    <a href="#week-view">This week</a><a href="#lineup-view">Lineup</a><a href="#waivers-view">Waivers</a><a href="#league-view">League</a>
+  </nav>
+  <div class="top-actions">
+    <span class="chip-yahoo" id="yahoo-chip" hidden><span class="dot"></span>Yahoo</span>
+    <button type="button" class="text-button" id="refresh" hidden>Refresh</button>
+    <button type="button" class="text-button" id="disconnect" hidden>Disconnect</button>
+    <a class="text-link desk-only" href="/app/">Draft board →</a>
+  </div>
+</header>
+
+<main>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section id="connect-panel" class="connect-panel">
+    <p class="eyebrow">Yahoo Fantasy · read-only</p>
+    <h1>Your team, one clear next move.</h1>
+    <p class="lede">Connect your Yahoo league and get this week's lineup calls, the best free agents for <em>your</em> roster, and where you stand in the league.</p>
+    <button type="button" class="button primary big" id="connect">Connect Yahoo</button>
+    <p class="fine" id="empty-message">OverADP only reads your team. You make every change in Yahoo.</p>
+  </section>
+
+  <section id="teams-section" class="teams-section" hidden>
+    <label for="team">Your team</label>
+    <div class="team-picker">
+      <select id="team"><option value="">Select your team</option></select>
+      <button type="button" class="button" id="load" disabled>Open</button>
+    </div>
+  </section>
+
+  <div id="hub" hidden>
+    <section class="team-head">
+      <p class="eyebrow" id="team-meta"></p>
+      <h1 id="team-name"></h1>
+      <div id="warnings"></div>
     </section>
-    <section id="empty" class="empty-state" aria-label="Getting started">
-      <p id="empty-message">Connect Yahoo to see your lineup, available players, and league comparison.</p>
-    </section>
-    <section id="workspace" hidden>
-      <div id="league-heading"></div><p id="coverage" class="fine"></p><div id="warnings" role="status"></div>
-      <details class="source-strip"><summary id="public-coverage">Loading independent nflverse context…</summary><p id="jev-coverage">Loading independent Jev review…</p><p>Yahoo roster and scoring rules stay in your session and are never sent to Jev.</p></details>
-      <nav class="view-tabs" aria-label="League views"><button data-view="roster" aria-pressed="true">Your week</button><button data-view="pickups" aria-pressed="false">Waivers &amp; free agents</button><button data-view="compare" aria-pressed="false">League comparison</button><button data-view="jev" aria-pressed="false">Compare two players</button></nav>
-      <section id="jev-view" class="card" hidden>
-        <p class="eyebrow">PUBLIC-DATA COMPARISON</p><h2>Ask Jev: who would you start?</h2>
-        <p class="fine">Choose two players at the same position. Jev sees only their public nflverse history, upcoming game, and the generic scoring type you choose here. Your Yahoo roster and league settings are not sent.</p>
-        <div class="jev-form">
-          <label>Position<select id="jev-position"><option value="WR">Wide receiver</option><option value="RB">Running back</option><option value="QB">Quarterback</option><option value="TE">Tight end</option></select></label>
-          <label>Generic scoring<select id="jev-scoring"><option value="standard">Standard · no PPR</option><option value="half_ppr">Half-PPR</option><option value="ppr">PPR</option></select></label>
-          <label>Player A<select id="jev-a"><option value="">Choose a player</option></select></label>
-          <label>Player B<select id="jev-b"><option value="">Choose a player</option></select></label>
-          <button id="jev-run" disabled>Compare players</button>
+
+    <div class="hub-grid">
+      <section id="week-view" class="view" aria-labelledby="moves-title">
+        <div id="matchup" class="card matchup"></div>
+        <div class="section-head">
+          <h2 id="moves-title">Moves this week</h2>
+          <span class="fine" id="moves-sub"></span>
         </div>
-        <p id="jev-status" role="status" class="fine">Loading public player list…</p><div id="jev-result" aria-live="polite"></div>
-        <p class="fine">This is a read-only opinion, not a validated projection. Confirm injuries, eligibility, and lineup lock times in Yahoo. No start/sit change is made automatically.</p>
+        <div id="moves" class="moves"></div>
+        <div class="section-head mobile-only">
+          <h2>Your starters</h2>
+          <button type="button" class="text-button" data-go="lineup">Full lineup →</button>
+        </div>
+        <div id="glance" class="card list mobile-only"></div>
       </section>
-      <section id="compare-view" class="card">
-        <div class="section-head"><div><h2>Where your team stands</h2><p class="fine">Aggregate comparison of current starters' early-season estimates. No other team's player list is shown. Only teams with complete scoring are ranked.</p></div><label>Compare position<select id="compare-position"><option value="RB">Running backs</option><option value="WR">Wide receivers</option><option value="TE">Tight ends</option><option value="QB">Quarterbacks</option><option value="K">Kickers</option><option value="DEF">Defenses</option><option value="ALL">All positions</option></select></label></div>
-        <div id="comparison"></div>
+
+      <section id="lineup-view" class="view" aria-labelledby="lineup-title">
+        <div class="section-head">
+          <h2 id="lineup-title">Lineup</h2>
+          <a class="text-link" id="edit-lineup" href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener noreferrer">Edit in Yahoo ↗</a>
+        </div>
+        <p class="lineup-summary" id="lineup-summary"></p>
+        <div id="starters" class="card list"></div>
+        <h3>Bench</h3>
+        <div id="bench" class="card list"></div>
       </section>
-      <section id="roster-view">
-        <div class="team-grid">
-          <div class="advice-side">
-            <section class="card focus-card"><p class="eyebrow">THIS WEEK'S PRIORITIES</p><h2>Lineup checks</h2><div id="needs"></div><p class="fine">A blank status does not prove a player will play. Confirm Yahoo's status before kickoff.</p></section>
-            <section class="card"><p class="eyebrow">BENCH COVER</p><h2>Possible swaps</h2><div id="swaps"></div></section>
+
+      <section id="waivers-view" class="view" aria-labelledby="waivers-title">
+        <div class="section-head">
+          <h2 id="waivers-title">Best adds for you</h2>
+        </div>
+        <p class="fine">Ranked by points each player would add to <em>your</em> lineup this week.</p>
+        <div class="chips" role="group" aria-label="Filter by position">
+          <button type="button" class="chip" data-pos="ALL" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-pos="QB" aria-pressed="false">QB</button>
+          <button type="button" class="chip" data-pos="RB" aria-pressed="false">RB</button>
+          <button type="button" class="chip" data-pos="WR" aria-pressed="false">WR</button>
+          <button type="button" class="chip" data-pos="TE" aria-pressed="false">TE</button>
+          <button type="button" class="chip" data-pos="K" aria-pressed="false">K</button>
+          <button type="button" class="chip" data-pos="DEF" aria-pressed="false">DEF</button>
+        </div>
+        <p class="fine" id="pickup-status" aria-live="polite"></p>
+        <div id="candidates" class="adds"></div>
+        <button type="button" class="button ghost" id="more-adds" hidden>Show more</button>
+      </section>
+
+      <section id="league-view" class="view" aria-labelledby="league-title">
+        <div class="section-head">
+          <h2 id="league-title">Where you stand</h2>
+        </div>
+        <p class="fine">Your best healthy players at each position vs. every other team's, by estimated points this week.</p>
+        <div id="ranks" class="card list"></div>
+        <div id="trade" class="card trade" hidden></div>
+
+        <div class="card compare" id="compare">
+          <h3>Stuck on a start/sit?</h3>
+          <p class="fine">Ask Jev to compare two players. Jev only sees their public stats and next game, never your Yahoo league.</p>
+          <div class="compare-grid">
+            <label>Position
+              <select id="jev-position"><option value="WR">Wide receiver</option><option value="RB">Running back</option><option value="QB">Quarterback</option><option value="TE">Tight end</option></select>
+            </label>
+            <label>Scoring
+              <select id="jev-scoring"><option value="standard">Standard</option><option value="half_ppr" selected>Half-PPR</option><option value="ppr">PPR</option></select>
+            </label>
+            <label>Player A <select id="jev-a"><option value="">Choose a player</option></select></label>
+            <label>Player B <select id="jev-b"><option value="">Choose a player</option></select></label>
           </div>
-          <section class="card"><p class="eyebrow">CONSERVATIVE LINEUP CHECK</p><h2>Who to start or monitor</h2><p class="fine">Provisional points blend 2025 and Weeks 1–2 of 2026 under this league's scoring. Small estimated edges do not trigger healthy-starter swaps. These are not validated forecasts.</p><div id="weekly-lineup"></div><p id="jev-note" class="fine">Checking Jev's independent public-only game review…</p></section>
+          <button type="button" class="button primary" id="jev-run" disabled>Who should I start?</button>
+          <p class="fine" id="jev-status" aria-live="polite"></p>
+          <div id="jev-result"></div>
         </div>
-        <section class="card"><div class="section-head"><div><p class="eyebrow">YOUR PLAYERS</p><h2>Starting lineup &amp; depth</h2><p class="fine">Player-card points are completed-game actuals reconstructed from nflverse using this Yahoo league's scoring rules. They are not Week 3 forecasts. Missing or partial categories are labeled.</p></div></div><div id="roster"></div></section>
-        <details class="card method"><summary>League settings and scoring</summary><div id="settings"></div></details>
+
+        <details class="card settings">
+          <summary>League settings and scoring</summary>
+          <div id="settings"></div>
+        </details>
       </section>
-      <section id="pickups-view" class="card" hidden>
-        <div class="section-head"><div><h2>Available to consider</h2><p class="fine">Compare the players returned on this page. Pending claims are not confirmed acquisitions.</p></div></div>
-        <div class="filter-row"><label>Availability<select id="pool"><option value="BOTH">Free agents + waivers</option><option value="FA">Free agents only</option><option value="W">Waivers only</option></select></label><label>Position<select id="pickup-position"><option value="ALL">All positions</option><option value="RB">Running backs</option><option value="WR">Wide receivers</option><option value="TE">Tight ends</option><option value="QB">Quarterbacks</option><option value="K">Kickers</option><option value="DEF">Defenses</option></select></label><button id="find">Find players</button></div>
-        <p id="pickup-status" role="status">Open this view to check free agents and waivers.</p>
-        <div class="candidate-sort"><strong id="candidate-sort-label">Sorted by estimated lineup gain</strong><label>Sort cards<select id="candidate-sort"><option value="gain">Estimated lineup gain</option><option value="past">Past points</option></select></label></div>
-        <p class="fine">Lineup gain is a provisional single-slot comparison, not a validated forecast. Past points are completed-game totals. Only the first 25 players from each selected Yahoo pool are searched, not every available player.</p><div id="candidates"></div>
-        <div class="pagination"><button id="previous" class="secondary" hidden>Previous 25</button><button id="next" class="secondary" hidden>Next 25</button></div>
-        <p class="fine">This view checks up to 25 players from each selected Yahoo pool. Narrow to one pool and use Next for more. Verify eligibility, status and waiver deadlines in Yahoo. It does not read your pending claims or choose a drop.</p>
-      </section>
-      <details class="method"><summary>How the weekly advice works</summary><p>Early-season estimates blend last season's active-game scoring average with this season's completed games under your Yahoo league rules. With only one or two current games, this is a rough heuristic, not a validated projection. A missing score is not zero. Defense/special teams may lack public scoring categories and will remain unranked.</p><p>The browser finds the highest-scoring eligible lineup from players with verified upcoming kickoffs, while keeping already-locked starters in place. A questionable player remains conditional on playing. Confirm statuses and deadlines in Yahoo before making changes. Historical injury reports are not current clearances.</p><p>Waiver candidates are compared for immediate roster fit and provisional weekly scoring within the loaded page. No drop, claim or lineup change is automatic. Yahoo league data stays in this browser session and is never sent to Jev or another AI tool. Jev reviews independent public football context only.</p></details>
-    </section>
-    <section class="privacy"><h2>A short connection, not a data archive</h2><p>Yahoo information is shown only for this session. The encrypted connection expires within one hour. Reconnect when needed. Disconnect clears this browser's connection. To revoke access on Yahoo as well, use <a href="https://login.yahoo.com/account/security" rel="noreferrer noopener" target="_blank">Yahoo account security</a>.</p></section>
-    <footer><a href="https://sports.yahoo.com/fantasy/" rel="noreferrer noopener" target="_blank">Fantasy data provided by Yahoo Fantasy</a><span><a href="/privacy/">Privacy</a> · <a href="/methodology/">Methodology</a> · <a href="/data-credits/">Data Credits</a></span></footer>
-  </main>
+    </div>
+    <p class="footnote" id="footnote">Estimates blend 2025 and 2026 games under your league's scoring. They are a guide, not a guarantee. Always confirm injury status in Yahoo before kickoff.</p>
+  </div>
+</main>
+
+<nav class="tabbar" id="tabbar" aria-label="Team hub sections" hidden>
+  <button type="button" data-view="week" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>This week</button>
+  <button type="button" data-view="lineup" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Lineup</button>
+  <button type="button" data-view="waivers" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Waivers</button>
+  <button type="button" data-view="league" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>League</button>
+</nav>
+
+<footer>
+  <a href="https://sports.yahoo.com/fantasy/" rel="noreferrer noopener" target="_blank">Fantasy data provided by Yahoo Fantasy</a>
+  <span id="public-coverage"></span>
+  <span><a href="/privacy/">Privacy</a> · <a href="/methodology/">Methodology</a> · <a href="/data-credits/">Data Credits</a></span>
+</footer>
 </body>
 </html>
