@@ -1,0 +1,7 @@
+data/
+work/
+adp/
+cfbd_raw/
+cfbd_derived/
+.secrets/
+__pycache__/

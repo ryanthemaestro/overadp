@@ -1,0 +1,73 @@
+{
+ "half": {
+  "QB": {
+   "intercept": 507.328,
+   "slope_log_adp": -59.069,
+   "n": 157
+  },
+  "RB": {
+   "intercept": 299.306,
+   "slope_log_adp": -42.026,
+   "n": 404
+  },
+  "TE": {
+   "intercept": 288.608,
+   "slope_log_adp": -39.077,
+   "n": 125
+  },
+  "WR": {
+   "intercept": 306.044,
+   "slope_log_adp": -40.836,
+   "n": 444
+  }
+ },
+ "ppr": {
+  "QB": {
+   "intercept": 529.242,
+   "slope_log_adp": -63.897,
+   "n": 174
+  },
+  "RB": {
+   "intercept": 334.078,
+   "slope_log_adp": -46.348,
+   "n": 427
+  },
+  "TE": {
+   "intercept": 344.813,
+   "slope_log_adp": -45.936,
+   "n": 141
+  },
+  "WR": {
+   "intercept": 369.154,
+   "slope_log_adp": -49.621,
+   "n": 490
+  }
+ },
+ "std": {
+  "QB": {
+   "intercept": 497.187,
+   "slope_log_adp": -57.446,
+   "n": 176
+  },
+  "RB": {
+   "intercept": 271.407,
+   "slope_log_adp": -39.344,
+   "n": 434
+  },
+  "TE": {
+   "intercept": 225.532,
+   "slope_log_adp": -31.2,
+   "n": 138
+  },
+  "WR": {
+   "intercept": 245.883,
+   "slope_log_adp": -33.316,
+   "n": 476
+  }
+ },
+ "_meta": {
+  "source": "Fantasy Football Calculator ADP (12-team, end of preseason) vs actual nflverse fantasy points, 2019-2025",
+  "formula": "adp_points = intercept + slope_log_adp * ln(adp)",
+  "use": "ADP-implied points for the 50/50 v6+ADP blend; only for players with real ADP (< 200)"
+ }
+}
