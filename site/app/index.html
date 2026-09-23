@@ -1638,6 +1638,7 @@
     }
   }
 </style>
+<script src="yahoo-policy.js?v=yahoo10-v1"></script>
 </head>
 <body>
 <div class="war-room" id="warRoom" data-mobile-panel="board">
@@ -1949,6 +1950,16 @@
   <div class="info-modal" style="max-width:480px;">
     <button class="close-btn" onclick="toggleSettings()" aria-label="Close draft settings">&times;</button>
     <h2>Draft Settings</h2>
+    <p style="font-size:12px;line-height:1.5;"><a href="/yahoo/" target="_blank" rel="noopener noreferrer" style="color:var(--confirm);">Connect Yahoo (read-only)</a><br>View your league and roster in a separate tab. Does not change this draft or select a policy.</p>
+    <fieldset style="border:0;padding:0;margin:0 0 12px;">
+      <legend>League preset</legend>
+      <input type="hidden" id="leaguePreset" value="">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--smoke);border-radius:4px;cursor:pointer;"><input type="radio" name="leaguePresetChoice" value="" checked onchange="selectLeaguePreset(this.value)" style="accent-color:var(--confirm);"> Custom / standard settings</label>
+        <label style="display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--smoke);border-radius:4px;cursor:pointer;"><input type="radio" name="leaguePresetChoice" value="yahoo10" onchange="selectLeaguePreset(this.value)" style="accent-color:var(--confirm);"> Yahoo · 10-team H2H</label>
+      </div>
+    </fieldset>
+    <p id="yahooPresetInfo" hidden style="font-size:12px;line-height:1.5;">10 teams · Head-to-head · Half PPR · Snake.<br>Start 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX (RB/WR/TE), 1 K, 1 DEF; 6 bench. Draft 15 total; IR does not add draft picks.<br>Prefer RB → RB → QB → WR for your first four selections, only within 12 ADP spots of the best legal option. Then follow legal ADP while leaving room to complete the roster. WR and TE are separate.<br>Research candidate: 2024 simulation, not a future win guarantee. Uses a dated 12-team FFC half-PPR market, not Yahoo platform ADP. Display projections and injury badges do not rank this policy.<br>Set your actual draft position below. Choose Custom if your scoring or lineup differs. This preset guides the draft; it does not manage weekly lineups.</p>
 
     <h3>Scoring Format</h3>
     <div style="display:flex;gap:8px;margin:8px 0 16px;">
@@ -2708,6 +2719,7 @@ async function loadData(){
     // Build player map
     playerMap={};
     allPlayers.forEach(p=>{playerMap[p.player_id]=p;});
+    try{OverADPYahooPolicy.clear();const yr=await fetch('data/yahoo-market.json'+_v,{cache:'no-store'});if(!yr.ok)throw Error('Yahoo market unavailable');await OverADPYahooPolicy.prepare(allPlayers,await yr.json());}catch(e){console.error('Yahoo preset market:',e);}
     // Load sleepers/busts
     try{const sbRes=await fetch('data/sleepers_busts.json'+_v);const sb=await sbRes.json();
       if(Array.isArray(sb)){sleepersData=sb.filter(x=>x.label==='SLEEPER');bustsData=sb.filter(x=>x.label==='BUST');}
@@ -2748,6 +2760,7 @@ async function loadData(){
 
 function draftPlayer(pid,team){
   const priorTopRecommendation=[...recommendedIds][0]||null;
+  if(isYahooLeague()&&(!playerMap[pid]||playerMap[pid].retained_draft_only||myTeamIds.includes(pid)||opponentIds.includes(pid)))return;
   if(team==='mine'){
     if(!canDraftMine()){showUpgrade();return;}
     if(myTeamIds.includes(pid))return;
@@ -2947,6 +2960,7 @@ function getPositionCounts(ids){
 }
 
 function getRosterPlan(){
+  if(rosterConfig.league_preset==='yahoo10')return {starters:{QB:1,RB:2,WR:2,TE:1,FLEX:1},flexEligible:['RB','WR','TE'],bench:6,maxByPos:{QB:4,RB:6,WR:8,TE:4},numTeams:10,draftSlot:Math.max(1,Math.min(10,Number(rosterConfig.draft_slot)||5))};
   const rawSlots=rosterConfig.roster_slots||{};
   const flexEligible=(rosterConfig.flex_eligible||['rb','wr','te']).map(s=>s.toUpperCase());
   const bench=rosterConfig.bench_size!=null?rosterConfig.bench_size:(rawSlots.bench!=null?rawSlots.bench:6);
@@ -3012,6 +3026,10 @@ function formatMandatoryNeeds(state){
 }
 
 function getRosterDraftConstraint(position,counts=getPositionCounts(myTeamIds),plan=getRosterPlan()){
+  if(rosterConfig.league_preset==='yahoo10'){
+    const allowed=OverADPYahooPolicy.legal(allPlayers,myTeamIds,opponentIds).some(p=>p.position===position);
+    return {allowed,message:allowed?'':'Yahoo roster safeguard: this pick would exceed a position limit or prevent completion of your 15-player roster. Review remaining QB/RB/WR/TE/FLEX/K/DEF needs or undo an incompatible pick.',rosterSlotsOpen:Math.max(0,15-myTeamIds.length)};
+  }
   const rawSlots=rosterConfig.roster_slots||{};
   const totalRosterSlots=Object.values(rawSlots).reduce((sum,n)=>sum+(Number(n)||0),0);
   const rosterSlotsOpen=Math.max(0,totalRosterSlots-myTeamIds.length);
@@ -3148,6 +3166,14 @@ function draftBoardScore(p,ownList){
 }
 
 function getRecommendations(){
+  if(isYahooLeague()){
+    const drafted=new Set([...myTeamIds,...opponentIds]);
+    updateLiveValueVsAdp(allPlayers.filter(p=>!drafted.has(p.player_id)));
+    const top5=OverADPYahooPolicy.rank(allPlayers,myTeamIds,opponentIds);
+    recommendedIds=new Set(top5.map(p=>p.player_id));
+    renderRecommendations(top5);
+    return;
+  }
   const drafted=new Set([...myTeamIds,...opponentIds]);
   const available=allPlayers.filter(p=>!drafted.has(p.player_id));
   updateLiveValueVsAdp(available);
@@ -3889,6 +3915,13 @@ function renderOpponentPicks(){
   ).join('');
 }
 
+function yahooPresetHeader(timing,plan,required){
+  const date=OverADPYahooPolicy.snapshot(),age=date?(Date.now()-Date.parse(date))/86400000:0;
+  const next=OverADPYahooPolicy.sequence[myTeamIds.length];
+  return `<div style="font-size:11px;line-height:1.5;padding-bottom:10px;">YAHOO · 10-TEAM H2H · HALF PPR · SLOT ${plan.draftSlot}<br>Your selection ${Math.min(15,myTeamIds.length+1)}/15 · overall pick ${timing.pickNum}<br>${next?`Prefer ${next} now · RB → RB → QB → WR · max 12 ADP spots`:'Opening complete · best legal ADP'}<br>Still needed for starters: ${formatMandatoryNeeds(required)}<br>Market: FFC 12-team half-PPR · through ${date||'UNAVAILABLE'}${age>7?' · SNAPSHOT IS OVER 7 DAYS OLD':''}<br><span style="color:var(--smoke)">2024 research candidate; not a future win guarantee. Cards are alternatives for this pick. Record other teams’ picks as TAKEN. Status badges are warnings, not automatic penalties.</span></div>`;
+}
+
+
 function renderRecommendations(recs){
   const c=document.getElementById('recommendations');
   const preview=canPreviewIntel();
@@ -3915,7 +3948,7 @@ function renderRecommendations(recs){
       :Math.max(1,timing.totalRounds-specialNeed[pos]);
     return hardDeadline||timing.round>=start?'NOW':`R${start}`;
   };
-  const header=`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 2px 8px;">
+  const header=isYahooLeague()?yahooPresetHeader(timing,plan,required):`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:0 2px 8px;">
     <div>PICK ${timing.pickNum} · SLOT ${plan.draftSlot||'-'} · ROUND ${timing.round} · TARGET INTEL · NEEDS QB ${needs.QB} RB ${needs.RB} WR ${needs.WR} TE ${needs.TE} FLEX ${needs.FLEX}</div>
     <div style="margin-top:4px;color:var(--fg3);">SPECIAL TEAMS · DEF ${specialStatus('DEF')} · K ${specialStatus('K')}</div>
     ${hardRosterDeadline?`<div style="margin-top:4px;color:var(--te);">ROSTER LOCK · ${formatMandatoryNeeds(required)} · ${rosterSlotsOpen} PICK${rosterSlotsOpen===1?'':'S'} LEFT</div>`:''}
@@ -3927,6 +3960,7 @@ function renderRecommendations(recs){
   if(!recs||!recs.length){
     const empty=required.total<=0
       ?'Roster complete.'
+      :isYahooLeague()&&!OverADPYahooPolicy.ready()?'Yahoo half-PPR market failed to load. Click INITIALIZE to retry; no other policy has been substituted.'
       :`No legal recommendation. Undo an UNSLOTTED pick or review Settings. Required: ${formatMandatoryNeeds(required)}.`;
     c.innerHTML=header+proofGuide+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
     return;
@@ -3944,8 +3978,8 @@ function renderRecommendations(recs){
     `<div class="intel-card">
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${playerHeadingHtml(r)}</div>
-      <div class="intel-pts">${preview?((r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'-'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:availabilityAdjustedProjection(r).toFixed(1)+' proj · '+availabilityAdjustedVbd(r).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
-      <div class="player-sub">${(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'-'}`:`Model #${r.model_rank||'-'} · ${r.position}${r.model_pos_rank||'-'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'-'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
+      <div class="intel-pts">${preview?(r.yahoo_policy?`HALF-PPR ADP ${Number.isFinite(r.policy_adp)?r.policy_adp.toFixed(1):'UNPRICED'}`:(r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'-'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:availabilityAdjustedProjection(r).toFixed(1)+' proj · '+availabilityAdjustedVbd(r).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
+      <div class="player-sub">${r.yahoo_policy?'Yahoo 10-team opening preference + legal FFC half-PPR ADP. Projections do not rank this policy.':(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'-'}`:`Model #${r.model_rank||'-'} · ${r.position}${r.model_pos_rank||'-'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'-'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${canDraftMine()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">'+(isPaid()?'DRAFT':freePickLabel())+'</button>':'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>'}
@@ -3966,9 +4000,9 @@ function renderCompactIntel(recs,timing){
   }
   const top=recs[0];
   const preview=canPreviewIntel();
-  const adp=Number(top.adp);
-  const adpLabel=Number.isFinite(adp)&&adp>0&&adp<200?adp.toFixed(1):'-';
-  const value=Number.isFinite(top.value_vs_adp)?` · VALUE ${formatPickValue(top.value_vs_adp)}`:'';
+  const adp=Number(top.yahoo_policy?top.policy_adp:top.adp);
+  const adpLabel=Number.isFinite(adp)&&adp>0&&(top.yahoo_policy||adp<200)?adp.toFixed(1):'-';
+  const value=!top.yahoo_policy&&Number.isFinite(top.value_vs_adp)?` · VALUE ${formatPickValue(top.value_vs_adp)}`:'';
   const reason=top.pick_reason||top.intel_reason||'best live value';
   const next=recs.slice(1,3).map((r,i)=>`<span>#${i+2} ${escapeHtml(r.player_name||r.player_id)} · ${r.position}</span>`).join('');
   const draftAction=canDraftMine()
@@ -3980,7 +4014,7 @@ function renderCompactIntel(recs,timing){
     <div class="compact-intel-copy">
       <div class="compact-intel-kicker">On the clock · pick ${timing.pickNum} · Target Intel #1</div>
       <div class="compact-intel-name">${posTag(top.position)} ${playerHeadingHtml(top)}</div>
-      <div class="compact-intel-meta">ADP ${adpLabel}${value} · ${escapeHtml(reason)}</div>
+      <div class="compact-intel-meta">${top.yahoo_policy?'HALF-PPR ':''}ADP ${adpLabel}${value} · ${escapeHtml(reason)}</div>
     </div>
     <div class="compact-intel-actions">
       ${draftAction}
@@ -4260,6 +4294,17 @@ function toggleInfo(){
   overlay.classList.toggle('active');
 }
 
+function isYahooLeague(){return rosterConfig.league_preset==='yahoo10';}
+function selectLeaguePreset(value,restoring=false){
+  const yahoo=value==='yahoo10',preset=yahoo?'yahoo10':'';
+  document.getElementById('leaguePreset').value=preset;
+  document.querySelectorAll('input[name="leaguePresetChoice"]').forEach(el=>{el.checked=el.value===preset;});
+  document.getElementById('yahooPresetInfo').hidden=!yahoo;
+  const values={slotQB:1,slotRB:2,slotWR:2,slotTE:1,slotFlex:1,slotK:1,slotDEF:1,slotBench:6};
+  for(const [id,n] of Object.entries(values)){const el=document.getElementById(id);el.disabled=yahoo;if(!restoring||yahoo)el.value=n;}
+  document.querySelectorAll('.scoring-btn[data-scoring],.scoring-btn[data-teams]').forEach(b=>{b.disabled=yahoo;});
+  if(yahoo){setScoring('half_ppr',document.querySelector('[data-scoring="half_ppr"]'));setTeams(10,document.querySelector('[data-teams="10"]'));}
+}
 function toggleSettings(){
   const overlay=document.getElementById('settingsOverlay');
   overlay.classList.toggle('hidden');
@@ -4307,6 +4352,8 @@ function setTeams(n, btn){
 }
 
 function applySettings(){
+  rosterConfig.league_preset=document.getElementById('leaguePreset').value;
+  if(isYahooLeague())selectLeaguePreset('yahoo10',true);
   // Update scoring
   adjustScoring();
   buildDraftIntel();
@@ -4332,7 +4379,7 @@ function applySettings(){
   rosterConfig.draft_slot=draftSlot;
   rosterConfig.bench_size=benchv;
   // Save to localStorage
-  lsSet('settings',{scoring:scoringFormat,numTeams,draftSlot,slots:rosterConfig.roster_slots,bench:benchv});
+  lsSet('settings',{leaguePreset:rosterConfig.league_preset,scoring:scoringFormat,numTeams,draftSlot,slots:rosterConfig.roster_slots,bench:benchv});
   if(isPaid())queuePaidDraftSave();
   // Recalculate everything
   refreshAll();
@@ -4342,6 +4389,9 @@ function applySettings(){
 function restoreSettings(){
   const s=lsGet('settings',null);
   if(!s)return;
+  if(s.leaguePreset==='yahoo10')Object.assign(s,{scoring:'half_ppr',numTeams:10,bench:6,slots:{qb:1,rb:2,wr:2,te:1,flex:1,k:1,defense:1,bench:6},draftSlot:Math.max(1,Math.min(10,Number(s.draftSlot)||5))});
+  rosterConfig.league_preset=s.leaguePreset==='yahoo10'?'yahoo10':'';
+  document.getElementById('leaguePreset').value=rosterConfig.league_preset;
   scoringFormat=s.scoring||'half_ppr';
   if(s.numTeams)rosterConfig.num_teams=s.numTeams;
   if(s.draftSlot)rosterConfig.draft_slot=s.draftSlot;
@@ -4370,6 +4420,7 @@ function restoreSettings(){
     if(document.getElementById('slotDEF'))document.getElementById('slotDEF').value=s.slots.defense!=null?s.slots.defense:1;
     document.getElementById('slotBench').value=s.bench!=null?s.bench:(s.slots.bench!=null?s.slots.bench:6);
   }
+  selectLeaguePreset(rosterConfig.league_preset,true);
   adjustScoring();
   buildDraftIntel();
 }
