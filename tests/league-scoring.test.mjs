@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { scoreGame, scorePlayer } from '../site/yahoo/league-scoring.mjs';
-const snapshot = JSON.parse(readFileSync(new URL('../site/yahoo/nflverse-2026.json', import.meta.url)));
+const snapshot = JSON.parse(readFileSync(new URL('./fixtures/nflverse-2026-week2.json', import.meta.url)));
 const league = { scoring: [
   ['Pass Yds', .04], ['Pass TD', 4], ['Int', -1], ['Rush Yds', .1], ['Rush TD', 6],
   ['Rec', .5], ['Rec Yds', .1], ['Rec TD', 6], ['Ret TD', 6], ['2-PT', 2],
