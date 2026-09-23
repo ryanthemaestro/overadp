@@ -1760,7 +1760,7 @@
   <div class="info-modal">
     <button class="close-btn" onclick="toggleInfo()" aria-label="Close War Room guide">&times;</button>
     <h2>OverADP: How to Use the War Room</h2>
-    <p id="dataCoverageSummary">OverADP is an AI-powered fantasy football draft assistant. It uses machine learning trained on historical NFL data plus current roster overlays, teammate target competition, draft-value rookie signals, prior-year contract signals, and <strong>split-conformal quantile regression</strong> for 80%-target projection ranges. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. The projection model and daily draft-market refresh are dated separately so you can verify freshness.</p>
+    <p id="dataCoverageSummary">OverADP is an AI-powered fantasy football draft assistant. It uses a machine-learning model trained on NFL seasons since 2014 (play-by-play opportunity, route participation, depth charts, team context and college production), blended 50/50 with ADP, with 80% ranges built from past projection misses. Target Intel uses opportunity-cost draft math that adapts to roster settings, live picks, VBD, ADP, flex paths, and player availability before your next turn. The projection model and daily draft-market refresh are dated separately so you can verify freshness.</p>
 
     <h2>Understanding the UI</h2>
     <h3>Player Pool (Left Panel)</h3>
@@ -1826,19 +1826,17 @@
     </table>
     <p><strong>Example:</strong> If the gap from the top available tight end to a replacement-level tight end is much larger than the comparable quarterback gap, tight end is more scarce for your league settings. The live scarcity panel calculates those gaps from the current projections and your roster configuration, so the example never depends on stale player names or point totals.</p>
 
-    <h3>Projection Range (CQR)</h3>
-    <p>The 80% target range is built via <strong>Conformalized Quantile Regression</strong>: separate 10th- and 90th-percentile models plus a split-conformal adjustment learned from 2025 calibration rows.</p>
-    <p>The procedure targets 80% marginal coverage across comparable players. Its post-adjustment 2025 coverage is a calibration diagnostic, not an independent test result or a guarantee for one player.</p>
-    <p>Rookies and 2nd-year players get a 1.8× / 1.3× width multiplier to reflect their scarcer historical data.</p>
+    <h3>Projection Range</h3>
+    <p>The 80% range comes from how far past projections at the same position and projection level missed, measured only on earlier seasons. In 2024 and 2025 about 77% of outcomes landed inside it (lower at QB and TE). It is a guide for comparable players, not a guarantee for one player.</p>
 
     <h3>Point-Model Accuracy</h3>
-    <p>The published point-model results aggregate <strong>1,052 player-season predictions</strong> from two chronological folds: train through 2023 and test on 2024, then train through 2024 and test on 2025. The exact-cohort ADP-only comparison is not marketed because the 2025 input is an explicitly labeled preseason-rank proxy rather than true ADP.</p>
+    <p>These are the live board's results (model blended with ADP, half-PPR) for <strong>1,303 player-seasons</strong> in 2024 and 2025, each season predicted using only earlier seasons. The pool is players with a prior NFL season or a top-150 draft pick.</p>
     <table>
       <tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr>
-      <tr><td><strong>QB</strong></td><td>57.15</td><td>72.43</td><td>0.61</td><td>134</td></tr>
-      <tr><td><strong>RB</strong></td><td>43.39</td><td>60.47</td><td>0.51</td><td>269</td></tr>
-      <tr><td><strong>WR</strong></td><td>31.90</td><td>43.78</td><td>0.57</td><td>426</td></tr>
-      <tr><td><strong>TE</strong></td><td>23.79</td><td>33.35</td><td>0.56</td><td>223</td></tr>
+      <tr><td><strong>QB</strong></td><td>42.93</td><td>62.45</td><td>0.71</td><td>184</td></tr>
+      <tr><td><strong>RB</strong></td><td>31.40</td><td>47.85</td><td>0.68</td><td>328</td></tr>
+      <tr><td><strong>WR</strong></td><td>25.21</td><td>38.32</td><td>0.67</td><td>515</td></tr>
+      <tr><td><strong>TE</strong></td><td>17.99</td><td>28.14</td><td>0.67</td><td>276</td></tr>
     </table>
     <p>When the model and ADP disagree strongly, it flags sleepers (model rank better than ADP) and busts (ADP rank better than model).</p>
 
@@ -1854,48 +1852,48 @@
     <p><strong>Strategy:</strong> Draft your stud RB's handcuff with one of your last picks. It's like buying insurance: you hope you never need it, but if you do, it can save your season. The Handcuff Alerts panel shows you which backups are still available for RBs already on your roster.</p>
 
     <h3>Model Architecture</h3>
-    <p>OverADP currently runs tuned <strong>CatBoost models per position</strong>, selected after walk-forward experiments against simpler baselines. The production models use per-position feature sets, temporal sample weighting (more recent seasons matter more), and leakage-controlled lag features so current-season outcomes never feed their own predictions.</p>
-    <p>80%-target projection ranges come from a parallel <strong>split-conformal quantile regression</strong> pipeline (see Projection Range section above).</p>
+    <p>OverADP runs one <strong>gradient-boosted model</strong> across QB, RB, WR and TE (a bag of boosted trees averaged with a games × points-per-game version), chosen after season-by-season tests from 2019 to 2025. Every input is known before Week 1, so a season's outcome never feeds its own prediction.</p>
+    <p>The board blends that projection 50/50 with ADP-implied points, which tested better than either one alone. Players without real ADP use the model alone.</p>
     <table>
       <tr><th>Model</th><th>Role</th></tr>
-      <tr><td><strong>CatBoost</strong> (production)</td><td>Ordered boosting for the QB/RB/WR/TE projection models.</td></tr>
+      <tr><td><strong>v6 point model</strong></td><td>Gradient-boosted QB/RB/WR/TE projections from public data.</td></tr>
       <tr><td><strong>Target Intel</strong></td><td>Opportunity-cost next-pick scoring for live draft recommendations.</td></tr>
-      <tr><td><strong>ADP Baseline</strong></td><td>Held out as the market comparison, not used as a target leak.</td></tr>
-      <tr><td><strong>Conformal Quantiles</strong></td><td>Parallel interval pipeline for 80%-target projection ranges.</td></tr>
+      <tr><td><strong>ADP blend</strong></td><td>50/50 average of the model and ADP-implied points.</td></tr>
+      <tr><td><strong>80% ranges</strong></td><td>Built from past projection misses by position and projection level.</td></tr>
       <tr><td><strong>K/DEF</strong></td><td>Current depth-chart starters ranked for Weeks 1–3 by market-implied scoring, opponent, venue, and a backtested late-round streaming policy.</td></tr>
     </table>
 
-    <h3>Key Features (August 2026)</h3>
+    <h3>Key Features (September 2026)</h3>
     <ul>
       <li><strong>Current roster overlay</strong>: Sleeper roster/depth data keeps teams, bye weeks, and post-draft movement aligned with the board.</li>
       <li><strong>Current availability overlay</strong>: injuries, reserve-list designations, practice status, expected returns, and suspensions are refreshed throughout draft season.</li>
       <li><strong>Target / carry competition</strong>: Sum of teammate prior-year production on current roster. Captures FA moves and scheme shifts directly.</li>
-      <li><strong>College &amp; draft pipeline</strong>: Draft capital, draft-pick value, combine athleticism, college per-game production, Power 5 flags, and rookie interaction features.</li>
-      <li><strong>Injury-adjusted regression</strong>: Separates injury-driven declines from talent-driven declines; flags bounce-back candidates.</li>
-      <li><strong>Contract signals</strong>: Prior-year contract context helps capture role stability, especially in WR/TE experiments.</li>
-      <li><strong>Conformal 80% target ranges</strong>: Split-calibrated on 2025 rows; marginal target, not an individual guarantee.</li>
+      <li><strong>College production</strong>: Draft capital, combine results, breakout age, and share of team receiving yards and touchdowns in college.</li>
+      <li><strong>Games vs. per-game value</strong>: Games played and points per game are modeled separately, so a short season is not read as lost talent.</li>
+      <li><strong>Route data</strong>: Routes run, targets per route and yards per route for pass catchers.</li>
+      <li><strong>80% ranges</strong>: About 77% observed coverage in 2024 and 2025; a guide, not an individual guarantee.</li>
       <li><strong>ADP matching</strong>: Robust via <code>football_name</code> (handles apostrophes, suffixes, nicknames).</li>
     </ul>
 
     <h2>Data Sources</h2>
     <ul>
-      <li><strong>nflverse</strong> (via <code>nfl_data_py</code>): Seasonal stats, rosters, team stats, OL metrics, snap counts, injuries, depth charts</li>
+      <li><strong>nflverse</strong>: Play-by-play, player stats, rosters, depth charts, snap counts, route participation, draft picks and combine data</li>
+      <li><strong>CollegeFootballData.com</strong>: College production and recruiting data</li>
       <li><strong>Fantasy Football Calculator</strong>: ADP (half-PPR) and bye weeks</li>
       <li><strong>FantasyPros</strong>: K and DEF projections (ML is not reliable for these; we use consensus instead)</li>
-      <li><strong>Pro-Football-Reference</strong>: Combine data, draft capital, college production stats</li>
-    </ul>
+          </ul>
 
     <h2>Accuracy (Walk-Forward Validated)</h2>
-    <p>Point models were trained on earlier seasons and tested on the next season, using 2024 and 2025 as held-out folds. Metrics are player-weighted across both folds. CQR uses 2025 as the final split-calibration season. Numbers refreshed August 2026 after the latest validated projection export.</p>
+    <p>The model was trained on earlier seasons and tested on the next one. These are the live board's numbers (model blended with ADP) for 2024 and 2025, updated September 2026.</p>
     <table>
       <tr><th>Position</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Held-Out N</th></tr>
-      <tr><td><strong>QB</strong></td><td>57.15</td><td>72.43</td><td>0.61</td><td>134</td></tr>
-      <tr><td><strong>RB</strong></td><td>43.39</td><td>60.47</td><td>0.51</td><td>269</td></tr>
-      <tr><td><strong>WR</strong></td><td>31.90</td><td>43.78</td><td>0.57</td><td>426</td></tr>
-      <tr><td><strong>TE</strong></td><td>23.79</td><td>33.35</td><td>0.56</td><td>223</td></tr>
-      <tr><td><strong>Player-Weighted Summary</strong></td><td>36.34</td><td>51.14</td><td><strong>0.56</strong></td><td>1,052</td></tr>
+      <tr><td><strong>QB</strong></td><td>42.93</td><td>62.45</td><td>0.71</td><td>184</td></tr>
+      <tr><td><strong>RB</strong></td><td>31.40</td><td>47.85</td><td>0.68</td><td>328</td></tr>
+      <tr><td><strong>WR</strong></td><td>25.21</td><td>38.32</td><td>0.67</td><td>515</td></tr>
+      <tr><td><strong>TE</strong></td><td>17.99</td><td>28.14</td><td>0.67</td><td>276</td></tr>
+      <tr><td><strong>All positions</strong></td><td>27.74</td><td>43.30</td><td><strong>0.68</strong></td><td>1,303</td></tr>
     </table>
-    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The summary MAE and R² are weighted by held-out player count; summary RMSE is pooled from squared position RMSE values. ADP improvement claims are intentionally omitted because the 2025 market feature is a preseason-rank proxy.</p>
+    <p style="color:var(--smoke);font-size:12px;margin-top:16px;">The summary MAE and R² are weighted by held-out player count; summary RMSE is pooled from squared position RMSE values. In tests on 2019 to 2025, the model-plus-ADP blend had lower error than ADP alone in 19 of 21 season-format checks; that is historical testing, not a guarantee.</p>
 
     <h2>Support</h2>
     <p>Questions about your account, purchase, or the War Room? Visit <a href="/support/" style="color:var(--accent);">OverADP Support</a> or email <a href="mailto:overadp@gmail.com" style="color:var(--accent);">overadp@gmail.com</a>.</p>
@@ -2681,7 +2679,7 @@ async function loadData(){
     updateDataStatus();
     // Injury-only refreshes can update players.json without changing market
     // data, so their timestamp must also invalidate the cached player board.
-    const cacheVersion=dataMetadata.injuries?.fetched_at||dataMetadata.market?.fetched_at||APP_CACHE_FALLBACK;
+    const cacheVersion=[dataMetadata.injuries?.fetched_at,dataMetadata.model?.generated_at].filter(Boolean).join('|')||dataMetadata.market?.fetched_at||APP_CACHE_FALLBACK;
     const _v='?v='+encodeURIComponent(cacheVersion);
     const [pRes,bRes,sRes,rcRes,accRes]=await Promise.all([
       fetch('data/players.json'+_v),
