@@ -407,6 +407,15 @@ def main():
         choices=["catboost", "validated_non_transformer"],
         help="catboost keeps the existing production model; validated_non_transformer applies the best walk-forward residual/direct variants by position.",
     )
+    parser.add_argument(
+        "--projection-source",
+        default="catboost",
+        choices=["catboost", "public_v6", "public_v6_blend"],
+        help="catboost (default) leaves projections unchanged; public_v6 uses research/public_model_v6 projections; "
+             "public_v6_blend averages v6 with ADP-implied points for players with real ADP.",
+    )
+    parser.add_argument("--v6-projections", default=None,
+                        help="Path to a v6 projections CSV (default: latest research/public_model_v6/out/projections_*.csv)")
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -602,6 +611,14 @@ def main():
         projections = pipeline.predict(df, target_season=latest_season)
     if args.projection_mode == "validated_non_transformer":
         projections = apply_validated_non_transformer_predictions(projections, df, projection_season)
+    if args.projection_source != "catboost":
+        from src.api.public_v6 import apply_public_v6
+        projections = apply_public_v6(
+            projections,
+            scoring=args.scoring,
+            blend=args.projection_source == "public_v6_blend",
+            projections_csv=args.v6_projections,
+        )
 
     # ADP is already included by pipeline.predict() via row.get("adp", 200)
     # Just ensure any remaining NaN is filled

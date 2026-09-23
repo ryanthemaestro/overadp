@@ -1,0 +1,8 @@
+group,n_features,mae_increase_when_shuffled
+past production,75,16.86
+dc,1,7.39
+bio,15,2.96
+status,2,1.52
+team,27,0.8
+pbp,31,0.75
+snap,7,0.19
