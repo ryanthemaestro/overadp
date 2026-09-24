@@ -76,6 +76,15 @@
           <a class="text-link" id="edit-lineup" href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener noreferrer">Edit in Yahoo ↗</a>
         </div>
         <p class="lineup-summary" id="lineup-summary"></p>
+        <section class="card startsit" aria-labelledby="startsit-title">
+          <h3 id="startsit-title">Start or sit?</h3>
+          <p class="fine">Your closest calls this week. Tap one to see the answer.</p>
+          <div id="calls" class="calls"></div>
+          <label class="search-label" for="player-search">Compare any player</label>
+          <input id="player-search" type="search" placeholder="Type a player's name" autocomplete="off" spellcheck="false">
+          <div id="search-results" class="search-results"></div>
+          <p class="fine">Or tap ⇄ next to any player in your lineup, bench or waivers.</p>
+        </section>
         <div class="lineup-cols">
           <div class="col"><h3 class="col-title">Starters</h3><div id="starters" class="card list"></div></div>
           <div class="col"><h3 class="col-title">Bench</h3><div id="bench" class="card list"></div></div>
@@ -113,24 +122,6 @@
         </div>
         <div class="col">
 
-        <div class="card compare" id="compare">
-          <h3>Stuck on a start/sit?</h3>
-          <p class="fine">Ask Jev to compare two players. Jev only sees their public stats and next game, never your Yahoo league.</p>
-          <div class="compare-grid">
-            <label>Position
-              <select id="jev-position"><option value="WR">Wide receiver</option><option value="RB">Running back</option><option value="QB">Quarterback</option><option value="TE">Tight end</option></select>
-            </label>
-            <label>Scoring
-              <select id="jev-scoring"><option value="standard">Standard</option><option value="half_ppr" selected>Half-PPR</option><option value="ppr">PPR</option></select>
-            </label>
-            <label>Player A <select id="jev-a"><option value="">Choose a player</option></select></label>
-            <label>Player B <select id="jev-b"><option value="">Choose a player</option></select></label>
-          </div>
-          <button type="button" class="button primary" id="jev-run" disabled>Who should I start?</button>
-          <p class="fine" id="jev-status" aria-live="polite"></p>
-          <div id="jev-result"></div>
-        </div>
-
         <details class="card settings">
           <summary>League settings and scoring</summary>
           <div id="settings"></div>
@@ -142,6 +133,12 @@
     <p class="footnote" id="footnote">Estimates blend 2025 and 2026 games under your league's scoring. They are a guide, not a guarantee. Always confirm injury status in Yahoo before kickoff.</p>
   </div>
 </main>
+
+<div id="compare-tray" class="compare-tray" hidden>
+  <div class="tray-head"><span class="eyebrow">Start or sit</span><button type="button" class="text-button" id="tray-clear">Clear</button></div>
+  <div id="tray-picks" class="tray-picks"></div>
+  <p id="tray-verdict" class="tray-verdict" aria-live="polite"></p>
+</div>
 
 <nav class="tabbar" id="tabbar" aria-label="Team hub sections" hidden>
   <button type="button" data-view="week" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>This week</button>

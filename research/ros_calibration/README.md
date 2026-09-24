@@ -40,3 +40,23 @@ Resting starters shows up only in the season's final week (strong teams 0.98× v
 - Points per game *when playing*. Availability (injury status, byes) is handled separately on the page.
 
 Run: `python3 research/ros_calibration/calibrate.py DATA_DIR` (DATA_DIR holds `stats_YYYY.csv`, `games.csv`, `preseason.csv`).
+
+## Start/sit accuracy (`start_sit.py`)
+
+Pairs of same-position, fantasy-relevant players who both played the following week, 2019–2025, scored with a model fit without that season. The page shows the rate for the projected gap between the two players.
+
+| Picked by | Right |
+|---|---|
+| **Calibrated model** | **63.6%** |
+| v6 preseason projection | 61.0% |
+| Season average so far | 61.4% |
+
+| Projected gap | QB | RB | WR | TE |
+|---|---|---|---|---|
+| under 1 pt | 52% | 53% | 52% | 54% |
+| 1–2 | 57% | 57% | 57% | 57% |
+| 2–3 | 59% | 63% | 61% | 61% |
+| 3–5 | 65% | 68% | 67% | 68% |
+| 5+ | 69% | 79% | 75% | 74% |
+
+Under one point the page calls it a toss-up. When the two players play different positions (a FLEX decision), it uses the lower of the two rates.

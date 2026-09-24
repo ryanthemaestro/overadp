@@ -44,7 +44,7 @@ jobs:
         run: node scripts/build_yahoo_public_context.mjs "$RUNNER_TEMP/players.csv" "$RUNNER_TEMP/teams.csv" "$RUNNER_TEMP/injuries.csv" "$RUNNER_TEMP/games.csv"
 
       - name: Validate before publishing
-        run: node --test tests/snapshot.test.mjs tests/jev-compare.test.mjs tests/public-context.test.mjs
+        run: node --test tests/snapshot.test.mjs tests/public-context.test.mjs tests/ros.test.mjs
 
       - name: Publish the refreshed snapshot
         run: |

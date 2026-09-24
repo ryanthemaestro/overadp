@@ -243,3 +243,51 @@ export function describeAdd(r) {
   if (r.byeWeeks.length) text += ` Covers bye week${r.byeWeeks.length === 1 ? '' : 's'} ${r.byeWeeks.join(', ')}.`;
   return text;
 }
+
+// ---- Start/sit -------------------------------------------------------------
+// Accuracy comes from research/ros_calibration/start_sit.py: how often the
+// calibrated model's pick outscored the other player, by projected gap.
+export function pickAccuracy(model, positions, gap) {
+  const table = model?.start_sit;
+  const band = table?.gaps.find(([lo, hi]) => gap >= lo && gap < hi);
+  if (!band) return null;
+  const values = positions.map(pos => table.accuracy[pos]?.[`${band[0]}-${band[1]}`]).filter(Number.isFinite);
+  return values.length ? Math.min(...values) : null;
+}
+const posOf = p => String(p.position || '').toUpperCase().split(/[,/]/)[0];
+// a and b: { player, estimate } where estimate has points/playable/reason.
+export function startSit(a, b, model, week) {
+  const ok = x => x.estimate?.playable && Number.isFinite(x.estimate.points);
+  if (!ok(a) && !ok(b)) return { pick: null, text: `Neither has a usable projection this week (${a.player.name}: ${a.estimate?.reason || 'no estimate'}; ${b.player.name}: ${b.estimate?.reason || 'no estimate'}).` };
+  if (!ok(a) || !ok(b)) {
+    const [pick, other] = ok(a) ? [a, b] : [b, a];
+    return { pick: pick.player, text: `Start ${pick.player.name}. ${other.player.name}: ${other.estimate?.reason || 'no projection this week'}.` };
+  }
+  const [pick, other] = a.estimate.points >= b.estimate.points ? [a, b] : [b, a];
+  const gap = Math.round((pick.estimate.points - other.estimate.points) * 10) / 10;
+  const accuracy = pickAccuracy(model, [posOf(a.player), posOf(b.player)], gap);
+  const pct = accuracy ? Math.round(accuracy * 100) : null;
+  const tag = statusTag(pick.player, week);
+  const caution = tag?.tone === 'warn' ? ` ${pick.player.name} is ${tag.label}; confirm before kickoff.` : '';
+  if (gap < 1) return { pick: null, gap, accuracy, tossup: true,
+    text: `Toss-up: ${gap.toFixed(1)} pts apart.${pct ? ` At gaps this small the higher projection has won only ${pct}% of the time, so either is fine.` : ''}` };
+  return { pick: pick.player, gap, accuracy,
+    text: `Start ${pick.player.name}: ${gap.toFixed(1)} pts ahead.${pct ? ` At this gap our pick has outscored the other player ${pct}% of the time in past seasons.` : ''}${caution}` };
+}
+// Your tightest decisions: each current starter vs the best eligible bench player.
+export function closestCalls({ team, lineup, estimate, limit = 3, within = 3 }) {
+  if (!team?.rosterAvailable || !lineup?.assignments) return [];
+  const starting = new Set(lineup.assignments.map(a => a.player?.playerKey).filter(Boolean));
+  const calls = [];
+  for (const a of lineup.assignments) {
+    if (!a.player || a.locked || !Number.isFinite(a.estimate?.points)) continue;
+    const alt = team.roster.filter(p => isBench(p) && !SLOT_OUT.has(String(p.slot || '').toUpperCase()) && !starting.has(p.playerKey) && canFill(p, a.slot))
+      .map(p => ({ p, e: estimate(p) })).filter(x => x.e?.playable && Number.isFinite(x.e.points) && !x.e.locked)
+      .sort((x, y) => y.e.points - x.e.points)[0];
+    if (!alt) continue;
+    // The bench player may project higher: the optimizer won't swap for small, noisy edges.
+    const diff = Math.round((a.estimate.points - alt.e.points) * 10) / 10;
+    if (Math.abs(diff) < within) calls.push({ slot: String(a.slot).replace('W/R/T', 'FLEX'), starter: a.player, alt: alt.p, gap: Math.abs(diff), benchAhead: diff < 0 });
+  }
+  return calls.sort((x, y) => x.gap - y.gap).slice(0, limit);
+}
