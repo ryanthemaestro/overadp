@@ -4,7 +4,6 @@ import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
 import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
 import { rosPerGame, kickerPerGame, defensePerGame } from './ros.mjs';
-import { loadKeeps, saveKeeps } from './keeps.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
 const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
@@ -35,7 +34,7 @@ const denialMessages = Object.freeze({
 });
 const POS_CLASS = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'D/ST': 'DEF' };
 let generation = 0, controller, expiry, command = null, availableGeneration = 0, availableController;
-let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null, comparePicks = [], keeps = new Set();
+let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null, comparePicks = [], keeps = new Set(), keepsTeam = null;
 let cooldownUntil = 0, rateLimitCount = 0;
 let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null, contextReady = null;
 let v6Index = new Map(), rosModel = null;
@@ -405,7 +404,9 @@ function valueCandidate(c) {
   return { ...c, ros: Number.isFinite(c.rosPg) && mine?.rosterAvailable && weeks.length
     ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints, keep: keeps }) : null };
 }
-// ---- Locks: keep players out of drop suggestions (saved on this device only) ----
+// ---- Locks: keep players out of drop suggestions for this visit ----
+// Kept in memory only. The Yahoo API agreement (2(c)(vii)) bars storing, caching or
+// indexing Yahoo Fantasy Information, so locks are never written to the device.
 const LOCK = 'M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z';
 function lockButton(p) {
   const on = keeps.has(p.playerKey), b = el('button', null, 'keep-btn'); b.type = 'button';
@@ -416,7 +417,6 @@ function lockButton(p) {
   return b;
 }
 function applyKeeps() {
-  saveKeeps(command.team.teamKey, keeps);
   candidates = candidates.map(valueCandidate); renderPlan(); renderAdds();
 }
 function rankedCandidates() {
@@ -530,7 +530,7 @@ async function loadLeague() {
   try {
     const data = await request('command', { teamKey: $('team').value }, controller.signal);
     await contextReady; if (id !== generation) return;
-    command = data; keeps = loadKeeps(command.team.teamKey); rosCache.clear(); defenseWeekCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
+    command = data; if (command.team.teamKey !== keepsTeam) { keeps = new Set(); keepsTeam = command.team.teamKey; } rosCache.clear(); defenseWeekCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
     findPlayers();
   } catch (e) { if (id === generation) { $('teams-section').hidden = false; error(e); } }
   finally { if (id === generation) $('load').disabled = !$('team').value; }

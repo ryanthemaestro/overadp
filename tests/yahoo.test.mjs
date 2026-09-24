@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { handle, seal, unseal, parseTeams, parseLeague, parseRoster, ORIGIN, CALLBACK, TOKEN_URL } from '../netlify/functions/_shared/yahoo-core.mjs';
 const secret = 'ab'.repeat(32), time = 1800000000000;
 const env = key => ({ YAHOO_ENABLED: 'true', YAHOO_CLIENT_ID: 'test-client', YAHOO_CLIENT_SECRET: 'test-secret', YAHOO_SESSION_SECRET: secret })[key];
@@ -128,6 +128,11 @@ test('request and response size limits fail safely', async () => {
   assert.equal(big.status, 502);
   const r = await handle('api', post({ action: 'teams' }, session()), { ...deps, fetcher: async () => new Response('secret', { headers: { 'content-length': '3000000' } }) });
   assert.equal(r.status, 502); assert.equal((await r.json()).error, 'RESPONSE_TOO_LARGE');
+});
+test('no Team Hub file stores data in the browser (Yahoo API agreement 2(c)(vii))', () => {
+  const dir = new URL('../site/yahoo/', import.meta.url);
+  for (const file of readdirSync(dir).filter(f => /\.(m?js|html)$/.test(f)))
+    assert(!/localStorage|sessionStorage|indexedDB|document\.cookie|caches\.open/.test(readFileSync(new URL(file, dir), 'utf8')), file);
 });
 test('private frontend has no analytics, unsafe HTML sinks, persistent storage, or tokens', () => {
   const js = readFileSync(new URL('../site/yahoo/yahoo.js', import.meta.url), 'utf8');
