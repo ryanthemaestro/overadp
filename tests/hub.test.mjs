@@ -33,7 +33,7 @@ test('Yahoo links are built only from well-formed keys', () => {
 });
 test('status tags use Yahoo status only and mark byes', () => {
   assert.equal(statusTag({ status: '' }, 3), null);
-  assert.deepEqual(statusTag({ status: 'Q' }, 3), { text: 'Q', tone: 'warn', label: 'listed Questionable' });
+  assert.deepEqual(statusTag({ status: 'Q' }, 3), { text: 'QUES', tone: 'warn', label: 'listed Questionable' });
   assert.equal(statusTag({ status: 'O' }, 3).text, 'OUT');
   assert.equal(statusTag({ status: 'D' }, 3).tone, 'bad');
   assert.equal(statusTag({ status: '', byeWeek: 3 }, 3).text, 'BYE');

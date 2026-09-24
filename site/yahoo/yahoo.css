@@ -123,7 +123,7 @@ select{min-height:44px;background:var(--steel);border:1px solid var(--rust);bord
 .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .game{font-size:13px;color:var(--muted)}
 .pts{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--soft);min-width:44px;text-align:right}
-.tag{flex-shrink:0;font-family:var(--label);font-weight:700;font-size:12px;letter-spacing:1px;padding:1px 6px;border-radius:3px}
+.tag{flex-shrink:0;font-family:var(--body);font-weight:600;font-size:12px;letter-spacing:.5px;padding:1px 6px;border-radius:3px}
 .tag.warn{background:var(--amber-bg);color:var(--amber)}
 .tag.bad{background:var(--red-bg);color:var(--red)}
 .tag.good{background:var(--green-bg);color:var(--green-hi)}
@@ -190,23 +190,30 @@ body[data-view="week"] #week-view,body[data-view="lineup"] #lineup-view,body[dat
 footer{max-width:1320px;margin:32px auto 0;padding:18px 20px;border-top:1px solid var(--iron);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between;font-size:12px;color:var(--muted)}
 footer a{color:var(--muted)}
 
-/* Desktop: everything on one screen */
+.col{min-width:0}
+.col-title{margin:0 0 10px}
+.lineup-cols .col+.col .col-title{margin-top:20px}
+.league-cols .col+.col{margin-top:0}
+
+/* Desktop: same tabs as the phone, each laid out to use the width */
 @media (min-width:1100px){
   body{padding-bottom:0}
   .topbar{padding:16px 40px}
-  body.loaded .desk-nav{display:flex;gap:24px;margin-right:auto;margin-left:24px}
-  .desk-nav a{font-family:var(--label);font-weight:700;font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-decoration:none}
-  .desk-nav a:hover{color:var(--green)}
+  body.loaded .desk-nav{display:flex;gap:8px;margin-right:auto;margin-left:24px}
+  .desk-nav button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 10px;min-height:40px;cursor:pointer;font-family:var(--label);font-weight:700;font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  .desk-nav button:hover{color:var(--text)}
+  .desk-nav button[aria-pressed="true"]{color:var(--green);border-bottom-color:var(--green)}
   .desk-only{display:inline}
   main{padding:0 40px}
   .tabbar{display:none}
-  .mobile-only{display:none!important}
-  .view{display:block!important}
-  .hub-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr) minmax(0,3.4fr);grid-template-rows:auto 1fr;gap:0 28px;align-items:start}
-  #week-view{grid-row:1 / span 2}
-  #lineup-view{grid-row:1 / span 2}
-  #waivers-view{grid-column:3}
-  #league-view{grid-column:3}
   .team-head h1{font-size:36px}
-  .adds .add-why{display:none}
+  #week-view{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:32px;align-items:start}
+  #week-view .col:last-child>.section-head{margin-top:14px}
+  body[data-view="week"] #week-view{display:grid}
+  .lineup-cols,.league-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;align-items:start}
+  .lineup-cols .col+.col .col-title{margin-top:0}
+  .league-cols .col+.col>.compare{margin-top:0}
+  .adds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+  .add{justify-content:space-between}
+  .button.ghost{max-width:360px}
 }

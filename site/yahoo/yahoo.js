@@ -183,7 +183,7 @@ function playerRow(p, { slot = p.slot, extraTag = null, compact = false } = {}) 
   line.append(el('span', p.name, 'name'));
   for (const t of [tag, extraTag, e.locked && Number.isFinite(e.kickoff) ? { text: 'LOCKED', tone: 'lock' } : null]) if (t) line.append(tagEl(t));
   who.append(line);
-  if (!compact) who.append(el('span', gameLine(p.team, nextGame(p)) || `${p.team || 'Team'} · no game found`, 'game'));
+  if (!compact) who.append(el('span', gameLine(p.team, nextGame(p)) || `${String(p.team || 'Team').toUpperCase()} · no game found`, 'game'));
   row.append(who, el('span', fmt(e.points), 'pts'));
   return row;
 }
@@ -244,7 +244,7 @@ function renderPlan() {
 }
 function selectView(view) {
   document.body.dataset.view = view;
-  for (const b of document.querySelectorAll('#tabbar [data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+  for (const b of document.querySelectorAll('button[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
   window.scrollTo({ top: 0 });
 }
 
@@ -260,7 +260,7 @@ function renderAdds() {
     const who = el('div', null, 'who'), line = el('div', null, 'name-line');
     line.append(el('span', String(p.position).split(',')[0], 'slot ' + posClass(p.position)), el('span', p.name, 'name'));
     const tag = statusTag(p, command.league.currentWeek); if (tag) line.append(tagEl(tag));
-    who.append(line, el('span', `${p.team || 'FA'} · ${p.ownership === 'waivers' ? `Waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent'}`, 'game'));
+    who.append(line, el('span', `${String(p.team || 'FA').toUpperCase()} · ${p.ownership === 'waivers' ? `Waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent'}`, 'game'));
     const g = el('div', null, 'add-gain');
     g.append(el('strong', helps ? `+${fmt(gain)}` : fmt(c.estimate?.points), helps ? '' : 'none'), el('span', helps ? 'pts this week' : 'est. pts'));
     head.append(el('span', String(i + 1), 'add-rank'), who, g);
@@ -400,7 +400,7 @@ $('disconnect').addEventListener('click', async () => {
 $('refresh').addEventListener('click', teams);
 $('team').addEventListener('change', () => { generation++; controller?.abort(); clearWorkspace(); $('load').disabled = !$('team').value; });
 $('load').addEventListener('click', loadLeague);
-document.querySelectorAll('#tabbar [data-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.view)));
+document.querySelectorAll('button[data-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.go)));
 document.querySelectorAll('.chip[data-pos]').forEach(chip => chip.addEventListener('click', () => {
   pickupPosition = chip.dataset.pos;

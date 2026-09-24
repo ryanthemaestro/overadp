@@ -26,8 +26,8 @@ export function statusTag(player, week) {
   const raw = String(player.status || '').toUpperCase();
   if (state.label === 'Bye this week') return { text: 'BYE', tone: 'bad', label: 'on bye this week' };
   if (state.blocked) return { text: raw === 'O' ? 'OUT' : raw || 'OUT', tone: 'bad', label: `listed ${raw === 'O' ? 'Out' : player.status}` };
-  if (raw === 'D') return { text: 'D', tone: 'bad', label: 'listed Doubtful' };
-  if (raw === 'Q') return { text: 'Q', tone: 'warn', label: 'listed Questionable' };
+  if (raw === 'D') return { text: 'DOUBT', tone: 'bad', label: 'listed Doubtful' };
+  if (raw === 'Q') return { text: 'QUES', tone: 'warn', label: 'listed Questionable' };
   return { text: raw.slice(0, 6), tone: 'warn', label: `listed ${player.status}` };
 }
 

@@ -15,7 +15,7 @@
 <header class="topbar">
   <a class="logo" href="/">OVER<span>ADP</span> <small>/ TEAM HUB</small></a>
   <nav class="desk-nav" aria-label="Team hub sections">
-    <a href="#week-view">This week</a><a href="#lineup-view">Lineup</a><a href="#waivers-view">Waivers</a><a href="#league-view">League</a>
+    <button type="button" data-view="week" aria-pressed="true">This week</button><button type="button" data-view="lineup" aria-pressed="false">Lineup</button><button type="button" data-view="waivers" aria-pressed="false">Waivers</button><button type="button" data-view="league" aria-pressed="false">League</button>
   </nav>
   <div class="top-actions">
     <span class="chip-yahoo" id="yahoo-chip" hidden><span class="dot"></span>Yahoo</span>
@@ -53,17 +53,21 @@
 
     <div class="hub-grid">
       <section id="week-view" class="view" aria-labelledby="moves-title">
+        <div class="col">
         <div id="matchup" class="card matchup"></div>
         <div class="section-head">
           <h2 id="moves-title">Moves this week</h2>
           <span class="fine" id="moves-sub"></span>
         </div>
         <div id="moves" class="moves"></div>
-        <div class="section-head mobile-only">
+        </div>
+        <div class="col">
+        <div class="section-head">
           <h2>Your starters</h2>
           <button type="button" class="text-button" data-go="lineup">Full lineup →</button>
         </div>
-        <div id="glance" class="card list mobile-only"></div>
+        <div id="glance" class="card list"></div>
+        </div>
       </section>
 
       <section id="lineup-view" class="view" aria-labelledby="lineup-title">
@@ -72,9 +76,10 @@
           <a class="text-link" id="edit-lineup" href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener noreferrer">Edit in Yahoo ↗</a>
         </div>
         <p class="lineup-summary" id="lineup-summary"></p>
-        <div id="starters" class="card list"></div>
-        <h3>Bench</h3>
-        <div id="bench" class="card list"></div>
+        <div class="lineup-cols">
+          <div class="col"><h3 class="col-title">Starters</h3><div id="starters" class="card list"></div></div>
+          <div class="col"><h3 class="col-title">Bench</h3><div id="bench" class="card list"></div></div>
+        </div>
       </section>
 
       <section id="waivers-view" class="view" aria-labelledby="waivers-title">
@@ -100,9 +105,13 @@
         <div class="section-head">
           <h2 id="league-title">Where you stand</h2>
         </div>
+        <div class="league-cols">
+        <div class="col">
         <p class="fine">Your best healthy players at each position vs. every other team's, by estimated points this week.</p>
         <div id="ranks" class="card list"></div>
         <div id="trade" class="card trade" hidden></div>
+        </div>
+        <div class="col">
 
         <div class="card compare" id="compare">
           <h3>Stuck on a start/sit?</h3>
@@ -126,6 +135,8 @@
           <summary>League settings and scoring</summary>
           <div id="settings"></div>
         </details>
+        </div>
+        </div>
       </section>
     </div>
     <p class="footnote" id="footnote">Estimates blend 2025 and 2026 games under your league's scoring. They are a guide, not a guarantee. Always confirm injury status in Yahoo before kickoff.</p>
