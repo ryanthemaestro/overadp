@@ -95,7 +95,7 @@ export function buildMoves({ team, league, lineup, estimate, pickups = [], links
       impact: 'Status', action: 'Open lineup', href: links.team, basis: null });
   }
   // The best add by rest-of-season value, if it's worth at least ~1 point a week.
-  const best = pickups.filter(c => c.ros?.gain >= Math.max(6, c.ros.of)).sort((a, b) => b.ros.gain - a.ros.gain)[0];
+  const best = pickups.filter(c => c.ros && c.ros.gain >= Math.max(6, c.ros.of)).sort((a, b) => b.ros.gain - a.ros.gain)[0];
   if (best) {
     const p = best.player, pool = p.ownership === 'waivers' ? `On waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent';
     moves.push({ kind: 'pickup', priority: 1, headline: `Add ${p.name}${best.ros.drop ? `, drop ${best.ros.drop.name}` : ''}`,
