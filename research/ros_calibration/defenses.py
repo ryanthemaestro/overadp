@@ -180,6 +180,13 @@ def main():
                        'fallback_base': result['fallback_base'], 'rest_of_season': result['rest_of_season_model'], 'next_week': result['next_week_model'],
                        'held_out': {'rest_of_season_mae': ros_s.to_dict(), 'next_week_pick_accuracy': pick_s.to_dict()}}
     site['start_sit']['accuracy']['DEF'] = {k: v['accuracy'] for k, v in by_gap.items()}
+    # Weeks past the next one have no betting line yet: use each week's opponent's scoring
+    # (the 'blend+opponent offense' model, 57.7% held-out start/sit accuracy).
+    tf = rows.dropna(subset=['next', 'next_opp_off', 'home'])
+    site['defense']['future_week'] = {'name': 'blend+opponent offense', 'features': ['intercept'] + WEEK['blend+opponent offense'],
+                                      'buckets': [list(b) for b in BUCKETS],
+                                      'by_bucket': fit(tf.assign(w1=1.0), WEEK['blend+opponent offense'], target='next', weight='w1'),
+                                      'held_out_pick_accuracy': float(pick_s['blend+opponent offense'])}
     site_path.write_text(json.dumps(site, separators=(',', ':')))
 
 

@@ -104,15 +104,21 @@ export const DEFAULT_DEF = [['Sack', 1], ['Int', 2], ['Fum Rec', 2], ['TD', 6], 
  * strength of the offenses still to come. kind 'week': the next game, from the betting
  * line's projected points for the opponent.
  */
-export function defensePerGame({ kind, team, snapshot, league, model }) {
+export function defensePerGame({ kind, team, week, snapshot, league, model }) {
   if (!model?.defense || !snapshot) return null;
   const ctx = snapshot.teamContext?.[team] || {}, game = snapshot.schedule?.[team];
   const games = (snapshot.teamStats?.[team]?.defenseGames || []).filter(g => Number.isFinite(g.pointsAllowed));
   const pts = g => scoreGame(g, 'DEF', DEFAULT_DEF)?.points;
   const values = { intercept: 1, base: ctx.priorDefensePointsPerGame ?? model.defense.fallback_base, obs0: perGame(games, pts) ?? 0,
     opp_off: ctx.remainingOpponentOffense, opp_implied: game ? snapshot.schedule?.[game.opponent]?.impliedTotal : null, home: game?.home ? 1 : 0 };
-  const part = kind === 'week' ? model.defense.next_week : model.defense.rest_of_season;
-  if (part.features.some(f => !Number.isFinite(values[f]))) return null;
+  const part = kind === 'week' ? model.defense.next_week : kind === 'future' ? model.defense.future_week : model.defense.rest_of_season;
+  if (kind === 'future') {
+    // A later week: that week's opponent's scoring so far (no betting line exists yet).
+    const g = ctx.remainingSchedule?.find(x => x.week === week);
+    if (!g) return { points: 0, basis: 'bye week', games: games.length };
+    values.next_opp_off = snapshot.teamContext?.[g.opponent]?.offenseStrength; values.home = g.home ? 1 : 0;
+  }
+  if (!part || part.features.some(f => !Number.isFinite(values[f]))) return null;
   const key = bucketFor(part, games.length), coef = key && part.by_bucket[key];
   if (!coef) return null;
   const pg = part.features.reduce((sum, f, i) => sum + coef[i] * values[f], 0);
@@ -123,7 +129,8 @@ export function defensePerGame({ kind, team, snapshot, league, model }) {
     if (Number.isFinite(a) && Number.isFinite(b)) { lg += a; dflt += b; }
   }
   const ratio = Math.abs(dflt) >= 5 ? Math.min(2, Math.max(0.5, lg / dflt)) : 1;
-  const basis = kind === 'week' ? `defense model: opponent projected for ${values.opp_implied} points by the betting line`
+  const basis = kind === 'future' ? `defense model: week ${week} opponent scoring ${values.next_opp_off.toFixed(1)} points a game`
+    : kind === 'week' ? `defense model: opponent projected for ${values.opp_implied} points by the betting line`
     : `defense model: last season + ${games.length} game${games.length === 1 ? '' : 's'}, remaining opponents averaging ${values.opp_off.toFixed(1)} points`;
   return { points: Math.round(pg * ratio * 100) / 100, basis, games: games.length };
 }

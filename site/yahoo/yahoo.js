@@ -94,7 +94,25 @@ function rosPoints(p) {
   if (!r && ['K', 'DEF'].includes(pos)) { const e = weekly(p); r = Number.isFinite(e.points) ? { points: e.points, basis: e.basis } : null; }
   rosCache.set(key, r); return r;
 }
-function seasonPoints(p, week) { const r = rosPoints(p); return r ? r.points * availabilityShare(p, week, command.league.currentWeek) : 0; }
+// Defenses are valued week by week against each opponent, so a second defense gets
+// credit for the weeks its matchup is better (streaming), not just for byes.
+const defenseWeekCache = new Map();
+function defenseWeek(p, week) {
+  const key = `${normalTeam(p.team)}|${week}`;
+  if (!defenseWeekCache.has(key)) {
+    const kind = week === publicSnapshot?.nextWeek ? 'week' : 'future';
+    defenseWeekCache.set(key, rosModel && publicSnapshot ? defensePerGame({ kind, team: normalTeam(p.team), week, snapshot: publicSnapshot, league: command.league, model: rosModel }) : null);
+  }
+  return defenseWeekCache.get(key);
+}
+function seasonPoints(p, week) {
+  const share = availabilityShare(p, week, command.league.currentWeek);
+  if (/^(DEF|D\/ST)$/i.test(String(p.position))) {
+    const w = defenseWeek(p, week);
+    if (w) return w.points * share;
+  }
+  const r = rosPoints(p); return r ? r.points * share : 0;
+}
 function nextGame(player) { return publicMatch(player)?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)] || null; }
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
 // A confirmation that clears itself unless something else replaced it meanwhile.
@@ -478,7 +496,7 @@ async function refresh() {
   try {
     const data = await request('command', { teamKey: command.team.teamKey }, controller.signal);
     if (id !== generation) return;
-    command = data; rosCache.clear(); renderCommand(); resetCandidates(); findPlayers();
+    command = data; rosCache.clear(); defenseWeekCache.clear(); renderCommand(); resetCandidates(); findPlayers();
     notice(`Updated from Yahoo at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
   } catch (e) { if (id === generation) error(e, 'refreshing your league'); }
   finally { button.disabled = false; button.textContent = 'Refresh'; }
@@ -489,7 +507,7 @@ async function loadLeague() {
   try {
     const data = await request('command', { teamKey: $('team').value }, controller.signal);
     await contextReady; if (id !== generation) return;
-    command = data; rosCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
+    command = data; rosCache.clear(); defenseWeekCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
     findPlayers();
   } catch (e) { if (id === generation) { $('teams-section').hidden = false; error(e); } }
   finally { if (id === generation) $('load').disabled = !$('team').value; }
@@ -517,7 +535,7 @@ async function loadRosContext() {
     if (!Array.isArray(players) || model.version !== 1) throw Error('Rest-of-season inputs invalid');
     v6Index = new Map(players.map(p => [p.player_id, p])); rosModel = model;
   } catch { v6Index = new Map(); rosModel = null; }
-  rosCache.clear();
+  rosCache.clear(); defenseWeekCache.clear();
 }
 async function loadPriorContext() {
   try {

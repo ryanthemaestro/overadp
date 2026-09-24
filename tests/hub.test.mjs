@@ -243,3 +243,17 @@ test('when drops cost the same, a spare kicker goes before a backup running back
   const r = addValue({ roster: t.roster, candidate: newK, league: kLeague, weeks: fantasyWeeks(kLeague), value: valueOf({ OldK: 9, NewK: 11, RB2: 1, WRbench: 1 }) });
   assert(r.drops.some(p => p.name === 'OldK'), r.drops.map(p => p.name).join());
 });
+test('two defenses rotated by matchup both earn starts, so neither reads as "never starts"', () => {
+  const defLeague = { ...lateLeague, positions: [...lateLeague.positions, { position: 'DEF', count: '1' }] };
+  const t = team();
+  t.roster.push({ name: 'Bills', position: 'DEF', eligible: ['DEF'], playerKey: '461.p.801', slot: 'DEF', status: '' },
+    { name: 'Broncos', position: 'DEF', eligible: ['DEF'], playerKey: '461.p.802', slot: 'BN', status: '' });
+  // Week-by-week matchups: Bills better in 14 and 16, Broncos in 15 and 17.
+  const byWeek = { Bills: { 14: 9, 15: 4, 16: 8, 17: 5 }, Broncos: { 14: 5, 15: 8, 16: 4, 17: 9 } };
+  const value = (p, week) => byWeek[p.name]?.[week] ?? (flat[p.name] || 0) * availabilityShare(p, week, 14);
+  const order = dropOrder({ roster: t.roster, league: defLeague, weeks: fantasyWeeks(defLeague), value });
+  const bills = order.find(d => d.player.name === 'Bills'), broncos = order.find(d => d.player.name === 'Broncos');
+  assert.equal(bills.starts, 2); assert.equal(broncos.starts, 2);
+  assert(broncos.cost > 0 && bills.cost > 0, 'dropping either one loses the rotation');
+  assert.equal(order[0].player.name, 'TEbench');
+});
