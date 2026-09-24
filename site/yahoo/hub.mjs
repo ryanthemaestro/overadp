@@ -156,8 +156,10 @@ export function positionRanks(command, estimate) {
   return { ranks: out, byTeam };
 }
 
+// Only skill positions: kickers and defenses are replaceable off waivers every week,
+// so "deep at DEF, thin at K" is never a real trade.
 export function tradeIdea({ ranks, byTeam }, mineKey) {
-  const rated = ranks.filter(r => r.rank && r.of >= 6);
+  const rated = ranks.filter(r => r.rank && r.of >= 6 && ['QB', 'RB', 'WR', 'TE'].includes(r.pos));
   const strong = rated.filter(r => r.rank <= 3).sort((a, b) => a.rank - b.rank)[0];
   const weak = rated.filter(r => r.rank > r.of - 3).sort((a, b) => b.rank - a.rank)[0];
   if (!strong || !weak) return null;

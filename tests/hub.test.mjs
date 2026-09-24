@@ -280,3 +280,9 @@ test('when the IR player is the cheapest drop, the card says to drop them instea
   assert.match(card.why, /Dropping IRguy is the cheapest fix: no one you drop is projected to start for you again\. Or move IRguy to your bench/);
   assert(!/drop IRguy to make room/.test(card.why));
 });
+test('trade ideas only use QB/RB/WR/TE, never kickers or defenses', () => {
+  const ranks = [{ pos: 'DEF', rank: 1, of: 9 }, { pos: 'K', rank: 9, of: 9 }, { pos: 'RB', rank: 5, of: 9 }, { pos: 'WR', rank: 5, of: 9 }];
+  assert.equal(tradeIdea({ ranks, byTeam: new Map() }, 'me'), null);
+  const skill = [...ranks, { pos: 'QB', rank: 2, of: 9 }, { pos: 'TE', rank: 8, of: 9 }];
+  assert.deepEqual(tradeIdea({ ranks: skill, byTeam: new Map() }, 'me'), { strong: 'QB', weak: 'TE', partners: 0 });
+});
