@@ -16,6 +16,11 @@ const messages = {
   AUTH_DECLINED: 'Yahoo authorization was cancelled. Nothing was connected.',
   INVALID_STATE: 'That connection attempt could not be verified. Please connect again.',
   TOKEN_EXCHANGE_FAILED: 'Yahoo could not complete the connection. Please try again or contact support.',
+  YAHOO_UNAVAILABLE: "Yahoo's servers didn't answer that request. Try Refresh in a minute.",
+  SERVER_UNAVAILABLE: 'Our server hiccuped while reading Yahoo. Try Refresh in a minute.',
+  INVALID_RESPONSE: "Yahoo sent data we couldn't read. Try Refresh; if it keeps happening, tell us.",
+  RESPONSE_TOO_LARGE: "Yahoo sent more data than expected. Try a narrower position filter.",
+  TEAM_NOT_AUTHORIZED: "Yahoo says this account can't read that team. Try Refresh or reconnect.",
 };
 const denialMessages = Object.freeze({
   APPLICATION_NOT_AUTHORIZED: 'Yahoo accepted sign-in but reports that this application is not authorized for the requested Fantasy API access. Diagnostic: APPLICATION_NOT_AUTHORIZED.',
@@ -69,13 +74,18 @@ function rosPoints(p) {
 function seasonPoints(p, week) { const r = rosPoints(p); return r ? r.points * availabilityShare(p, week, command.league.currentWeek) : 0; }
 function nextGame(player) { return publicMatch(player)?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)] || null; }
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
-function error(e) {
+// `where` names the step for errors on our side; `target` shows the message there
+// instead of in the page-wide banner. Only fixed text and short error codes are shown.
+function error(e, where = '', target = null) {
   if (e.name === 'AbortError') return;
   if (e.code === 'SESSION_EXPIRED') connected(false);
+  const code = /^[A-Z_]{3,40}$/.test(e.code || '') ? e.code : null;
   const message = e.code === 'YAHOO_RATE_LIMIT' ? 'Yahoo is limiting requests. Try again after ' + new Date(cooldownUntil).toLocaleTimeString() + '.'
     : e.code === 'YAHOO_ACCESS_DENIED' && Object.hasOwn(denialMessages, e.diagnostic) ? denialMessages[e.diagnostic]
-    : messages[e.code] || 'Yahoo could not finish this read. Missing information has not been treated as zero.';
-  status(message, true); return message;
+    : messages[e.code] || (code ? `Yahoo could not finish this read (${code}). Missing information has not been treated as zero.`
+      : `Something went wrong on our side${where ? ` while ${where}` : ''} (${/^[A-Za-z]{1,30}$/.test(e.name || '') ? e.name : 'Error'}). Refresh to retry.`);
+  if (target) { target.textContent = message; target.classList.add('error-text'); } else status(message, true);
+  return message;
 }
 function arrowIcon() {
   const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), path = document.createElementNS(ns, 'path');
@@ -112,12 +122,18 @@ function setExpiry(timestamp) {
   clearTimeout(expiry);
   expiry = setTimeout(() => { connected(false); status('Your Yahoo session expired. The displayed league information was cleared.'); }, Math.max(0, timestamp - Date.now()));
 }
-async function request(action, extra = {}, signal) {
+async function request(action, extra = {}, signal, retried = false) {
   if (demo) return action === 'command' ? demo.command : action === 'teams' ? { teams: demo.teams } : demo.available(extra);
   if (action !== 'disconnect' && Date.now() < cooldownUntil) throw { code: 'YAHOO_RATE_LIMIT' };
   const r = await fetch('/.netlify/functions/yahoo-api', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) });
-  const body = await r.json();
+  // A platform error (e.g. a cold start) returns plain text, not our JSON.
+  let body; try { body = await r.json(); } catch { body = { error: r.ok ? 'INVALID_RESPONSE' : 'SERVER_UNAVAILABLE' }; }
+  // Reads are safe to repeat once after a server-side hiccup.
+  if (!retried && action !== 'disconnect' && ['SERVER_UNAVAILABLE', 'YAHOO_UNAVAILABLE'].includes(body.error)) {
+    await new Promise(done => setTimeout(done, 800));
+    return request(action, extra, signal, true);
+  }
   if (r.status === 429) {
     const seconds = Math.max(60, Number(r.headers.get('retry-after')) || 0, Math.min(900, 60 * 2 ** rateLimitCount++));
     cooldownUntil = Date.now() + seconds * 1000;
@@ -299,14 +315,27 @@ async function findPlayers() {
   const id = ++availableGeneration, leagueGeneration = generation;
   const teamKey = command.team.teamKey, position = pickupPosition;
   $('pickup-status').textContent = 'Checking free agents and waivers…';
+  $('pickup-status').classList.remove('error-text');
+  const pages = [], failed = [];
   try {
-    const pages = [];
     for (const pool of ['FA', 'W']) {
-      const d = await request('available', { teamKey, pool, position, start: 0 }, availableController.signal);
+      try {
+        const d = await request('available', { teamKey, pool, position, start: 0 }, availableController.signal);
+        if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== position) throw { code: 'INVALID_RESPONSE' };
+        pages.push(d);
+      } catch (e) {
+        // Keep one pool's results if the other fails, unless the session or rate limit is the problem.
+        if (e.name === 'AbortError' || ['SESSION_EXPIRED', 'YAHOO_RATE_LIMIT', 'YAHOO_ACCESS_DENIED'].includes(e.code)) throw e;
+        failed.push({ pool, e });
+      }
       if (id !== availableGeneration || leagueGeneration !== generation) return;
-      if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== position) throw Error('Mismatched response');
-      pages.push(d);
     }
+    if (!pages.length) throw failed[0].e;
+  } catch (e) {
+    if (id === availableGeneration && leagueGeneration === generation) error(e, 'reading available players', $('pickup-status'));
+    return;
+  }
+  try {
     const mine = ownTeam(), lineup = publicCurrent() ? optimizeLineup(mine, command.league, weekly) : null;
     const weeks = fantasyWeeks(command.league);
     mine.roster.forEach(rosPoints);
@@ -316,10 +345,11 @@ async function findPlayers() {
         ros: r && mine.rosterAvailable && weeks.length ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints }) : null };
     });
     addsShown = 6; renderAdds();
-    $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}`;
+    $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}` +
+      (failed.length ? ` · ${failed[0].pool === 'W' ? 'Waiver-wire' : 'Free-agent'} list unavailable right now, so it isn't included` : '');
     if (position === 'ALL') renderPlan();
   } catch (e) {
-    if (id === availableGeneration && leagueGeneration === generation) { const message = error(e); if (message) $('pickup-status').textContent = message; }
+    if (id === availableGeneration && leagueGeneration === generation) error(e, 'ranking available players', $('pickup-status'));
   }
 }
 
