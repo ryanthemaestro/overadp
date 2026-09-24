@@ -102,3 +102,32 @@ test('later weeks: each defense is valued against that week\'s opponent, and bye
   assert.match(weak.basis, /week 4 opponent scoring 15\.0 points a game/);
   assert.deepEqual(defensePerGame(args(6)), { points: 0, basis: 'bye week', games: 2 });
 });
+
+// ---- Injury return curves (research/ros_calibration/injuries.py) ----
+import { availabilityShare, likelyReturn } from '../site/yahoo/hub.mjs';
+const avail = model.availability;
+test('availability model ships measured curves and beats the previous assumptions held out', () => {
+  assert(avail.out.all[2] > 0.6, 'most Out players miss a second game');
+  assert(avail.held_out_brier.calibrated < avail.held_out_brier['previous page']);
+  assert(avail.questionable > 0.5 && avail.questionable < 0.8);
+  assert(avail.doubtful < 0.1);
+});
+test('an Out player is not assumed back next week; knee absences run longer than concussions', () => {
+  const knee = { status: 'O', injuryGroup: 'Knee', gamesMissed: 0 }, conc = { status: 'O', injuryGroup: 'Concussion', gamesMissed: 0 };
+  assert.equal(availabilityShare(knee, 3, 3, avail), 0);
+  assert(availabilityShare(knee, 4, 3, avail) < 0.5);
+  assert(availabilityShare(conc, 4, 3, avail) > availabilityShare(knee, 4, 3, avail));
+  assert(availabilityShare(knee, 12, 3, avail) > 0.6, 'most are back within ~9 games');
+  assert(likelyReturn(knee, avail) > likelyReturn(conc, avail));
+});
+test('IR, Questionable and Doubtful use measured rates; healthy players are unaffected', () => {
+  const ir = { status: 'IR', slot: 'IR', gamesMissed: 1 };
+  assert.equal(availabilityShare(ir, 3, 3, avail), 0);
+  assert(availabilityShare(ir, 5, 3, avail) < 0.5);
+  assert.equal(availabilityShare({ status: 'Q' }, 3, 3, avail), avail.questionable);
+  assert.equal(availabilityShare({ status: 'D' }, 3, 3, avail), avail.doubtful);
+  assert(availabilityShare({ status: 'D' }, 4, 3, avail) < 0.5, 'a Doubtful player usually misses more than this week');
+  assert.equal(availabilityShare({ status: '' }, 5, 3, avail), 1);
+  assert.equal(availabilityShare({ status: 'O', byeWeek: 5 }, 5, 3, avail), 0);
+  assert.equal(likelyReturn({ status: '' }, avail), null);
+});

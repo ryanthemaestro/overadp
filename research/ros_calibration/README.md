@@ -91,3 +91,17 @@ Yahoo default DEF scoring rebuilt from nflverse team stats plus final scores (po
 | **Blend + betting-line implied points for the opponent (shipped, next week)** | — | **60.8%** |
 
 Defenses are the most matchup-driven position: next-week pick accuracy by projected gap is 53% under 1 pt, 60% at 1–2, 65% at 2–3, 70% at 3–5 and 77% at 5+. The next-week model is roughly 15.7 − 0.41 × the opponent's implied points.
+
+## Injury return (`injuries.py`)
+
+How long fantasy-relevant QB/RB/WR/TE (5+ half-PPR pts/game) actually miss, from public NFL weekly injury reports and roster statuses, 2018–2025: 759 Out episodes, 493 reserve (IR) stints, 2,216 Questionable/Doubtful reports. Survival curves use Kaplan–Meier with season-end censoring.
+
+| | Previous page assumption | Measured |
+|---|---|---|
+| Listed Out | back next game | median 2 games missed; 74% miss a 2nd game, 27% miss 5+ |
+| Out, by injury | — | still out 2 games later: knee 62%, ankle 63%, hamstring 45%, shoulder 34%, concussion 29% |
+| Reserve / IR | out 4 weeks, then 80% | 80% miss 4+, 62% miss 6+, 44% miss 9+ |
+| Questionable | plays 75% | plays 68% |
+| Doubtful | plays 25% | plays 1% |
+
+Held-out Brier on "plays the game j games from now" (j = 1–8): **0.178** vs 0.272 for the previous assumptions. Injury-specific curves are used when a group has 40+ episodes (knee, ankle, hamstring, concussion, shoulder, other); 40 scored best held-out (0.1782 vs 0.1814 at 150).

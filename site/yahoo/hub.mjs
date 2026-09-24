@@ -67,6 +67,18 @@ export function buildMoves({ team, league, lineup, estimate, pickups = [], drops
   for (const p of team.roster.filter(mustLeaveIR)) {
     const cut = drops.slice(0, over), tag = statusTag(p, week);
     const cost = cut.reduce((sum, d) => sum + d.cost, 0);
+    const self = cut.some(d => d.player === p);
+    if (self) {
+      // Cheapest fix is letting the IR player go (e.g. still expected to miss time and never starting).
+      const others = cut.filter(d => d.player !== p);
+      moves.push({ kind: 'roster', priority: 5, headline: `Drop ${p.name} to clear the IR spot`,
+        why: `${p.name} is ${tag ? tag.label : 'no longer injured'}, so Yahoo won't allow an IR spot and will block other moves until this is fixed. ` +
+          `Dropping ${p.name}${others.length ? ` and ${others.map(d => d.player.name).join(' and ')}` : ''} is the cheapest fix: ` +
+          (cost <= 0.05 ? 'no one you drop is projected to start for you again.' : `about ${cost.toFixed(1)} lineup points through your playoffs.`) +
+          ` Or move ${p.name} to your bench and drop someone else.`,
+        impact: 'Required', action: 'Fix in Yahoo', href: links.team, basis: null });
+      continue;
+    }
     moves.push({ kind: 'roster', priority: 5, headline: `Take ${p.name} off IR`,
       why: `${p.name} is ${tag ? tag.label : 'no longer injured'}, so Yahoo won't allow an IR spot and will block other moves until this is fixed. Move ${p.name} to your bench` +
         (cut.length ? ` and drop ${cut.map(d => d.player.name).join(' and ')} to make room. ` + (cost <= 0.05
@@ -179,9 +191,29 @@ const inReserve = p => SLOT_OUT.has(String(p.slot || '').toUpperCase());
 export const mustLeaveIR = p => inReserve(p) && !IR_ELIGIBLE.has(String(p.status || '').toUpperCase());
 // Takes a roster spot: everyone outside IR, plus IR players who no longer qualify for it.
 export const occupiesSpot = p => !inReserve(p) || mustLeaveIR(p);
-export function availabilityShare(player, week, currentWeek) {
+// With `avail` (research/ros_calibration/injuries.py), injured players come back on
+// the measured schedule: a survival curve of games missed by status and injury type,
+// conditioned on games already missed (player.gamesMissed, player.injuryGroup).
+function playsLater(curve, missed, j) {
+  const h = curve.length - 1, now = curve[Math.min(missed + 1, h)], later = curve[Math.min(missed + 1 + j, h)];
+  return now > 0 ? 1 - later / now : 1;
+}
+export function outCurve(avail, player) { return avail.out[player.injuryGroup] || avail.out.all; }
+export function availabilityShare(player, week, currentWeek, avail = null) {
   if (player.byeWeek === week) return 0;
   const status = String(player.status || '').toUpperCase();
+  if (avail) {
+    const j = week - currentWeek, missed = Math.max(0, Number(player.gamesMissed) || 0);
+    const longOut = LONG_OUT.has(status) || (inReserve(player) && (status === 'O' || !status));
+    if (longOut) return j <= 0 ? 0 : playsLater(avail.ir, missed, j);
+    if (status === 'O') return j <= 0 ? 0 : playsLater(outCurve(avail, player), missed, j);
+    if (status === 'Q' || status === 'D') {
+      const now = status === 'Q' ? avail.questionable : avail.doubtful;
+      // If they sit this week, they follow the same return curve as a player listed Out.
+      return j <= 0 ? now : now + (1 - now) * playsLater(outCurve(avail, player), 0, j);
+    }
+    return 1;
+  }
   // A reserve player marked only Out (or with no tag) is treated as a multi-week absence;
   // one upgraded to D/Q is judged by that status like anyone else.
   if (LONG_OUT.has(status) || (inReserve(player) && (status === 'O' || !status)))
@@ -280,6 +312,13 @@ export function addValue({ roster, candidate, league, weeks, value, keep = new S
     dropDetails: drops.map(p => ({ player: p, starts: startsOf(p) })),
     starts: startWeeks.length, playoffStarts: startWeeks.filter(w => w.playoff).length, of: weeks.length,
     displaced: roster.find(p => p.playerKey === topKey) || null, byeWeeks };
+}
+// Games from now until an injured player is more likely than not to play again.
+export function likelyReturn(player, avail) {
+  const status = String(player.status || '').toUpperCase();
+  if (!avail || !(status === 'O' || LONG_OUT.has(status) || inReserve(player))) return null;
+  for (let j = 1; j <= 17; j++) if (availabilityShare({ ...player, byeWeek: null }, j, 0, avail) >= 0.5) return j;
+  return null;
 }
 export function describeAdd(r) {
   if (!r) return 'No rest-of-season estimate for this player yet.';
