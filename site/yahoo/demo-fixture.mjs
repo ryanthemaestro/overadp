@@ -5,6 +5,7 @@ const SCORING = [
   ['Rec TD', 6], ['Ret TD', 6], ['2-PT', 2], ['Fum Lost', -2], ['Off Fumb TD', 6],
   ['FG 0-19', 3], ['FG 20-29', 3], ['FG 30-39', 3], ['FG 40-49', 4], ['FG 50+', 5], ['PAT Made', 1],
   ['Sack', 1], ['Int', 2], ['Fum Rec', 2], ['TD', 6], ['Safe', 2], ['Blk Kick', 2], ['Ret TD', 6], ['Pts Allow 0', 10],
+  ['Pts Allow 1-6', 7], ['Pts Allow 7-13', 4], ['Pts Allow 14-20', 1], ['Pts Allow 21-27', 0], ['Pts Allow 28-34', -1], ['Pts Allow 35+', -4],
 ].map(([name, value]) => ({ name, value: String(value) }));
 const POSITIONS = [['QB', 1], ['WR', 2], ['RB', 2], ['TE', 1], ['W/R/T', 1], ['K', 1], ['DEF', 1], ['BN', 6], ['IR', 1]]
   .map(([position, count]) => ({ position, count: String(count) }));

@@ -39,9 +39,10 @@ jobs:
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/teams.csv" "$base/stats_team/stats_team_week_2026.csv"
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/injuries.csv" "$base/injuries/injuries_2026.csv"
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/games.csv" "$base/schedules/games.csv"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/teams_prior.csv" "$base/stats_team/stats_team_week_2025.csv"
 
       - name: Rebuild the public snapshot
-        run: node scripts/build_yahoo_public_context.mjs "$RUNNER_TEMP/players.csv" "$RUNNER_TEMP/teams.csv" "$RUNNER_TEMP/injuries.csv" "$RUNNER_TEMP/games.csv"
+        run: node scripts/build_yahoo_public_context.mjs "$RUNNER_TEMP/players.csv" "$RUNNER_TEMP/teams.csv" "$RUNNER_TEMP/injuries.csv" "$RUNNER_TEMP/games.csv" "$RUNNER_TEMP/teams_prior.csv"
 
       - name: Validate before publishing
         run: node --test tests/snapshot.test.mjs tests/public-context.test.mjs tests/ros.test.mjs

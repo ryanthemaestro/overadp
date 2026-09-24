@@ -61,3 +61,34 @@ test('next week: a higher implied team total projects more', () => {
   assert(high.points > low.points);
   assert.equal(kickerPerGame({ kind: 'week', current: kicker, prior: null, team: 'KC', context: ctx, game: null, league: kLeague, model }), null);
 });
+
+// ---- Defenses ----
+import { defensePerGame, DEFAULT_DEF } from '../site/yahoo/ros.mjs';
+import { scoreGame } from '../site/yahoo/league-scoring.mjs';
+const defGame = (week, pointsAllowed) => ({ week, sacks: 3, interceptions: 1, fumbleRecoveries: 0, touchdowns: 0, safeties: 0, puntBlocks: 0,
+  patBlocks: 0, fgBlocks: 0, returnTds: 0, twoPointReturns: 0, pointsAllowed });
+const defSnap = oppImplied => ({
+  teamContext: { BAL: { priorDefensePointsPerGame: 7, remainingOpponentOffense: 21 } },
+  teamStats: { BAL: { defenseGames: [defGame(1, 10), defGame(2, 24)] } },
+  schedule: { BAL: { opponent: 'DAL', home: false }, DAL: { opponent: 'BAL', impliedTotal: oppImplied, home: true } } });
+test('points-allowed tiers score from the final score; missing scores stay incomplete', () => {
+  assert.equal(scoreGame(defGame(1, 10), 'DEF', DEFAULT_DEF).points, 3 + 2 + 4);
+  assert.equal(scoreGame(defGame(1, 0), 'DEF', DEFAULT_DEF).points, 3 + 2 + 10);
+  assert.equal(scoreGame(defGame(1, 40), 'DEF', DEFAULT_DEF).points, 3 + 2 - 4);
+  const noScore = scoreGame(defGame(1, null), 'DEF', DEFAULT_DEF);
+  assert.equal(noScore.points, null); assert.deepEqual(noScore.missing, ['points allowed']);
+});
+test('defense model ships both parts and a DEF start/sit table', () => {
+  assert(model.defense.next_week.features.includes('opp_implied'));
+  assert(model.defense.rest_of_season.features.includes('opp_off'));
+  assert(model.start_sit.accuracy.DEF['3-5'] > 0.65);
+});
+test('next week: facing a lower-scoring opponent projects more', () => {
+  const soft = defensePerGame({ kind: 'week', team: 'BAL', snapshot: defSnap(16), league: { scoring: DEFAULT_DEF }, model });
+  const tough = defensePerGame({ kind: 'week', team: 'BAL', snapshot: defSnap(30), league: { scoring: DEFAULT_DEF }, model });
+  assert(soft.points > tough.points + 3, `${soft.points} vs ${tough.points}`);
+  assert.match(soft.basis, /opponent projected for 16 points/);
+  const season = defensePerGame({ kind: 'season', team: 'BAL', snapshot: defSnap(20), league: { scoring: DEFAULT_DEF }, model });
+  assert(season.points > 2 && season.points < 12, String(season.points));
+  assert.equal(defensePerGame({ kind: 'week', team: 'BAL', snapshot: defSnap(null), league: { scoring: DEFAULT_DEF }, model }), null);
+});

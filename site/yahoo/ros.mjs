@@ -94,3 +94,36 @@ export function kickerPerGame({ kind, current, prior, team, context, game, leagu
     `kicker model: ${Number.isFinite(priorPg) ? 'last season' : 'league-average start'}${n ? ` + ${n} game${n === 1 ? '' : 's'}` : ''}, ${Math.round(100 * (ctx.remainingIndoorShare ?? 0))}% of remaining games indoors`;
   return { points: Math.round(pg * ratio * 100) / 100, basis, games: n };
 }
+
+// ---- Team defenses (research/ros_calibration/defenses.py) ----
+export const DEFAULT_DEF = [['Sack', 1], ['Int', 2], ['Fum Rec', 2], ['TD', 6], ['Safe', 2], ['Blk Kick', 2], ['Ret TD', 6],
+  ['Pts Allow 0', 10], ['Pts Allow 1-6', 7], ['Pts Allow 7-13', 4], ['Pts Allow 14-20', 1], ['Pts Allow 21-27', 0], ['Pts Allow 28-34', -1], ['Pts Allow 35+', -4]]
+  .map(([name, value]) => ({ name, value: String(value) }));
+/**
+ * kind 'season': rest-of-season points per game, from last season, this season and the
+ * strength of the offenses still to come. kind 'week': the next game, from the betting
+ * line's projected points for the opponent.
+ */
+export function defensePerGame({ kind, team, snapshot, league, model }) {
+  if (!model?.defense || !snapshot) return null;
+  const ctx = snapshot.teamContext?.[team] || {}, game = snapshot.schedule?.[team];
+  const games = (snapshot.teamStats?.[team]?.defenseGames || []).filter(g => Number.isFinite(g.pointsAllowed));
+  const pts = g => scoreGame(g, 'DEF', DEFAULT_DEF)?.points;
+  const values = { intercept: 1, base: ctx.priorDefensePointsPerGame ?? model.defense.fallback_base, obs0: perGame(games, pts) ?? 0,
+    opp_off: ctx.remainingOpponentOffense, opp_implied: game ? snapshot.schedule?.[game.opponent]?.impliedTotal : null, home: game?.home ? 1 : 0 };
+  const part = kind === 'week' ? model.defense.next_week : model.defense.rest_of_season;
+  if (part.features.some(f => !Number.isFinite(values[f]))) return null;
+  const key = bucketFor(part, games.length), coef = key && part.by_bucket[key];
+  if (!coef) return null;
+  const pg = part.features.reduce((sum, f, i) => sum + coef[i] * values[f], 0);
+  // Convert to the league's scoring using this season's games (unscorable rules keep the default).
+  let lg = 0, dflt = 0;
+  for (const g of games) {
+    const a = scoreGame(g, 'DEF', league.scoring)?.points, b = pts(g);
+    if (Number.isFinite(a) && Number.isFinite(b)) { lg += a; dflt += b; }
+  }
+  const ratio = Math.abs(dflt) >= 5 ? Math.min(2, Math.max(0.5, lg / dflt)) : 1;
+  const basis = kind === 'week' ? `defense model: opponent projected for ${values.opp_implied} points by the betting line`
+    : `defense model: last season + ${games.length} game${games.length === 1 ? '' : 's'}, remaining opponents averaging ${values.opp_off.toFixed(1)} points`;
+  return { points: Math.round(pg * ratio * 100) / 100, basis, games: games.length };
+}

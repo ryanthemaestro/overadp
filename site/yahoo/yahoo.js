@@ -3,7 +3,7 @@ import { indexPublicPlayers, matchPublicPlayer, normalTeam, normalName } from '.
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
 import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
-import { rosPerGame, kickerPerGame } from './ros.mjs';
+import { rosPerGame, kickerPerGame, defensePerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
 const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
@@ -64,6 +64,11 @@ function weekly(player) {
       game: pub.nextGame, league: command.league, model: rosModel });
     if (r) return { ...estimate, points: r.points, basis: r.basis };
   }
+  // Defenses this week: the next-week defense model, driven by the betting line.
+  if (estimate.playable && pos === 'DEF' && rosModel) {
+    const r = defensePerGame({ kind: 'week', team: normalTeam(player.team), snapshot: publicSnapshot, league: command.league, model: rosModel });
+    if (r) return { ...estimate, points: r.points, basis: r.basis };
+  }
   return estimate;
 }
 function actualScore(player) {
@@ -84,6 +89,8 @@ function rosPoints(p) {
   if (!r && pos === 'K' && rosModel && publicSnapshot)
     r = kickerPerGame({ kind: 'season', current, prior: priorPlayers ? matchPrior(current, p, priorPlayers) : null, team: normalTeam(p.team),
       context: publicSnapshot.teamContext, game: nextGame(p), league: command.league, model: rosModel });
+  if (!r && pos === 'DEF' && rosModel && publicSnapshot)
+    r = defensePerGame({ kind: 'season', team: normalTeam(p.team), snapshot: publicSnapshot, league: command.league, model: rosModel });
   if (!r && ['K', 'DEF'].includes(pos)) { const e = weekly(p); r = Number.isFinite(e.points) ? { points: e.points, basis: e.basis } : null; }
   rosCache.set(key, r); return r;
 }
@@ -386,7 +393,7 @@ function renderAdds() {
     g.append(el('strong', helps ? `+${fmt(gain)}` : '0', helps ? '' : 'none'), el('span', 'pts rest of season'));
     head.append(el('span', String(i + 1), 'add-rank'), who, g);
     const isDef = /DEF|D\/ST/i.test(String(p.position));
-    let why = c.ros ? describeAdd(c.ros) : isDef ? "Defenses aren't ranked: points allowed can't be scored from public stats."
+    let why = c.ros ? describeAdd(c.ros) : isDef ? "No projection for this defense yet (its season data or betting line is missing)."
       : c.estimate?.playable === false && c.estimate?.reason ? c.estimate.reason : 'No rest-of-season estimate for this player yet.';
     if (Number.isFinite(c.impact?.gain) && c.impact.gain > 0 && c.impact.replaced) why += ` This week: +${fmt(c.impact.gain)} over ${c.impact.replaced}.`;
     const foot = el('div', null, 'add-foot'), dropText = el('span');

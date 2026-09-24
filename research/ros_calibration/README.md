@@ -76,3 +76,18 @@ Yahoo default kicker scoring, leave-one-season-out on 2019–2025.
 | **Blend + team scoring + betting-line implied team total + roof (shipped, next week)** | — | **55.3%** |
 
 Rest-of-season kicker scoring is close to a constant (~6.4 pts/game) plus an indoor-schedule bonus; a kicker's own history carries little forward, which is why trusting it (the previous method) did worst. Next-week pick accuracy by projected gap: 52% under 1 pt, 58% at 1–2, 63% at 2+. Team scoring alone added noise to the rest-of-season model and was dropped there.
+
+## Team defenses (`defenses.py`)
+
+Yahoo default DEF scoring rebuilt from nflverse team stats plus final scores (points allowed = the opponent's final score, which also counts points the defense's own offense gave up; the approximation public data allows). Leave-one-season-out on 2019–2025.
+
+| Defense projection | Rest-of-season MAE (pts/game) | Next-week start/sit right |
+|---|---|---|
+| Last season only | 2.02 | 53.1% |
+| This season only | 2.86 | 53.5% |
+| Calibrated blend | 1.68 | 54.0% |
+| **Blend + remaining opponents' scoring (shipped, rest of season)** | **1.67** | 54.0% |
+| Blend + next opponent's scoring so far | — | 57.7% |
+| **Blend + betting-line implied points for the opponent (shipped, next week)** | — | **60.8%** |
+
+Defenses are the most matchup-driven position: next-week pick accuracy by projected gap is 53% under 1 pt, 60% at 1–2, 65% at 2–3, 70% at 3–5 and 77% at 5+. The next-week model is roughly 15.7 − 0.41 × the opponent's implied points.
