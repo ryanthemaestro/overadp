@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 
 // This build consumes only public nflverse CSV snapshots. Yahoo data never enters it.
-const [playersPath, teamsPath, injuriesPath, gamesPath] = process.argv.slice(2);
+const [playersPath, teamsPath, injuriesPath, gamesPath, priorTeamsPath] = process.argv.slice(2);
 if (![playersPath, teamsPath, injuriesPath, gamesPath].every(Boolean)) {
-  throw Error('Usage: node build-public-context.mjs PLAYER_CSV TEAM_CSV INJURY_CSV GAMES_CSV');
+  throw Error('Usage: node build-public-context.mjs PLAYER_CSV TEAM_CSV INJURY_CSV GAMES_CSV [PRIOR_SEASON_TEAM_CSV]');
 }
 function csv(path) {
   const source = readFileSync(path, 'utf8');
@@ -66,8 +66,8 @@ const implied = (r, home) => {
   return Number.isFinite(total) && Number.isFinite(spread) ? Number(((total + (home ? spread : -spread)) / 2).toFixed(2)) : null;
 };
 const schedule = Object.fromEntries(nextGames.flatMap(r => [
-  [r.home_team, { opponent: r.away_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, true), indoor: indoor(r) }],
-  [r.away_team, { opponent: r.home_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, false), indoor: indoor(r) }],
+  [r.home_team, { opponent: r.away_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, true), indoor: indoor(r), home: true }],
+  [r.away_team, { opponent: r.home_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, false), indoor: indoor(r), home: false }],
 ]));
 const regular = gameInput.rows.filter(r => r.game_type === 'REG');
 const pointsPerGame = season => {
@@ -78,10 +78,36 @@ const pointsPerGame = season => {
 };
 const currentPpg = pointsPerGame('2026'), priorPpg = pointsPerGame('2025');
 const remaining = regular.filter(r => r.season === '2026' && Number(r.week) >= nextWeek && Number(r.week) <= 17);
+// Defense context (research/ros_calibration/defenses.py): opponents' scoring so far,
+// shrunk toward last season with four games of weight, averaged over the remaining schedule;
+// and last season's defense points per game under Yahoo's default scoring.
+const scoredGames = season => regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== '');
+const offense = {};
+for (const r of scoredGames('2026')) for (const [team, pts] of [[r.home_team, r.home_score], [r.away_team, r.away_score]]) (offense[team] ||= []).push(Number(pts));
+const leaguePrior = Object.values(priorPpg).reduce((a, b) => a + b, 0) / Math.max(1, Object.keys(priorPpg).length);
+const strength = team => { const v = offense[team] || [], prior = priorPpg[team] ?? leaguePrior; return (prior * 4 + v.reduce((a, b) => a + b, 0)) / (4 + v.length); };
+const defenseTiers = pa => pa === 0 ? 10 : pa <= 6 ? 7 : pa <= 13 ? 4 : pa <= 20 ? 1 : pa <= 27 ? 0 : pa <= 34 ? -1 : -4;
+const priorDefense = {};
+if (priorTeamsPath) {
+  const allowed = {};
+  for (const r of scoredGames('2025')) { allowed[`${r.home_team}|${r.week}`] = Number(r.away_score); allowed[`${r.away_team}|${r.week}`] = Number(r.home_score); }
+  for (const r of csv(priorTeamsPath).rows.filter(x => x.season === '2025' && x.season_type === 'REG' && Number(x.week) <= 17)) {
+    const pa = allowed[`${r.team}|${r.week}`];
+    if (!Number.isFinite(pa)) continue;
+    const v = k => num(r[k]) || 0;
+    const pts = v('def_sacks') + 2 * v('def_interceptions') + 2 * v('fumble_recovery_opp') + 6 * (v('def_tds') + v('special_teams_tds')) +
+      2 * v('def_safeties') + 2 * (v('def_punt_blocks') + v('def_fg_blocks') + v('def_pat_blocks')) + defenseTiers(pa);
+    (priorDefense[r.team] ||= []).push(pts);
+  }
+}
 const teamContext = Object.fromEntries([...new Set(remaining.flatMap(r => [r.home_team, r.away_team]))].map(team => {
   const games = remaining.filter(r => r.home_team === team || r.away_team === team);
+  const opponents = games.map(r => r.home_team === team ? r.away_team : r.home_team);
+  const pd = priorDefense[team];
   return [team, { pointsPerGame: currentPpg[team] ?? null, priorPointsPerGame: priorPpg[team] ?? null,
-    remainingIndoorShare: games.length ? Number((games.filter(indoor).length / games.length).toFixed(3)) : null }];
+    remainingIndoorShare: games.length ? Number((games.filter(indoor).length / games.length).toFixed(3)) : null,
+    remainingOpponentOffense: opponents.length ? Number((opponents.reduce((a, t) => a + strength(t), 0) / opponents.length).toFixed(2)) : null,
+    priorDefensePointsPerGame: pd?.length >= 8 ? Number((pd.reduce((a, b) => a + b, 0) / pd.length).toFixed(2)) : null }];
 }));
 const players = [...playerMap.values()].map(p => {
   p.games.sort((a, b) => a.week - b.week);
@@ -92,6 +118,11 @@ const players = [...playerMap.values()].map(p => {
   return p;
 });
 const teamRows = teamInput.rows.filter(r => r.season === '2026' && r.season_type === 'REG');
+// Final scores give each defense's points allowed (the opponent's score).
+const allowedThisSeason = {};
+for (const r of gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && r.home_score !== '' && r.away_score !== '')) {
+  allowedThisSeason[`${r.home_team}|${Number(r.week)}`] = Number(r.away_score); allowedThisSeason[`${r.away_team}|${Number(r.week)}`] = Number(r.home_score);
+}
 const defenseFields = { sacks: 'def_sacks', interceptions: 'def_interceptions',
   fumbleRecoveries: 'fumble_recovery_opp', touchdowns: 'def_tds', safeties: 'def_safeties',
   puntBlocks: 'def_punt_blocks', patBlocks: 'def_pat_blocks', fgBlocks: 'def_fg_blocks',
@@ -101,7 +132,7 @@ const teamStats = Object.fromEntries([...new Set(teamRows.map(r => r.team))].map
   const total = field => rows.reduce((sum, r) => sum + (num(r[field]) || 0), 0);
   return [team, { games: rows.length, passAttempts: total('attempts'), passingYards: total('passing_yards'),
     carries: total('carries'), rushingYards: total('rushing_yards'), defensiveSacks: total('def_sacks'),
-    defensiveInterceptions: total('def_interceptions'), defenseGames: rows.map(r => ({ week: Number(r.week), ...pickStats(r, defenseFields) })) }];
+    defensiveInterceptions: total('def_interceptions'), defenseGames: rows.map(r => ({ week: Number(r.week), ...pickStats(r, defenseFields), pointsAllowed: allowedThisSeason[`${team}|${r.week}`] ?? null })) }];
 }));
 const output = {
   source: 'nflverse', season: 2026, generatedAt: now.toISOString(), latestCompletedWeek, nextWeek,
@@ -111,7 +142,8 @@ const output = {
     injuries: 'https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_2026.csv',
     schedule: 'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv',
   },
-  hashes: { playerStats: playerInput.hash, teamStats: teamInput.hash, injuries: injuryInput.hash, schedule: gameInput.hash },
+  hashes: { playerStats: playerInput.hash, teamStats: teamInput.hash, injuries: injuryInput.hash, schedule: gameInput.hash,
+    ...(priorTeamsPath ? { priorTeamStats: csv(priorTeamsPath).hash } : {}) },
   coverage: { playerRows: regularPlayers.length, teamRows: teamRows.length, injuryRows: injuryInput.rows.length, scheduledGames: nextGames.length },
   players, schedule, teamStats, teamContext,
 };

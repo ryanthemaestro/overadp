@@ -5,7 +5,7 @@ import { normalTeam } from './public-context.mjs';
 
 const round = n => Math.round(n * 10) / 10;
 const RESERVE = new Set(['IR', 'IR+', 'IL', 'NA']);
-export const RANK_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K'];
+export const RANK_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
 export function yahooLinks(teamKey) {
   const [, league, team] = /^\d+\.l\.(\d+)\.t\.(\d+)$/.exec(teamKey || '') || [];

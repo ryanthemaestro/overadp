@@ -20,6 +20,9 @@ const DEFENSE = new Map([
   ['Safe', g => g.safeties],
   ['Blk Kick', g => finiteSum(g.puntBlocks, g.patBlocks, g.fgBlocks)],
   ['Ret TD', g => g.returnTds], ['XPR', g => g.twoPointReturns],
+  // Yahoo's points-allowed tiers: 1 for the tier the final score falls in, else 0.
+  ...[['0', 0, 0], ['1-6', 1, 6], ['7-13', 7, 13], ['14-20', 14, 20], ['21-27', 21, 27], ['28-34', 28, 34], ['35+', 35, Infinity]]
+    .map(([label, lo, hi]) => [`Pts Allow ${label}`, g => Number.isFinite(g.pointsAllowed) ? Number(g.pointsAllowed >= lo && g.pointsAllowed <= hi) : null]),
 ]);
 const round = n => Math.round((n + Number.EPSILON) * 100) / 100;
 const finiteSum = (...numbers) => numbers.every(Number.isFinite) ? numbers.reduce((a, b) => a + b, 0) : null;
@@ -45,7 +48,7 @@ export function scoreGame(game, position, scoring) {
       continue;
     }
     const modifier = Number(rule.value), stat = rules.get(name)(game);
-    if (!Number.isFinite(modifier) || !Number.isFinite(stat)) { missing.push(name); continue; }
+    if (!Number.isFinite(modifier) || !Number.isFinite(stat)) { missing.push(/^Pts Allow /.test(name) ? 'points allowed' : name); continue; }
     points += modifier * stat; applied++;
   }
   if (!applied) return { points: null, partial: true, reason: 'No supported scoring rules' };
