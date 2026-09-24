@@ -269,3 +269,14 @@ test('locked players are never suggested as drops, and an add with no one left t
   const blocked = addValue({ roster: t.roster, candidate, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf({ 'New WR': 11 }), keep: everyone });
   assert(blocked.blocked); assert.match(describeAdd(blocked), /No room: everyone you could drop is locked/);
 });
+test('when the IR player is the cheapest drop, the card says to drop them instead of contradicting itself', () => {
+  const t = team({ IRguy: 'D' });
+  const kLeague = { ...lateLeague, positions: [...lateLeague.positions, { position: 'K', count: '1' }] };
+  t.roster.push({ name: 'OldK', position: 'K', eligible: ['K'], playerKey: '461.p.700', slot: 'K', status: '' });
+  const irGuy = t.roster.find(p => p.name === 'IRguy');
+  const drops = [{ player: irGuy, cost: 0 }, { player: t.roster.find(p => p.name === 'TEbench'), cost: 0 }];
+  const [card] = buildMoves({ team: t, league: kLeague, lineup: optimizeLineup(t, kLeague, estimateFor(), 0), estimate: estimateFor(), drops });
+  assert.equal(card.headline, 'Drop IRguy to clear the IR spot');
+  assert.match(card.why, /Dropping IRguy is the cheapest fix: no one you drop is projected to start for you again\. Or move IRguy to your bench/);
+  assert(!/drop IRguy to make room/.test(card.why));
+});

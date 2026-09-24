@@ -2,7 +2,7 @@ import { isBench, isStarter, pickupCandidates, mergeAvailablePages } from './ins
 import { indexPublicPlayers, matchPublicPlayer, normalTeam, normalName } from './public-context.mjs';
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
-import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR, likelyReturn } from './hub.mjs';
 import { rosPerGame, kickerPerGame, defensePerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
@@ -105,8 +105,21 @@ function defenseWeek(p, week) {
   }
   return defenseWeekCache.get(key);
 }
+// Injury type (latest public report) and team games missed since the player last played,
+// used by the measured return curves. Public nflverse data only.
+function annotateInjury(p) {
+  if (p.injuryAnnotated) return p;
+  const pub = publicMatch(p), team = normalTeam(p.team);
+  const teamWeeks = (publicSnapshot?.teamStats?.[team]?.defenseGames || []).map(g => g.week);
+  const last = Math.max(0, ...(pub?.games || []).map(g => g.week));
+  const report = pub?.recentInjury, text = String(report?.injury || '').toLowerCase();
+  p.injuryGroup = (rosModel?.availability?.groups || []).find(g => text.includes(g.toLowerCase())) || (text ? 'Other' : null);
+  p.gamesMissed = pub ? teamWeeks.filter(w => w > last).length : 0;
+  p.injuryAnnotated = true;
+  return p;
+}
 function seasonPoints(p, week) {
-  const share = availabilityShare(p, week, command.league.currentWeek);
+  const share = availabilityShare(annotateInjury(p), week, command.league.currentWeek, rosModel?.availability);
   if (/^(DEF|D\/ST)$/i.test(String(p.position))) {
     const w = defenseWeek(p, week);
     if (w) return w.points * share;
@@ -439,6 +452,8 @@ function renderAdds() {
     let why = c.ros ? describeAdd(c.ros) : isDef ? "No projection for this defense yet (its season data or betting line is missing)."
       : c.estimate?.playable === false && c.estimate?.reason ? c.estimate.reason : 'No rest-of-season estimate for this player yet.';
     if (Number.isFinite(c.impact?.gain) && c.impact.gain > 0 && c.impact.replaced) why += ` This week: +${fmt(c.impact.gain)} over ${c.impact.replaced}.`;
+    const back = likelyReturn(annotateInjury(p), rosModel?.availability);
+    if (back) why += ` ${p.injuryGroup && p.injuryGroup !== 'Other' ? `${p.injuryGroup} injury: ` : ''}players in this spot have usually been back about ${back} game${back === 1 ? '' : 's'} from now, and the value above counts that.`;
     const foot = el('div', null, 'add-foot'), dropText = el('span');
     if (helps && c.ros.dropDetails?.length) {
       dropText.append('Drop ');
