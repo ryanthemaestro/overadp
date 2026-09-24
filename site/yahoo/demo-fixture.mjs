@@ -52,7 +52,9 @@ export function buildDemo(snapshot) {
   const records = [[2, 0], [2, 0], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 2], [0, 2]];
   teams.forEach((t, i) => { [t.wins, t.losses] = records[(i * 7) % 10]; t.rank = i + 1; });
   const available = pool.filter(p => !taken.has(p.id)).slice(0, 60).map((p, i) => ({ ...toYahoo(p), slot: '',
-    ownership: i % 6 === 2 ? 'waivers' : 'freeagents', waiverDate: i % 6 === 2 ? 'Wed' : '' }));
+    ownership: i % 6 === 2 ? 'waivers' : 'freeagents', waiverDate: i % 6 === 2 ? 'Wed' : '' }))
+    // Unrostered defenses: public stats can't score them, which the ranking must tolerate.
+    .concat(DEFENSES.slice(teams.length).map(team => ({ ...toYahoo({ name: `${team} Defense`, position: 'DEF', team }), slot: '', ownership: 'freeagents' })));
   const command = { team: { teamKey: mine.teamKey, name: mine.name, leagueKey: '461.l.99999' }, league, teams,
     matchup: { week: league.currentWeek, opponentKey: teams[0].teamKey },
     warnings: ['SYNTHETIC LOCAL PREVIEW: invented league, teams and injury tags. Not live Yahoo data.'],

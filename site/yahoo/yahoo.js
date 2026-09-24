@@ -275,10 +275,15 @@ function renderPlan() {
   const { mine, lineup, moves, fresh } = plan();
   renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup);
 }
-function selectView(view) {
+const VIEWS = ['week', 'lineup', 'waivers', 'league'];
+// The tab lives in the address (#waivers), so a refresh or pull-to-refresh returns to it.
+function selectView(view, scroll = true) {
+  if (!VIEWS.includes(view)) view = 'week';
   document.body.dataset.view = view;
+  const keep = new URL(location.href).searchParams.get('demo') === '1' ? '?demo=1' : '';
+  history.replaceState(null, '', '/yahoo/' + keep + (view === 'week' ? '' : '#' + view));
   for (const b of document.querySelectorAll('button[data-view]')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
-  window.scrollTo({ top: 0 });
+  if (scroll) window.scrollTo({ top: 0 });
 }
 
 function rankedCandidates() {
@@ -474,6 +479,8 @@ $('jev-position').addEventListener('change', populateJevPlayers);
 for (const id of ['jev-a', 'jev-b']) $(id).addEventListener('change', updateJevButton);
 $('jev-run').addEventListener('click', compareWithJev);
 async function init() {
+  const reason = new URL(location.href).searchParams.get('error');
+  selectView(location.hash.slice(1), false);
   const publicReady = loadPublicContext();
   // Estimates depend on both public files; wait for them so rankings never change under the reader.
   contextReady = Promise.allSettled([publicReady, loadPriorContext(), loadRosContext()]);
@@ -488,7 +495,6 @@ async function init() {
     status('Preview only. Yahoo sign-in works on overadp.com. No live league data has been loaded.');
     return;
   }
-  const reason = new URL(location.href).searchParams.get('error'); history.replaceState(null, '', '/yahoo/');
   try {
     const s = await request('status'); connected(s.connected);
     if (s.connected) await teams(); else if (reason) status(messages[reason] || 'Yahoo could not finish authorization. Please try again.', true);

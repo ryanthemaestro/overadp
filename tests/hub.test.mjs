@@ -78,6 +78,8 @@ test('only a pickup worth about a point a week becomes a move', () => {
   const player = { name: 'Waiver WR', playerKey: '461.p.999', ownership: 'freeagents' };
   const ros = gain => ({ gain, of: 15, starts: 9, playoffStarts: 3, displaced: { name: 'FLEX1' }, byeWeeks: [7], drop: { name: 'TEbench' } });
   assert.equal(movesFor(team(), estimateFor(), [{ player, ros: ros(10) }]).length, 0);
+  // Players with no rest-of-season value (defenses, no projection) must not break the list.
+  assert.equal(movesFor(team(), estimateFor(), [{ player, ros: null }, { player }]).length, 0);
   const [move] = movesFor(team(), estimateFor(), [{ player, ros: ros(10) }, { player, ros: ros(22.5) }]);
   assert.equal(move.headline, 'Add Waiver WR, drop TEbench');
   assert.equal(move.impact, '+22.5 pts ROS');
