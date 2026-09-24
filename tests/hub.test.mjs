@@ -19,7 +19,7 @@ function team(statuses = {}) {
   return { teamKey: '461.l.555.t.3', name: 'Mine', rosterAvailable: true, roster: [
     P('QB1', 'QB', 'QB', statuses.QB1), P('RB1', 'RB', 'RB', statuses.RB1), P('RB2', 'RB', 'RB', statuses.RB2),
     P('WR1', 'WR', 'WR', statuses.WR1), P('FLEX1', 'WR', 'W/R/T'), P('RBbench', 'RB', 'BN'), P('WRbench', 'WR', 'BN'),
-    P('TEbench', 'TE', 'BN'), P('IRguy', 'RB', 'IR') ] };
+    P('TEbench', 'TE', 'BN'), P('IRguy', 'RB', 'IR', statuses.IRguy ?? 'IR') ] };
 }
 const movesFor = (t, estimate, pickups = [], drop = null) =>
   buildMoves({ team: t, league, lineup: optimizeLineup(t, league, estimate, 0), estimate, pickups, drop });
@@ -76,7 +76,7 @@ test('small healthy-starter edges do not trigger swaps', () => {
 });
 test('only a pickup worth about a point a week becomes a move', () => {
   const player = { name: 'Waiver WR', playerKey: '461.p.999', ownership: 'freeagents' };
-  const ros = gain => ({ gain, of: 15, starts: 9, playoffStarts: 3, displaced: { name: 'FLEX1' }, byeWeeks: [7], drop: { name: 'TEbench' } });
+  const ros = gain => ({ gain, of: 15, starts: 9, playoffStarts: 3, displaced: { name: 'FLEX1' }, byeWeeks: [7], drop: { name: 'TEbench' }, drops: [{ name: 'TEbench' }] });
   assert.equal(movesFor(team(), estimateFor(), [{ player, ros: ros(10) }]).length, 0);
   // Players with no rest-of-season value (defenses, no projection) must not break the list.
   assert.equal(movesFor(team(), estimateFor(), [{ player, ros: null }, { player }]).length, 0);
@@ -199,4 +199,47 @@ test('closest calls pair each starter with the best eligible bench player, tight
   // the best alternative at RB and FLEX, and is marked as projecting ahead.
   assert.deepEqual(calls.map(c => [c.slot, c.starter.name, c.alt.name, c.gap, c.benchAhead]),
     [['FLEX', 'FLEX1', 'RBbench', 1, true], ['RB', 'RB2', 'RBbench', 2, true], ['WR', 'WR1', 'WRbench', 2.5, false]]);
+});
+
+// ---- IR eligibility and multiple drops (Out -> Doubtful on a full roster, then add a K) ----
+import { mustLeaveIR, occupiesSpot, dropsNeeded, dropOrder } from '../site/yahoo/hub.mjs';
+test('only IR-eligible statuses may stay in an IR spot', () => {
+  assert.equal(mustLeaveIR({ slot: 'IR', status: 'O' }), false);
+  assert.equal(mustLeaveIR({ slot: 'IR', status: 'IR' }), false);
+  assert.equal(mustLeaveIR({ slot: 'IR', status: 'D' }), true);
+  assert.equal(mustLeaveIR({ slot: 'BN', status: 'D' }), false);
+  assert.equal(occupiesSpot({ slot: 'IR', status: 'D' }), true);
+  assert.equal(availabilityShare({ slot: 'IR', status: 'D' }, 14, 14), 0.25);
+  assert.equal(availabilityShare({ slot: 'IR', status: 'D' }, 15, 14), 1);
+  assert.equal(availabilityShare({ slot: 'IR', status: 'O' }, 15, 14), 0);
+});
+test('an IR player upgraded to Doubtful forces a drop, and an add then needs a second one', () => {
+  const t = team({ IRguy: 'D' });
+  const kLeague = { ...lateLeague, positions: [...lateLeague.positions, { position: 'K', count: '1' }] };
+  t.roster.push({ name: 'OldK', position: 'K', eligible: ['K'], playerKey: '461.p.700', slot: 'K', status: '' });
+  // Capacity 9 (5 starters + 3 bench + K); 10 players now take a spot.
+  assert.equal(dropsNeeded(t.roster, kLeague), 1);
+  assert.equal(dropsNeeded(t.roster, kLeague, 1), 2);
+  const value = valueOf({ OldK: 5, NewK: 8 });
+  const order = dropOrder({ roster: t.roster, league: kLeague, weeks: fantasyWeeks(kLeague), value });
+  assert.equal(order[0].player.name, 'TEbench'); assert.equal(order[0].cost, 0);
+  assert(!order.some(d => d.player.name === 'OldK'), 'the only kicker is never a drop');
+  const moves = buildMoves({ team: t, league: kLeague, lineup: optimizeLineup(t, kLeague, estimateFor(), 0), estimate: estimateFor(), drops: order });
+  assert.equal(moves[0].headline, 'Take IRguy off IR');
+  assert.match(moves[0].why, /IRguy is listed Doubtful, so Yahoo won't allow an IR spot.*drop TEbench to make room\. That player doesn't start for you in any remaining week, so it costs you nothing/);
+  const newK = { name: 'NewK', position: 'K', eligible: ['K'], playerKey: '461.p.701', slot: '', status: '' };
+  const r = addValue({ roster: t.roster, candidate: newK, league: kLeague, weeks: fantasyWeeks(kLeague), value });
+  assert.equal(r.drops.length, 2);
+  assert.deepEqual(r.drops.map(p => p.name).sort(), ['OldK', 'TEbench']);
+  assert(r.gain > 0);
+});
+test('when drops cost the same, a spare kicker goes before a backup running back', () => {
+  const kLeague = { ...lateLeague, positions: [...lateLeague.positions, { position: 'K', count: '1' }] };
+  const t = team({ IRguy: 'D' });
+  t.roster = t.roster.filter(p => p.name !== 'TEbench');
+  t.roster.push({ name: 'OldK', position: 'K', eligible: ['K'], playerKey: '461.p.700', slot: 'K', status: '' });
+  const newK = { name: 'NewK', position: 'K', eligible: ['K'], playerKey: '461.p.701', slot: '', status: '' };
+  // WRbench and OldK both stop mattering after the add; the RB depth (RB2) is kept.
+  const r = addValue({ roster: t.roster, candidate: newK, league: kLeague, weeks: fantasyWeeks(kLeague), value: valueOf({ OldK: 9, NewK: 11, RB2: 1, WRbench: 1 }) });
+  assert(r.drops.some(p => p.name === 'OldK'), r.drops.map(p => p.name).join());
 });

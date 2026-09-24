@@ -99,6 +99,9 @@ select{min-height:44px;background:var(--steel);border:1px solid var(--rust);bord
 .move-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .kind{font-family:var(--label);font-weight:700;font-size:13px;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;background:var(--iron);color:var(--soft);text-transform:uppercase}
 .kind.lineup{background:var(--amber-bg);color:var(--amber)}
+.kind.roster{background:var(--red-bg);color:var(--red)}
+.drop-name{flex-grow:1}
+.drop-cost{min-width:0;white-space:nowrap;font-size:13px}
 .kind.pickup{background:var(--green-bg);color:var(--green-hi)}
 .impact{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--green)}
 .move-title{margin:0;font-size:18px;font-weight:600;line-height:1.3}

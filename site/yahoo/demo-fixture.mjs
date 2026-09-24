@@ -49,10 +49,15 @@ export function buildDemo(snapshot) {
   wr[0].status = 'Q';
   const benchWr = mine.roster.filter(p => p.slot === 'BN' && p.position === 'WR').sort((a, b) => (avg.get(b.name) ?? 0) - (avg.get(a.name) ?? 0))[0];
   if (benchWr) { benchWr.slot = 'WR'; wr[1].slot = 'BN'; }
+  // An IR player upgraded from Out to Doubtful, who must come back to the roster.
+  const irBack = mine.roster.filter(p => p.slot === 'BN' && p.position === 'RB').at(-1);
+  if (irBack) { irBack.slot = 'IR'; irBack.status = 'D'; }
   const records = [[2, 0], [2, 0], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 2], [0, 2]];
   teams.forEach((t, i) => { [t.wins, t.losses] = records[(i * 7) % 10]; t.rank = i + 1; });
   const available = pool.filter(p => !taken.has(p.id)).slice(0, 60).map((p, i) => ({ ...toYahoo(p), slot: '',
     ownership: i % 6 === 2 ? 'waivers' : 'freeagents', waiverDate: i % 6 === 2 ? 'Wed' : '' }))
+    // A few unrostered kickers (the draft only takes one per team).
+    .concat(snapshot.players.filter(p => p.position === 'K' && p.nextGame && !taken.has(p.id)).slice(0, 4).map(p => ({ ...toYahoo(p), slot: '', ownership: 'freeagents' })))
     // Unrostered defenses: public stats can't score them, which the ranking must tolerate.
     .concat(DEFENSES.slice(teams.length).map(team => ({ ...toYahoo({ name: `${team} Defense`, position: 'DEF', team }), slot: '', ownership: 'freeagents' })));
   const command = { team: { teamKey: mine.teamKey, name: mine.name, leagueKey: '461.l.99999' }, league, teams,
