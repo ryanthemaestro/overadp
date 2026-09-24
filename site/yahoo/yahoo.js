@@ -1,8 +1,8 @@
 import { isBench, isStarter, pickupCandidates, mergeAvailablePages } from './insights.mjs';
-import { indexPublicPlayers, matchPublicPlayer, normalTeam } from './public-context.mjs';
+import { indexPublicPlayers, matchPublicPlayer, normalTeam, normalName } from './public-context.mjs';
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
-import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT } from './hub.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls } from './hub.mjs';
 import { rosPerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
@@ -34,7 +34,7 @@ const denialMessages = Object.freeze({
 });
 const POS_CLASS = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'D/ST': 'DEF' };
 let generation = 0, controller, expiry, command = null, availableGeneration = 0, availableController;
-let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null;
+let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null, comparePicks = [];
 let cooldownUntil = 0, rateLimitCount = 0;
 let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null, contextReady = null;
 let v6Index = new Map(), rosModel = null;
@@ -51,7 +51,13 @@ function weekly(player) {
   const matched = publicMatch(player);
   const pub = matched || { nextGame: publicSnapshot.schedule?.[normalTeam(player.team)], games: [] };
   const prior = priorSnapshot?.season === publicSnapshot.season - 1 ? matchPrior(matched, player, priorPlayers) : null;
-  return estimatePlayer(player, command.league, pub, prior);
+  const estimate = estimatePlayer(player, command.league, pub, prior);
+  // One model everywhere: the calibrated projection replaces the older this-week average.
+  if (estimate.playable && ['QB', 'RB', 'WR', 'TE'].includes(String(player.position || '').toUpperCase().split(/[,/]/)[0])) {
+    const r = rosPoints(player);
+    if (r) return { ...estimate, points: r.points, basis: r.basis };
+  }
+  return estimate;
 }
 function actualScore(player) {
   if (!publicSnapshot || publicSnapshot.season !== Number(command?.league?.season)) return null;
@@ -104,7 +110,7 @@ function resetCandidates() {
   candidates = []; addsShown = 6; $('candidates').replaceChildren(); $('more-adds').hidden = true; $('pickup-status').textContent = '';
 }
 function clearWorkspace() {
-  command = null; document.body.classList.remove('loaded'); resetCandidates();
+  command = null; document.body.classList.remove('loaded'); resetCandidates(); comparePicks = []; renderCompare();
   $('hub').hidden = true; $('tabbar').hidden = true;
   for (const id of ['matchup', 'moves', 'glance', 'starters', 'bench', 'ranks', 'trade', 'settings', 'warnings']) $(id).replaceChildren();
 }
@@ -216,6 +222,7 @@ function playerRow(p, { slot = p.slot, extraTag = null, compact = false } = {}) 
   who.append(line);
   if (!compact) who.append(el('span', gameLine(p.team, nextGame(p)) || `${String(p.team || 'Team').toUpperCase()} · no game found`, 'game'));
   row.append(who, el('span', fmt(e.points), 'pts'));
+  if (!compact) row.append(compareButton(p));
   return row;
 }
 function renderLineup(mine, lineup) {
@@ -237,6 +244,60 @@ function renderLineup(mine, lineup) {
     summary.append('Est. ', el('strong', fmt(asSet.points)), ' as set');
     if (lineup?.moves?.length && Number.isFinite(best) && best > asSet.points) { const s = el('strong', fmt(best), 'hi'); summary.append(' · ', s, ' with the suggested changes'); }
   }
+}
+// ---- Start/sit compare ----
+function compareButton(p) {
+  const b = el('button', '⇄', 'compare-btn'); b.type = 'button'; b.dataset.key = p.playerKey;
+  b.setAttribute('aria-label', `Compare ${p.name}`); b.setAttribute('aria-pressed', String(comparePicks.some(x => x.playerKey === p.playerKey)));
+  b.addEventListener('click', () => toggleCompare(p)); return b;
+}
+function toggleCompare(p) {
+  const i = comparePicks.findIndex(x => x.playerKey === p.playerKey);
+  if (i >= 0) comparePicks.splice(i, 1); else { if (comparePicks.length === 2) comparePicks.shift(); comparePicks.push(p); }
+  renderCompare();
+}
+function renderCompare() {
+  if (!command) comparePicks = [];
+  const tray = $('compare-tray'); tray.hidden = !comparePicks.length;
+  document.body.classList.toggle('tray-open', !tray.hidden);
+  $('tray-picks').replaceChildren(...comparePicks.map(p => {
+    const chip = el('div', null, 'tray-chip'), pos = String(p.position).split(/[,/]/)[0];
+    chip.append(el('span', pos, 'slot ' + posClass(pos)), el('span', p.name, 'name'), el('span', fmt(weekly(p).points), 'pts'));
+    return chip;
+  }), ...(comparePicks.length === 1 ? [el('p', 'Pick one more player to compare.', 'fine')] : []));
+  const [a, b] = comparePicks;
+  $('tray-verdict').textContent = b ? startSit({ player: a, estimate: weekly(a) }, { player: b, estimate: weekly(b) }, rosModel, command.league.currentWeek).text : '';
+  document.querySelectorAll('.compare-btn').forEach(btn => btn.setAttribute('aria-pressed', String(comparePicks.some(x => x.playerKey === btn.dataset.key))));
+}
+// A searched player: use the Yahoo record if they're rostered or available (it carries status).
+function comparablePlayer(pub) {
+  const same = p => normalName(p.name) === normalName(pub.name) && normalTeam(p.team) === normalTeam(pub.team);
+  return command.teams.flatMap(t => t.roster).find(same) || candidates.map(c => c.player).find(same) ||
+    { name: pub.name, position: pub.position, team: pub.team, playerKey: `pub.${pub.id}`, status: '', slot: '', eligible: [pub.position] };
+}
+function renderSearch() {
+  // Match the start of any part of the name ("kel" finds Kelce, "tra" finds Travis), or the full name.
+  const q = normalName($('player-search').value);
+  const matches = name => normalName(name).startsWith(q) || String(name).split(/[\s.'-]+/).some(part => normalName(part).startsWith(q));
+  const hits = q.length < 2 || !publicSnapshot ? [] : publicSnapshot.players.filter(p => matches(p.name) && p.nextGame)
+    .sort((a, b) => (b.averagePoints ?? 0) - (a.averagePoints ?? 0)).slice(0, 6);
+  $('search-results').replaceChildren(...hits.map(pub => {
+    const b = el('button', null, 'search-hit'); b.type = 'button';
+    b.append(el('span', pub.position, 'slot ' + posClass(pub.position)), el('span', pub.name, 'name'), el('span', pub.team, 'game'));
+    b.addEventListener('click', () => { toggleCompare(comparablePlayer(pub)); $('player-search').value = ''; renderSearch(); });
+    return b;
+  }), ...(q.length >= 2 && !hits.length ? [el('p', 'No player with a game this week matches that name.', 'fine')] : []));
+}
+function renderCalls(mine, lineup) {
+  const calls = publicCurrent() ? closestCalls({ team: mine, lineup, estimate: weekly }) : [];
+  $('calls').replaceChildren(...(calls.length ? calls.map(c => {
+    const b = el('button', null, 'call'); b.type = 'button';
+    b.append(el('span', c.slot, 'slot ' + posClass(c.slot === 'FLEX' ? c.starter.position : c.slot)),
+      el('span', `${c.starter.name} vs ${c.alt.name}`, 'call-names'),
+      el('span', c.gap < 1 ? 'Toss-up' : `${c.benchAhead ? 'Bench' : 'Starter'} +${fmt(c.gap)}`, 'call-gap' + (c.benchAhead ? ' ahead' : '')));
+    b.addEventListener('click', () => { comparePicks = [c.starter, c.alt]; renderCompare(); });
+    return b;
+  }) : [el('p', publicCurrent() ? 'No close calls: every starter projects at least 3 points ahead of your best bench option.' : 'Projections are paused until the public stats update.', 'empty')]));
 }
 function renderLeague() {
   const { ranks, byTeam } = positionRanks(command, weekly);
@@ -273,7 +334,7 @@ function renderCommand() {
 }
 function renderPlan() {
   const { mine, lineup, moves, fresh } = plan();
-  renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup);
+  renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup); renderCalls(mine, lineup); renderCompare();
 }
 const VIEWS = ['week', 'lineup', 'waivers', 'league'];
 // The tab lives in the address (#waivers), so a refresh or pull-to-refresh returns to it.
@@ -309,7 +370,9 @@ function renderAdds() {
     const foot = el('div', null, 'add-foot'), dropText = el('span');
     if (helps && c.ros.drop) dropText.append('Drop ', el('strong', c.ros.drop.name), c.ros.dropStarts ? ` (starts ${c.ros.dropStarts} wk${c.ros.dropStarts === 1 ? '' : 's'})` : ' (never starts)');
     else dropText.textContent = helps ? 'You have an open roster spot' : '';
-    foot.append(dropText, yahooButton(p.ownership === 'waivers' ? 'Claim' : 'Add', links.add(p.playerKey) || links.league));
+    const actions = el('div', null, 'add-actions');
+    actions.append(compareButton(p), yahooButton(p.ownership === 'waivers' ? 'Claim' : 'Add', links.add(p.playerKey) || links.league));
+    foot.append(dropText, actions);
     card.append(head, el('p', why, 'add-why'), foot); return card;
   }) : [el('p', 'No available players matched this filter.', 'empty card')]));
   $('more-adds').hidden = sorted.length <= addsShown;
@@ -382,50 +445,18 @@ async function loadLeague() {
   finally { if (id === generation) $('load').disabled = !$('team').value; }
 }
 
-function populateJevPlayers() {
-  const position = $('jev-position').value;
-  const players = (publicSnapshot?.players || []).filter(p => p.position === position && p.nextGame).sort((a, b) => a.name.localeCompare(b.name));
-  for (const id of ['jev-a', 'jev-b']) {
-    $(id).replaceChildren(new Option('Choose a player', ''));
-    for (const player of players) $(id).append(new Option(`${player.name} · ${player.team}`, player.id));
-  }
-  $('jev-status').textContent = players.length ? '' : 'No public players available at this position.';
-  $('jev-result').replaceChildren(); updateJevButton();
-}
-function updateJevButton() { $('jev-run').disabled = !publicSnapshot || !$('jev-a').value || !$('jev-b').value || $('jev-a').value === $('jev-b').value; }
-async function compareWithJev() {
-  const input = { playerAId: $('jev-a').value, playerBId: $('jev-b').value, scoring: $('jev-scoring').value };
-  if (!input.playerAId || !input.playerBId || input.playerAId === input.playerBId) return;
-  $('jev-run').disabled = true; $('jev-result').replaceChildren(); $('jev-status').textContent = 'Asking Jev…';
-  try {
-    const response = await fetch('/.netlify/functions/jev-compare', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
-    const data = await response.json();
-    if (!response.ok) throw Error(data.error || 'JEV_UNAVAILABLE');
-    const chosen = data.choice === 'a' ? data.players.a : data.choice === 'b' ? data.players.b : null;
-    const card = el('div', null, 'jev-answer');
-    card.append(el('strong', chosen ? `Jev leans: start ${chosen}` : 'Too close to call with the data so far'));
-    card.append(el('p', `${data.evidence === 'stale' ? 'Public stats are out of date.' : data.evidence === 'limited' ? 'Early-season or injury uncertainty, so treat this as a lean.' : 'Based on a moderate public sample.'} Decisiveness ${Math.round(100 * data.confidence)}%, which is not a win probability.`));
-    if (data.historicalInjuryNotes?.length) card.append(el('p', data.historicalInjuryNotes.join(' · '), 'warning-text'));
-    $('jev-result').replaceChildren(card); $('jev-status').textContent = 'Confirm injury status in Yahoo before kickoff.';
-  } catch (e) {
-    const explanations = { CONNECT_YAHOO_FIRST: 'Connect Yahoo again before comparing players.', STALE_PUBLIC_DATA: 'Public stats are stale, so Jev is paused until they update.', JEV_NOT_CONFIGURED: 'Jev is not configured on the server yet.', JEV_UNAVAILABLE: 'Jev did not finish this comparison. Please try again later.' };
-    $('jev-status').textContent = explanations[e.message] || 'Comparison unavailable. No recommendation was assumed.';
-  } finally { updateJevButton(); }
-}
 async function loadPublicContext() {
   try {
     const response = await fetch('/yahoo/nflverse-2026.json', { cache: 'no-cache' });
     if (!response.ok) throw Error('Public snapshot unavailable');
     const data = await response.json();
     if (data.source !== 'nflverse' || data.season !== 2026 || !Array.isArray(data.players)) throw Error('Public snapshot invalid');
-    publicSnapshot = data; publicIndex = indexPublicPlayers(data); populateJevPlayers();
+    publicSnapshot = data; publicIndex = indexPublicPlayers(data);
     const ageHours = (Date.now() - Date.parse(data.generatedAt)) / 3600000;
     $('public-coverage').textContent = `Public stats: nflverse through Week ${data.latestCompletedWeek} · updated ${new Date(data.generatedAt).toLocaleString()}${!Number.isFinite(ageHours) || ageHours > 48 ? ' · out of date, estimates paused' : ''}`;
     if (command) { renderPlan(); renderLeague(); }
   } catch {
     $('public-coverage').textContent = 'Public stats unavailable. Yahoo roster information remains usable.';
-    $('jev-status').textContent = 'Public player list unavailable. Please try again later.';
   }
 }
 async function loadRosContext() {
@@ -475,9 +506,8 @@ document.querySelectorAll('.chip[data-pos]').forEach(chip => chip.addEventListen
   resetCandidates(); findPlayers();
 }));
 $('more-adds').addEventListener('click', () => { addsShown += 6; renderAdds(); });
-$('jev-position').addEventListener('change', populateJevPlayers);
-for (const id of ['jev-a', 'jev-b']) $(id).addEventListener('change', updateJevButton);
-$('jev-run').addEventListener('click', compareWithJev);
+$('tray-clear').addEventListener('click', () => { comparePicks = []; renderCompare(); });
+$('player-search').addEventListener('input', renderSearch);
 async function init() {
   const reason = new URL(location.href).searchParams.get('error');
   selectView(location.hash.slice(1), false);

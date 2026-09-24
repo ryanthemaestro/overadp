@@ -162,3 +162,41 @@ test('never suggests dropping the only player at a required position', () => {
   const r = addValue({ roster: t.roster, candidate, league: kLeague, weeks: fantasyWeeks(kLeague), value: valueOf({ 'New WR': 11, OnlyK: 0 }) });
   assert.notEqual(r.drop.name, 'OnlyK');
 });
+
+// ---- Start/sit ----
+import { pickAccuracy, startSit, closestCalls } from '../site/yahoo/hub.mjs';
+const ssModel = { start_sit: { gaps: [[0, 1], [1, 2], [2, 3], [3, 5], [5, 99]],
+  accuracy: { WR: { '0-1': 0.52, '1-2': 0.57, '2-3': 0.61, '3-5': 0.67, '5-99': 0.75 }, RB: { '0-1': 0.53, '1-2': 0.57, '2-3': 0.63, '3-5': 0.68, '5-99': 0.79 } } } };
+const est = (points, extra = {}) => ({ points, playable: true, ...extra });
+test('pick accuracy uses the gap band and the weaker position when they differ', () => {
+  assert.equal(pickAccuracy(ssModel, ['WR'], 3.4), 0.67);
+  assert.equal(pickAccuracy(ssModel, ['WR', 'RB'], 6), 0.75);
+  assert.equal(pickAccuracy(ssModel, ['K'], 2), null);
+});
+test('start/sit states the pick with its measured accuracy, and calls small gaps a toss-up', () => {
+  const a = { player: { name: 'Rice', position: 'WR', status: '' }, estimate: est(14.4) };
+  const b = { player: { name: 'Waddle', position: 'WR', status: '' }, estimate: est(11.0) };
+  const r = startSit(a, b, ssModel, 3);
+  assert.equal(r.pick.name, 'Rice'); assert.equal(r.gap, 3.4);
+  assert.match(r.text, /Start Rice: 3\.4 pts ahead\. At this gap our pick has outscored the other player 67% of the time/);
+  const close = startSit(a, { ...b, estimate: est(13.9) }, ssModel, 3);
+  assert.equal(close.pick, null); assert(close.tossup);
+  assert.match(close.text, /Toss-up: 0\.5 pts apart\. .*only 52%/);
+});
+test('an unavailable player loses the start/sit, and a questionable pick carries a warning', () => {
+  const out = { player: { name: 'Hurt', position: 'RB', status: 'O' }, estimate: { points: null, playable: false, reason: 'O' } };
+  const ok = { player: { name: 'Healthy', position: 'RB', status: '' }, estimate: est(8) };
+  assert.equal(startSit(out, ok, ssModel, 3).pick.name, 'Healthy');
+  const q = { player: { name: 'Iffy', position: 'RB', status: 'Q' }, estimate: est(15) };
+  assert.match(startSit(q, ok, ssModel, 3).text, /Iffy is listed Questionable; confirm before kickoff/);
+});
+test('closest calls pair each starter with the best eligible bench player, tightest first', () => {
+  const t = team();
+  const estimate = estimateFor({ WRbench: 9.5 });
+  const lineup = optimizeLineup(t, league, estimate, 0);
+  const calls = closestCalls({ team: t, lineup, estimate });
+  // RBbench (11) sits behind RB2 (9) because a 2-point edge isn't worth a swap, so it's
+  // the best alternative at RB and FLEX, and is marked as projecting ahead.
+  assert.deepEqual(calls.map(c => [c.slot, c.starter.name, c.alt.name, c.gap, c.benchAhead]),
+    [['FLEX', 'FLEX1', 'RBbench', 1, true], ['RB', 'RB2', 'RBbench', 2, true], ['WR', 'WR1', 'WRbench', 2.5, false]]);
+});

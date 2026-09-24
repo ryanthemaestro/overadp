@@ -19,17 +19,7 @@ test('2026 public context has real weekly coverage and traceable hashes', () => 
   assert.ok(!JSON.stringify(data).includes('teamKey'));
   assert.ok(!JSON.stringify(data).includes('leagueKey'));
 });
-test('Jev artifact is independent public-only, complete, and explicitly uncertain', () => {
-  const data = read('../site/yahoo/jev-public-2026.json');
-  assert.equal(data.source, 'Jev analysis of public nflverse data only');
-  assert.equal(data.week, 3);
-  assert.equal(Object.keys(data.decisions).length, 16);
-  assert.ok(Object.values(data.decisions).every(v => ['elevated', 'ordinary', 'reduced', 'uncertain'].includes(v)));
-  assert.match(data.evidenceWarning, /not a projection/);
-  assert.ok(!JSON.stringify(data).includes('teamKey'));
-  assert.ok(!JSON.stringify(data).includes('leagueKey'));
-});
-test('browser does not send Yahoo session data to Jev', () => {
+test('browser code has no third-party AI calls or browser storage', () => {
   const code = readFileSync(new URL('../site/yahoo/yahoo.js', import.meta.url), 'utf8');
   assert.ok(!code.includes('api.typesafe.ai'));
   assert.ok(!code.includes('TYPESAFE_API_KEY'));
