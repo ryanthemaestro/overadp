@@ -15,8 +15,8 @@ const scoreboard = week => ({ fantasy_content: { league: [{ league_key: '999.l.1
   '0': { matchup: { week: String(week), status: 'preevent', '0': { teams: { '0': team('999.l.123.t.4', { team_projected_points: { total: '99' } }), '1': team('999.l.123.t.7'), count: 2 } } } },
   '1': { matchup: { week: String(week), '0': { teams: { '0': team('999.l.123.t.1'), '1': team('999.l.123.t.2'), count: 2 } } } },
   count: 2 } } } }] } });
-const settings = { fantasy_content: { league: [[{ name: 'Example League' }, { season: '2026' }, { current_week: '3' }, { num_teams: '4' }],
-  { settings: [{ roster_positions: [{ roster_position: { position: 'QB', count: 1 } }] }] }] } };
+const settings = { fantasy_content: { league: [[{ name: 'Example League' }, { season: '2026' }, { current_week: '3' }, { end_week: '17' }, { num_teams: '4' }],
+  { settings: [{ playoff_start_week: '15', uses_playoff: '1', roster_positions: [{ roster_position: { position: 'QB', count: 1 } }] }] }] } };
 const standings = { fantasy_content: { league: [{}, { standings: [{ teams: Object.fromEntries(['4', '7', '1', '2'].map((id, i) =>
   [String(i), { team: [[{ team_key: `999.l.123.t.${id}` }, { name: 'Team ' + id }], { team_standings: { rank: String(i + 1), outcome_totals: { wins: '1', losses: '1', ties: '0' } } }] }])) }] }] } };
 const rosters = { fantasy_content: { league: [{}, { teams: Object.fromEntries(['4', '7', '1', '2'].map((id, i) =>
@@ -48,6 +48,7 @@ test('command includes this week\'s opponent from a read-only scoreboard request
   assert.equal(r.status, 200);
   const body = await r.json();
   assert.deepEqual(body.matchup, { week: 3, opponentKey: '999.l.123.t.7' });
+  assert.equal(body.league.playoffStartWeek, 15); assert.equal(body.league.endWeek, 17);
   assert(urls.some(u => u.includes('league/999.l.123/scoreboard;week=3?format=json')));
   assert(!JSON.stringify(body).includes('team_projected_points'));
 });

@@ -125,7 +125,8 @@ export function parseLeague(raw) {
   const settings = fields(nodes(league, 'settings')[0]);
   return {
     name: text(league.name) || 'Yahoo league', season: text(league.season),
-    currentWeek: number(league.current_week),
+    currentWeek: number(league.current_week), endWeek: number(league.end_week),
+    playoffStartWeek: settings.uses_playoff === '0' ? null : number(settings.playoff_start_week),
     teams: text(settings.num_teams || league.num_teams),
     scoringType: text(settings.scoring_type || league.scoring_type), draftType: text(settings.draft_type),
     positions: nodes(settings.roster_positions, 'roster_position').map(x => {
