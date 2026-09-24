@@ -1956,10 +1956,10 @@
       <input type="hidden" id="leaguePreset" value="">
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
         <label style="display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--smoke);border-radius:4px;cursor:pointer;"><input type="radio" name="leaguePresetChoice" value="" checked onchange="selectLeaguePreset(this.value)" style="accent-color:var(--confirm);"> Custom / standard settings</label>
-        <label style="display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--smoke);border-radius:4px;cursor:pointer;"><input type="radio" name="leaguePresetChoice" value="yahoo10" onchange="selectLeaguePreset(this.value)" style="accent-color:var(--confirm);"> Yahoo · 10-team H2H</label>
+        <label style="display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--smoke);border-radius:4px;cursor:pointer;"><input type="radio" name="leaguePresetChoice" value="yahoo10" onchange="selectLeaguePreset(this.value)" style="accent-color:var(--confirm);"> 10-team H2H · Half PPR</label>
       </div>
     </fieldset>
-    <p id="yahooPresetInfo" hidden style="font-size:12px;line-height:1.5;">10 teams · Head-to-head · Half PPR · Snake.<br>Start 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX (RB/WR/TE), 1 K, 1 DEF; 6 bench. Draft 15 total; IR does not add draft picks.<br>Prefer RB → RB → QB → WR for your first four selections, only within 12 ADP spots of the best legal option. Then follow legal ADP while leaving room to complete the roster. WR and TE are separate.<br>Research candidate: 2024 simulation, not a future win guarantee. Uses a dated 12-team FFC half-PPR market, not Yahoo platform ADP. Display projections and injury badges do not rank this policy.<br>Set your actual draft position below. Choose Custom if your scoring or lineup differs. This preset guides the draft; it does not manage weekly lineups.</p>
+    <p id="yahooPresetInfo" hidden style="font-size:12px;line-height:1.5;">10 teams · Head-to-head · Half PPR · Snake.<br>Start 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX (RB/WR/TE), 1 K, 1 DEF; 6 bench. Draft 15 total; IR does not add draft picks.<br>Prefer RB → RB → QB → WR for your first four selections, only within 12 ADP spots of the best legal option. Then follow legal ADP while leaving room to complete the roster. WR and TE are separate.<br>Research candidate: 2024 simulation, not a future win guarantee. Uses a dated 12-team FFC half-PPR market, not your league site's ADP. Display projections and injury badges do not rank this policy.<br>Set your actual draft position below. Choose Custom if your scoring or lineup differs. This preset guides the draft; it does not manage weekly lineups.</p>
 
     <h3>Scoring Format</h3>
     <div style="display:flex;gap:8px;margin:8px 0 16px;">
@@ -3028,7 +3028,7 @@ function formatMandatoryNeeds(state){
 function getRosterDraftConstraint(position,counts=getPositionCounts(myTeamIds),plan=getRosterPlan()){
   if(rosterConfig.league_preset==='yahoo10'){
     const allowed=OverADPYahooPolicy.legal(allPlayers,myTeamIds,opponentIds).some(p=>p.position===position);
-    return {allowed,message:allowed?'':'Yahoo roster safeguard: this pick would exceed a position limit or prevent completion of your 15-player roster. Review remaining QB/RB/WR/TE/FLEX/K/DEF needs or undo an incompatible pick.',rosterSlotsOpen:Math.max(0,15-myTeamIds.length)};
+    return {allowed,message:allowed?'':'Roster safeguard: this pick would exceed a position limit or prevent completion of your 15-player roster. Review remaining QB/RB/WR/TE/FLEX/K/DEF needs or undo an incompatible pick.',rosterSlotsOpen:Math.max(0,15-myTeamIds.length)};
   }
   const rawSlots=rosterConfig.roster_slots||{};
   const totalRosterSlots=Object.values(rawSlots).reduce((sum,n)=>sum+(Number(n)||0),0);
@@ -3918,7 +3918,7 @@ function renderOpponentPicks(){
 function yahooPresetHeader(timing,plan,required){
   const date=OverADPYahooPolicy.snapshot(),age=date?(Date.now()-Date.parse(date))/86400000:0;
   const next=OverADPYahooPolicy.sequence[myTeamIds.length];
-  return `<div style="font-size:11px;line-height:1.5;padding-bottom:10px;">YAHOO · 10-TEAM H2H · HALF PPR · SLOT ${plan.draftSlot}<br>Your selection ${Math.min(15,myTeamIds.length+1)}/15 · overall pick ${timing.pickNum}<br>${next?`Prefer ${next} now · RB → RB → QB → WR · max 12 ADP spots`:'Opening complete · best legal ADP'}<br>Still needed for starters: ${formatMandatoryNeeds(required)}<br>Market: FFC 12-team half-PPR · through ${date||'UNAVAILABLE'}${age>7?' · SNAPSHOT IS OVER 7 DAYS OLD':''}<br><span style="color:var(--smoke)">2024 research candidate; not a future win guarantee. Cards are alternatives for this pick. Record other teams’ picks as TAKEN. Status badges are warnings, not automatic penalties.</span></div>`;
+  return `<div style="font-size:11px;line-height:1.5;padding-bottom:10px;">10-TEAM H2H · HALF PPR · SLOT ${plan.draftSlot}<br>Your selection ${Math.min(15,myTeamIds.length+1)}/15 · overall pick ${timing.pickNum}<br>${next?`Prefer ${next} now · RB → RB → QB → WR · max 12 ADP spots`:'Opening complete · best legal ADP'}<br>Still needed for starters: ${formatMandatoryNeeds(required)}<br>Market: FFC 12-team half-PPR · through ${date||'UNAVAILABLE'}${age>7?' · SNAPSHOT IS OVER 7 DAYS OLD':''}<br><span style="color:var(--smoke)">2024 research candidate; not a future win guarantee. Cards are alternatives for this pick. Record other teams’ picks as TAKEN. Status badges are warnings, not automatic penalties.</span></div>`;
 }
 
 
@@ -3960,7 +3960,7 @@ function renderRecommendations(recs){
   if(!recs||!recs.length){
     const empty=required.total<=0
       ?'Roster complete.'
-      :isYahooLeague()&&!OverADPYahooPolicy.ready()?'Yahoo half-PPR market failed to load. Click INITIALIZE to retry; no other policy has been substituted.'
+      :isYahooLeague()&&!OverADPYahooPolicy.ready()?'Half-PPR market failed to load. Click INITIALIZE to retry; no other policy has been substituted.'
       :`No legal recommendation. Undo an UNSLOTTED pick or review Settings. Required: ${formatMandatoryNeeds(required)}.`;
     c.innerHTML=header+proofGuide+`<div style="color:var(--smoke);font-size:12px;padding:4px;">${empty}</div>`;
     return;
@@ -3979,7 +3979,7 @@ function renderRecommendations(recs){
       <div class="intel-rank">#${i+1}</div>
       <div class="intel-name">${posTag(r.position)} ${playerHeadingHtml(r)}</div>
       <div class="intel-pts">${preview?(r.yahoo_policy?`HALF-PPR ADP ${Number.isFinite(r.policy_adp)?r.policy_adp.toFixed(1):'UNPRICED'}`:(r.position==='K'||r.position==='DEF')?`OPEN ${r.position}${r.stream_rank||'-'} · ${Number(r.opening_projection||0).toFixed(2)} exp PPG`:availabilityAdjustedProjection(r).toFixed(1)+' proj · '+availabilityAdjustedVbd(r).toFixed(1)+' VBD'):'🔒 UNLOCK'}</div>
-      <div class="player-sub">${r.yahoo_policy?'Yahoo 10-team opening preference + legal FFC half-PPR ADP. Projections do not rank this policy.':(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'-'}`:`Model #${r.model_rank||'-'} · ${r.position}${r.model_pos_rank||'-'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'-'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
+      <div class="player-sub">${r.yahoo_policy?'10-team H2H opening preference + legal FFC half-PPR ADP. Projections do not rank this policy.':(r.position==='K'||r.position==='DEF')?`${r.stream_tier||'STREAM'} · ${r.draft_guidance||'LAST ROUND'} · W1 ${r.opening_schedule?.[0]?.location||''} ${r.opening_schedule?.[0]?.opponent||'-'}`:`Model #${r.model_rank||'-'} · ${r.position}${r.model_pos_rank||'-'} · ADP ${Number.isFinite(Number(r.adp))&&Number(r.adp)>0&&Number(r.adp)<200?Number(r.adp).toFixed(1):'-'} (${r.adp_cost||'UDFA'})${Number.isFinite(r.value_vs_adp)?` · live slot #${r.model_draft_pick} · value ${formatPickValue(r.value_vs_adp)} picks`:''} · draft risk ${r.draft_risk||'low'}`}</div>
       <div class="player-sub" style="color:var(--chalk);">Why: ${r.pick_reason||'best value'}</div>
       <div class="intel-actions">
         ${canDraftMine()?'<button class="btn btn-sm btn-draft" onclick="draftPlayer(\''+r.player_id+'\',\'mine\')">'+(isPaid()?'DRAFT':freePickLabel())+'</button>':'<button class="btn btn-sm" onclick="showUpgrade()" style="opacity:0.5;">🔒 DRAFT</button>'}

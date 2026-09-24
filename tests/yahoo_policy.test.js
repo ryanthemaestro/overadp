@@ -59,7 +59,7 @@ test('production sidecar has real provenance; no board-placeholder inference; sc
  assert.equal(s.scoring,'half_ppr');assert.equal(s.teams,12);assert.equal(s.target_format_teams,10);assert.equal(s.matched_rows,s.source_rows);assert(s.matched_rows>=180);
  for(const p of Object.values(s.players)){assert.equal(p.has_real_adp,true);assert(Number.isFinite(p.observed_adp)&&p.observed_adp>0);assert.equal(p.adp_snapshot_date,s.snapshot_date);assert(p.adp_source);}
  for(const m of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(!m[0].includes('application/ld+json'))new vm.Script(m[1]);
- assert(html.includes('Yahoo · 10-team H2H'));assert(html.includes("s.leaguePreset==='yahoo10'"));
+ assert(html.includes('10-team H2H · Half PPR'));assert(html.includes("s.leaguePreset==='yahoo10'"));
 });
 test('app uses Yahoo ranking, not study ranking, and renders its evidence label',async()=>{
  await prepare();const element={innerHTML:'',hidden:false,classList:{remove(){},add(){}}};
