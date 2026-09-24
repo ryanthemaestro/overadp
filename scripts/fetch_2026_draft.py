@@ -10,10 +10,11 @@ every 2026 rookie gets draft_capital = 0 in the feature matrix.
 As of ~April 28, 2026 nflverse already has the full 2026 pick table with
 gsis_ids for most players.  This script:
 
-  1. Pulls 2026 picks from nfl_data_py (primary).
-  2. Falls back to ESPN's unofficial draft API if nflverse returns nothing.
-  3. Appends the new rows to data/draft_picks.parquet (cache update).
-  4. Prints a summary so you can see which skill-position players landed.
+  1. Pulls 2026 picks from nfl_data_py (nflverse).
+  2. Appends the new rows to data/draft_picks.parquet (cache update).
+  3. Prints a summary so you can see which skill-position players landed.
+
+If nflverse hasn't published the class yet, wait and re-run; no unofficial feeds are used.
 
 Usage
 -----
@@ -33,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
 
 import pandas as pd
@@ -42,26 +42,6 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 CACHE_PATH = DATA_DIR / "draft_picks.parquet"
 DRAFT_YEAR = 2026
 SKILL_POSITIONS = {"QB", "RB", "WR", "TE"}
-
-# ESPN unofficial draft API — one endpoint per round
-ESPN_ROUND_URL = (
-    "https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft"
-    "/{year}/rounds/{round_num}"
-)
-
-ESPN_TO_NFL_TEAM: dict[str, str] = {
-    "ARI": "ARI", "ATL": "ATL", "BAL": "BAL", "BUF": "BUF",
-    "CAR": "CAR", "CHI": "CHI", "CIN": "CIN", "CLE": "CLE",
-    "DAL": "DAL", "DEN": "DEN", "DET": "DET", "GB":  "GB",
-    "HOU": "HOU", "IND": "IND", "JAX": "JAX", "JAC": "JAX",
-    "KC":  "KC",  "LAC": "LAC", "LAR": "LA",  "LV":  "LV",
-    "LVR": "LV",  "MIA": "MIA", "MIN": "MIN", "NE":  "NE",
-    "NWE": "NE",  "NO":  "NO",  "NOR": "NO",  "NYG": "NYG",
-    "NYJ": "NYJ", "PHI": "PHI", "PIT": "PIT", "SEA": "SEA",
-    "SF":  "SF",  "TB":  "TB",  "TEN": "TEN", "WSH": "WSH",
-    "KAN": "KC",
-}
-
 
 # ---------------------------------------------------------------------------
 # Source 1: nfl_data_py (nflverse)
@@ -90,71 +70,6 @@ def fetch_nflverse(year: int) -> pd.DataFrame:
         df["gsis_id"] = df["gsis_id"].replace("None", None)
 
     print(f"  nflverse: {len(df)} picks, {df['gsis_id'].notna().sum()} with gsis_id")
-    return df
-
-
-# ---------------------------------------------------------------------------
-# Source 2: ESPN unofficial API (fallback)
-# ---------------------------------------------------------------------------
-
-def fetch_espn(year: int) -> pd.DataFrame:
-    """Pull draft picks from ESPN's unofficial round-by-round API."""
-    try:
-        import requests
-    except ImportError:
-        print("  requests not installed — skipping ESPN source")
-        return pd.DataFrame()
-
-    session = requests.Session()
-    session.headers.update({"User-Agent": "Mozilla/5.0"})
-    rows: list[dict] = []
-
-    for rnd in range(1, 8):
-        url = ESPN_ROUND_URL.format(year=year, round_num=rnd)
-        try:
-            resp = session.get(url, timeout=15)
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as exc:
-            print(f"  ESPN round {rnd}: FAILED ({exc})")
-            continue
-
-        picks = data.get("picks") or data.get("round", {}).get("picks", [])
-        if not picks:
-            continue
-
-        for p in picks:
-            athlete = p.get("athlete") or {}
-            team_info = p.get("team") or {}
-            pos_info = athlete.get("position") or {}
-            college_info = (athlete.get("college") or {})
-
-            raw_team = (team_info.get("abbreviation") or "").upper()
-            team = ESPN_TO_NFL_TEAM.get(raw_team, raw_team)
-            full_name = (
-                athlete.get("displayName")
-                or f"{athlete.get('firstName','')} {athlete.get('lastName','')}".strip()
-            )
-            position = (pos_info.get("abbreviation") or pos_info.get("name") or "").upper()
-            rows.append({
-                "season": year,
-                "round": rnd,
-                "pick": p.get("overallPickNumber") or p.get("pickNumber"),
-                "team": team,
-                "gsis_id": None,
-                "pfr_player_name": full_name,
-                "position": position,
-                "college": (college_info.get("name") or ""),
-                "age": float(athlete["age"]) if athlete.get("age") else None,
-            })
-        print(f"  ESPN round {rnd}: {len(picks)} picks")
-        time.sleep(0.3)
-
-    if not rows:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(rows)
-    print(f"  ESPN: {len(df)} picks total")
     return df
 
 
@@ -250,17 +165,11 @@ def main() -> None:
 
     print(f"Fetching {args.year} NFL Draft picks …\n")
 
-    # Try nflverse first
     df = fetch_nflverse(args.year)
 
-    # Fall back to ESPN
     if df.empty:
-        print("\n  nflverse empty — trying ESPN …")
-        df = fetch_espn(args.year)
-
-    if df.empty:
-        print("\nERROR: Could not fetch 2026 draft picks from any source.")
-        print("Try again in a few minutes, or check network access.")
+        print("\nERROR: nflverse has no 2026 draft picks yet.")
+        print("Try again once nflverse publishes the class, or check network access.")
         sys.exit(1)
 
     print(f"\nFetched {len(df)} picks for {args.year}")
