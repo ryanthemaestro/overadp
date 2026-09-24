@@ -476,16 +476,22 @@ async function findPlayers() {
   $('pickup-status').textContent = 'Checking free agents and waivers…';
   $('pickup-status').classList.remove('error-text');
   const pages = [], failed = [];
+  // Yahoo sorts by season points across positions, which buries kickers and defenses
+  // early in the season. For "All", read the top free agents at each position, plus the
+  // waiver wire, so every position's best options get valued against your roster.
+  const reads = position === 'ALL'
+    ? [...['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => ({ pool: 'FA', pos })), { pool: 'W', pos: 'ALL' }]
+    : ['FA', 'W'].map(pool => ({ pool, pos: position }));
   try {
-    for (const pool of ['FA', 'W']) {
+    for (const { pool, pos } of reads) {
       try {
-        const d = await request('available', { teamKey, pool, position, start: 0 }, availableController.signal);
-        if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== position) throw { code: 'INVALID_RESPONSE' };
+        const d = await request('available', { teamKey, pool, position: pos, start: 0 }, availableController.signal);
+        if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== pos) throw { code: 'INVALID_RESPONSE' };
         pages.push(d);
       } catch (e) {
-        // Keep one pool's results if the other fails, unless the session or rate limit is the problem.
+        // Keep the other lists if one fails, unless the session or rate limit is the problem.
         if (e.name === 'AbortError' || ['SESSION_EXPIRED', 'YAHOO_RATE_LIMIT', 'YAHOO_ACCESS_DENIED'].includes(e.code)) throw e;
-        failed.push({ pool, e });
+        failed.push({ pool, pos, e });
       }
       if (id !== availableGeneration || leagueGeneration !== generation) return;
     }
@@ -503,7 +509,7 @@ async function findPlayers() {
     });
     addsShown = 6; renderAdds();
     $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}` +
-      (failed.length ? ` · ${failed[0].pool === 'W' ? 'Waiver-wire' : 'Free-agent'} list unavailable right now, so it isn't included` : '');
+      (failed.length ? ` · ${failed.map(f => f.pool === 'W' ? 'waiver-wire' : `free-agent ${f.pos}`).join(', ')} list${failed.length === 1 ? '' : 's'} unavailable right now, so not included` : '');
     if (position === 'ALL') renderPlan();
   } catch (e) {
     if (id === availableGeneration && leagueGeneration === generation) error(e, 'ranking available players', $('pickup-status'));
