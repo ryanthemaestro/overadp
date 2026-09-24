@@ -14,7 +14,7 @@ const QUOTA = { QB: 2, RB: 5, WR: 5, TE: 2, K: 1 };
 const DEFENSES = ['BAL', 'PIT', 'DEN', 'SF', 'BUF', 'PHI', 'KC', 'DAL', 'MIN', 'HOU', 'DET', 'GB', 'NYJ', 'CLE'];
 
 export function buildDemo(snapshot) {
-  const league = { name: 'Sample League', season: String(snapshot.season), currentWeek: snapshot.nextWeek, teams: '10',
+  const league = { name: 'Sample League', season: String(snapshot.season), currentWeek: snapshot.nextWeek, endWeek: 17, playoffStartWeek: 15, teams: '10',
     scoringType: 'head', draftType: 'live', positions: POSITIONS, scoring: SCORING };
   let n = 1000;
   const toYahoo = p => ({ name: p.name, position: p.position, playerKey: `461.p.${n++}`, eligible: [p.position],

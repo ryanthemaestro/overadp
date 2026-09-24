@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { yahooLinks, statusTag, gameLine, starterTotal, dropCandidate, buildMoves, movesGain, positionRanks, tradeIdea } from '../site/yahoo/hub.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, fantasyWeeks, availabilityShare, bestLineup, addValue, describeAdd, starterSlots, movesGain, positionRanks, tradeIdea } from '../site/yahoo/hub.mjs';
 import { optimizeLineup } from '../site/yahoo/weekly-advice.mjs';
 
 // Synthetic league: 1 QB, 2 RB, 1 WR, 1 FLEX, 3 bench, 1 IR.
@@ -74,22 +74,16 @@ test('small healthy-starter edges do not trigger swaps', () => {
   const moves = movesFor(team(), estimateFor({ RBbench: 10.5 }));
   assert.equal(moves.filter(m => m.kind === 'lineup').length, 0);
 });
-test('only a meaningful, healthy pickup that would start becomes a move', () => {
-  const add = { player: { name: 'Waiver WR', playerKey: '461.p.999', ownership: 'freeagents' }, estimate: { playable: true, points: 14, basis: 'x' }, impact: { slot: 'WR', replaced: 'WR1', gain: 2 } };
-  const small = { ...add, impact: { ...add.impact, gain: 1 } };
-  const risky = { ...add, estimate: { ...add.estimate, caution: true } };
-  assert.equal(movesFor(team(), estimateFor(), [small]).length, 0);
-  assert.equal(movesFor(team(), estimateFor(), [risky]).length, 0);
-  const [move] = movesFor(team(), estimateFor(), [add], { name: 'TEbench' });
+test('only a pickup worth about a point a week becomes a move', () => {
+  const player = { name: 'Waiver WR', playerKey: '461.p.999', ownership: 'freeagents' };
+  const ros = gain => ({ gain, of: 15, starts: 9, playoffStarts: 3, displaced: { name: 'FLEX1' }, byeWeeks: [7], drop: { name: 'TEbench' } });
+  assert.equal(movesFor(team(), estimateFor(), [{ player, ros: ros(10) }]).length, 0);
+  const [move] = movesFor(team(), estimateFor(), [{ player, ros: ros(10) }, { player, ros: ros(22.5) }]);
   assert.equal(move.headline, 'Add Waiver WR, drop TEbench');
+  assert.equal(move.impact, '+22.5 pts ROS');
+  assert.match(move.why, /Starts for you in 9 of 15 weeks, including 3 playoff weeks, mostly over FLEX1\. Covers bye week 7\./);
   assert.equal(move.href, 'https://football.fantasysports.yahoo.com/f1/555/addplayer?apid=999');
-  assert.equal(movesGain([move, { impact: 'Avoid a zero' }, { impact: '+1.5 pts' }]), 3.5);
-});
-test('drop candidates skip IR and a team\'s only player at a started position', () => {
-  const t = team();
-  assert.equal(dropCandidate(t, league, estimateFor()).name, 'TEbench');
-  const onlyWrOnBench = { ...t, roster: t.roster.filter(p => p.name !== 'TEbench') };
-  assert.equal(dropCandidate(onlyWrOnBench, league, estimateFor()).name, 'WRbench');
+  assert.equal(movesGain([move, { impact: 'Avoid a zero' }, { impact: '+1.5 pts' }]), 1.5);
 });
 test('position ranks use best healthy players and leave incomplete teams unranked', () => {
   const mine = team({ RB2: 'O' });
@@ -109,4 +103,60 @@ test('position ranks use best healthy players and leave incomplete teams unranke
   assert.equal(ranks.find(r => r.pos === 'QB').rank, 7);
   assert.equal(ranks.find(r => r.pos === 'K').rank, null);
   assert.equal(tradeIdea({ ranks, byTeam }, mine.teamKey), null);
+});
+
+// ---- Rest-of-season valuation ----
+const flat = { QB1: 20, RB1: 15, RB2: 9, RBbench: 11, WR1: 12, FLEX1: 10, WRbench: 6, TEbench: 3, IRguy: 14 };
+const valueOf = (overrides = {}) => (p, week) => (overrides[p.name] ?? flat[p.name] ?? 0) * availabilityShare(p, week, 14);
+const lateLeague = { ...league, currentWeek: 14, endWeek: 17, playoffStartWeek: 15 };
+test('fantasy weeks run through the playoffs and weight playoff weeks 1.5x', () => {
+  assert.deepEqual(fantasyWeeks(lateLeague).map(w => [w.week, w.weight]), [[14, 1], [15, 1.5], [16, 1.5], [17, 1.5]]);
+  assert.equal(fantasyWeeks({ ...lateLeague, endWeek: 18 }).at(-1).week, 17);
+});
+test('availability: byes, this week\'s tags and long-term injuries', () => {
+  assert.equal(availabilityShare({ byeWeek: 9 }, 9, 3), 0);
+  assert.equal(availabilityShare({ status: 'Q' }, 3, 3), 0.75);
+  assert.equal(availabilityShare({ status: 'Q' }, 4, 3), 1);
+  assert.equal(availabilityShare({ status: 'O' }, 3, 3), 0);
+  assert.equal(availabilityShare({ status: 'IR', slot: 'IR' }, 6, 3), 0);
+  assert.equal(availabilityShare({ status: 'IR', slot: 'IR' }, 7, 3), 0.8);
+});
+test('best lineup fills position slots before flex', () => {
+  const t = team();
+  const lineup = bestLineup(t.roster, starterSlots(league), p => (flat[p.name] || 0) * availabilityShare(p, 14, 14));
+  // QB1, RB1, RBbench (RB slots), WR1, then FLEX goes to FLEX1 (10) over RB2 (9).
+  assert.equal(lineup.points, 20 + 15 + 11 + 12 + 10);
+  assert(!lineup.starters.has(t.roster.find(p => p.name === 'RB2').playerKey));
+});
+test('an add is valued against the best drop and credits bye coverage', () => {
+  const t = team();
+  t.roster.find(p => p.name === 'WR1').byeWeek = 16;
+  const candidate = { name: 'New WR', position: 'WR', eligible: ['WR'], playerKey: '461.p.500', slot: '', status: '' };
+  const r = addValue({ roster: t.roster, candidate, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf({ 'New WR': 11 }) });
+  // Starts every week (over FLEX1 at 10, and for WR1 in its bye), drop is the useless TE.
+  assert.equal(r.drop.name, 'TEbench'); assert.equal(r.starts, 4); assert.equal(r.playoffStarts, 3);
+  assert.deepEqual(r.byeWeeks, [16]);
+  // Week 14: +1 (11 over FLEX1 10); weeks 15-17 +1 each x1.5, plus week 16 bye: FLEX1 moves to WR (+10 over RB2 9 at FLEX -> net)
+  assert(r.gain > 4 && r.gain < 20, String(r.gain));
+  assert.match(describeAdd(r), /Starts for you in 4 of 4 weeks, including 3 playoff weeks/);
+});
+test('a player who never starts adds nothing, and an open roster spot means no drop', () => {
+  const t = team();
+  const scrub = { name: 'Scrub', position: 'TE', eligible: ['TE'], playerKey: '461.p.501', slot: '', status: '' };
+  const r = addValue({ roster: t.roster, candidate: scrub, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf({ Scrub: 2 }) });
+  assert.equal(r.gain, 0); assert.equal(r.starts, 0);
+  assert.match(describeAdd(r), /Wouldn't crack your lineup/);
+  const bigLeague = { ...lateLeague, positions: [...lateLeague.positions.filter(p => p.position !== 'BN'), { position: 'BN', count: '6' }] };
+  const open = addValue({ roster: t.roster, candidate: scrub, league: bigLeague, weeks: fantasyWeeks(bigLeague), value: valueOf({ Scrub: 2 }) });
+  assert.equal(open.drop, null);
+});
+test('never suggests dropping the only player at a required position', () => {
+  const kLeague = { ...lateLeague, positions: [...lateLeague.positions, { position: 'K', count: '1' }] };
+  const t = team();
+  const kicker = { name: 'OnlyK', position: 'K', eligible: ['K'], playerKey: '461.p.600', slot: 'K', status: '' };
+  t.roster = t.roster.concat(kicker);
+  const candidate = { name: 'New WR', position: 'WR', eligible: ['WR'], playerKey: '461.p.500', slot: '', status: '' };
+  // The kicker has no estimate (value 0) but must not be the drop.
+  const r = addValue({ roster: t.roster, candidate, league: kLeague, weeks: fantasyWeeks(kLeague), value: valueOf({ 'New WR': 11, OnlyK: 0 }) });
+  assert.notEqual(r.drop.name, 'OnlyK');
 });

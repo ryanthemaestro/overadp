@@ -1,0 +1,11 @@
+{
+  "baseline_game_mae": 4.402,
+  "opponent_strength_game_mae": 4.399,
+  "home_field_game_mae": 4.402,
+  "late_season_losing_team_ratio_median": 0.841,
+  "late_season_other_team_ratio_median": 0.757,
+  "late_season_losing_team_games": 20093,
+  "late_season_motivation_game_mae": 4.411,
+  "opponent_strength_slope": 0.171,
+  "home_vs_away_ratio": 1.062
+}

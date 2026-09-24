@@ -2,7 +2,8 @@ import { isBench, isStarter, pickupCandidates, mergeAvailablePages } from './ins
 import { indexPublicPlayers, matchPublicPlayer, normalTeam } from './public-context.mjs';
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
-import { yahooLinks, statusTag, gameLine, starterTotal, dropCandidate, buildMoves, movesGain, positionRanks, tradeIdea } from './hub.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT } from './hub.mjs';
+import { rosPerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
 const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
@@ -31,6 +32,8 @@ let generation = 0, controller, expiry, command = null, availableGeneration = 0,
 let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null;
 let cooldownUntil = 0, rateLimitCount = 0;
 let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null, contextReady = null;
+let v6Index = new Map(), rosModel = null;
+const rosCache = new Map();
 function publicCurrent() {
   return publicSnapshot && Number(command?.league?.season) === publicSnapshot.season &&
     publicSnapshot.nextWeek === command?.league?.currentWeek &&
@@ -51,6 +54,19 @@ function actualScore(player) {
     return scorePlayer({ position: 'DEF', team: normalTeam(player.team) }, command.league, publicSnapshot.teamStats);
   return scorePlayer(publicMatch(player), command.league, publicSnapshot.teamStats);
 }
+// Rest-of-season points per game in this league's scoring (calibrated model for
+// QB/RB/WR/TE; this week's estimate for K and DEF). Byes fall back to the v6 file.
+function rosPoints(p) {
+  const key = p.playerKey || p.name;
+  if (rosCache.has(key)) return rosCache.get(key);
+  const pos = String(p.position || '').toUpperCase().split(/[,/]/)[0].replace('D/ST', 'DEF');
+  const current = publicSnapshot ? publicMatch(p) : null, v6 = current ? v6Index.get(current.id) : null;
+  if (!Number.isInteger(p.byeWeek) && Number.isInteger(v6?.bye)) p.byeWeek = v6.bye;
+  let r = rosModel ? rosPerGame({ position: pos, current, prior: priorPlayers ? matchPrior(current, p, priorPlayers) : null, v6, league: command.league, model: rosModel }) : null;
+  if (!r && ['K', 'DEF'].includes(pos)) { const e = weekly(p); r = Number.isFinite(e.points) ? { points: e.points, basis: e.basis } : null; }
+  rosCache.set(key, r); return r;
+}
+function seasonPoints(p, week) { const r = rosPoints(p); return r ? r.points * availabilityShare(p, week, command.league.currentWeek) : 0; }
 function nextGame(player) { return publicMatch(player)?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)] || null; }
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
 function error(e) {
@@ -118,9 +134,8 @@ function plan() {
   const mine = ownTeam();
   const fresh = publicCurrent();
   const lineup = mine?.rosterAvailable ? (fresh ? optimizeLineup(mine, command.league, weekly) : currentLineup(mine)) : null;
-  const drop = mine ? dropCandidate(mine, command.league, weekly) : null;
-  const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), drop, links: yahooLinks(mine.teamKey) }) : [];
-  return { mine, lineup, drop, moves, fresh };
+  const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), links: yahooLinks(mine.teamKey) }) : [];
+  return { mine, lineup, moves, fresh };
 }
 
 function renderMatchup(mine, moves) {
@@ -235,6 +250,8 @@ function renderCommand() {
   $('team-meta').textContent = `${command.league.name} · Week ${command.league.currentWeek}${Number.isFinite(mine?.wins) ? ` · ${mine.wins}–${mine.losses}${mine.ties ? `–${mine.ties}` : ''}` : ''}`;
   $('team-name').textContent = command.team.name;
   $('warnings').replaceChildren(...command.warnings.map(w => el('p', w, 'warning')));
+  const weeks = fantasyWeeks(command.league), firstPlayoff = weeks.find(w => w.playoff);
+  if (weeks.length) $('waivers-note').textContent = `Ranked by the starting-lineup points each player adds to your team from Week ${weeks[0].week} through Week ${weeks.at(-1).week}${firstPlayoff ? `, with playoff weeks (${firstPlayoff.week}+) counting ${PLAYOFF_WEIGHT}×` : ''}, after the best drop. Byes, injuries and flex spots included.`;
   renderPlan(); renderLeague();
   $('hub').hidden = false; $('tabbar').hidden = false; $('teams-section').hidden = $('team').options.length <= 2;
 }
@@ -249,26 +266,28 @@ function selectView(view) {
 }
 
 function rankedCandidates() {
-  return [...candidates].sort((a, b) => (b.impact?.gain ?? -Infinity) - (a.impact?.gain ?? -Infinity)
-    || (b.estimate?.points ?? -Infinity) - (a.estimate?.points ?? -Infinity) || a.player.name.localeCompare(b.player.name));
+  return [...candidates].sort((a, b) => (b.ros?.gain ?? -Infinity) - (a.ros?.gain ?? -Infinity)
+    || (b.rosPg ?? -Infinity) - (a.rosPg ?? -Infinity) || a.player.name.localeCompare(b.player.name));
 }
 function renderAdds() {
-  const sorted = rankedCandidates(), drop = dropCandidate(ownTeam(), command.league, weekly), links = yahooLinks(command.team.teamKey);
+  const sorted = rankedCandidates(), links = yahooLinks(command.team.teamKey);
   $('candidates').replaceChildren(...(sorted.length ? sorted.slice(0, addsShown).map((c, i) => {
-    const p = c.player, gain = c.impact?.gain, helps = Number.isFinite(gain) && gain > 0;
+    const p = c.player, gain = c.ros?.gain, helps = Number.isFinite(gain) && gain > 0;
     const card = el('article', null, 'add' + (i === 0 && helps ? ' top' : '')), head = el('div', null, 'add-head');
     const who = el('div', null, 'who'), line = el('div', null, 'name-line');
     line.append(el('span', String(p.position).split(',')[0], 'slot ' + posClass(p.position)), el('span', p.name, 'name'));
     const tag = statusTag(p, command.league.currentWeek); if (tag) line.append(tagEl(tag));
-    who.append(line, el('span', `${String(p.team || 'FA').toUpperCase()} · ${p.ownership === 'waivers' ? `Waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent'}`, 'game'));
+    who.append(line, el('span', `${String(p.team || 'FA').toUpperCase()} · ${p.ownership === 'waivers' ? `Waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent'}${Number.isFinite(c.rosPg) ? ` · ${fmt(c.rosPg)} pts/game` : ''}`, 'game'));
     const g = el('div', null, 'add-gain');
-    g.append(el('strong', helps ? `+${fmt(gain)}` : fmt(c.estimate?.points), helps ? '' : 'none'), el('span', helps ? 'pts this week' : 'est. pts'));
+    g.append(el('strong', helps ? `+${fmt(gain)}` : '0', helps ? '' : 'none'), el('span', 'pts rest of season'));
     head.append(el('span', String(i + 1), 'add-rank'), who, g);
-    const why = !c.impact ? (c.estimate?.playable ? 'No estimate for this week yet.' : c.estimate?.reason || 'Not eligible for your open slots.')
-      : !c.impact.replaced ? `Fills your empty ${c.impact.slot} slot.`
-        : helps ? `Would start at ${c.impact.slot} over ${c.impact.replaced}.` : `Bench depth. Doesn't beat ${c.impact.replaced} this week.`;
+    const isDef = /DEF|D\/ST/i.test(String(p.position));
+    let why = c.ros ? describeAdd(c.ros) : isDef ? "Defenses aren't ranked: points allowed can't be scored from public stats."
+      : c.estimate?.playable === false && c.estimate?.reason ? c.estimate.reason : 'No rest-of-season estimate for this player yet.';
+    if (Number.isFinite(c.impact?.gain) && c.impact.gain > 0 && c.impact.replaced) why += ` This week: +${fmt(c.impact.gain)} over ${c.impact.replaced}.`;
     const foot = el('div', null, 'add-foot'), dropText = el('span');
-    if (helps && drop) dropText.append('Drop ', el('strong', drop.name)); else dropText.textContent = helps ? 'Needs an open roster spot' : '';
+    if (helps && c.ros.drop) dropText.append('Drop ', el('strong', c.ros.drop.name), c.ros.dropStarts ? ` (starts ${c.ros.dropStarts} wk${c.ros.dropStarts === 1 ? '' : 's'})` : ' (never starts)');
+    else dropText.textContent = helps ? 'You have an open roster spot' : '';
     foot.append(dropText, yahooButton(p.ownership === 'waivers' ? 'Claim' : 'Add', links.add(p.playerKey) || links.league));
     card.append(head, el('p', why, 'add-why'), foot); return card;
   }) : [el('p', 'No available players matched this filter.', 'empty card')]));
@@ -288,10 +307,13 @@ async function findPlayers() {
       if (d.teamKey !== teamKey || d.season !== command.league.season || d.pool !== pool || d.position !== position) throw Error('Mismatched response');
       pages.push(d);
     }
-    const lineup = publicCurrent() ? optimizeLineup(ownTeam(), command.league, weekly) : null;
-    candidates = pickupCandidates(mergeAvailablePages(pages), ownTeam(), command.league, actualScore).map(c => {
-      const estimate = weekly(c.player);
-      return { ...c, estimate, impact: lineup ? candidateImpact(c.player, lineup, estimate) : null };
+    const mine = ownTeam(), lineup = publicCurrent() ? optimizeLineup(mine, command.league, weekly) : null;
+    const weeks = fantasyWeeks(command.league);
+    mine.roster.forEach(rosPoints);
+    candidates = pickupCandidates(mergeAvailablePages(pages), mine, command.league, actualScore).map(c => {
+      const estimate = weekly(c.player), r = rosPoints(c.player);
+      return { ...c, estimate, impact: lineup ? candidateImpact(c.player, lineup, estimate) : null, rosPg: r?.points ?? null, rosBasis: r?.basis || null,
+        ros: r && mine.rosterAvailable && weeks.length ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints }) : null };
     });
     addsShown = 6; renderAdds();
     $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}`;
@@ -319,7 +341,7 @@ async function loadLeague() {
   try {
     const data = await request('command', { teamKey: $('team').value }, controller.signal);
     await contextReady; if (id !== generation) return;
-    command = data; renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
+    command = data; rosCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
     findPlayers();
   } catch (e) { if (id === generation) { $('teams-section').hidden = false; error(e); } }
   finally { if (id === generation) $('load').disabled = !$('team').value; }
@@ -371,6 +393,16 @@ async function loadPublicContext() {
     $('jev-status').textContent = 'Public player list unavailable. Please try again later.';
   }
 }
+async function loadRosContext() {
+  try {
+    const [players, model] = await Promise.all(['/app/data/players.json', '/yahoo/ros-model.json'].map(async url => {
+      const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw Error(url); return r.json();
+    }));
+    if (!Array.isArray(players) || model.version !== 1) throw Error('Rest-of-season inputs invalid');
+    v6Index = new Map(players.map(p => [p.player_id, p])); rosModel = model;
+  } catch { v6Index = new Map(); rosModel = null; }
+  rosCache.clear();
+}
 async function loadPriorContext() {
   try {
     const response = await fetch('/yahoo/nflverse-prior-2025.json', { cache: 'no-cache' });
@@ -414,7 +446,7 @@ $('jev-run').addEventListener('click', compareWithJev);
 async function init() {
   const publicReady = loadPublicContext();
   // Estimates depend on both public files; wait for them so rankings never change under the reader.
-  contextReady = Promise.allSettled([publicReady, loadPriorContext()]);
+  contextReady = Promise.allSettled([publicReady, loadPriorContext(), loadRosContext()]);
   if (location.origin !== 'https://overadp.com') {
     connected(false); $('connect').disabled = true;
     if (new URL(location.href).searchParams.get('demo') === '1' && /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(location.origin)) {

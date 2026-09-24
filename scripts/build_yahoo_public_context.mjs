@@ -29,7 +29,7 @@ const latestCompletedWeek = completedWeeks.at(-1);
 const playerMap = new Map();
 const num = v => v === '' || v == null ? null : Number(v);
 const playerFields = {
-  passingYards: 'passing_yards', passingTds: 'passing_tds', interceptions: 'passing_interceptions',
+  attempts: 'attempts', passingYards: 'passing_yards', passingTds: 'passing_tds', interceptions: 'passing_interceptions',
   rushingYards: 'rushing_yards', rushingTds: 'rushing_tds', receptions: 'receptions',
   receivingYards: 'receiving_yards', receivingTds: 'receiving_tds',
   passingTwo: 'passing_2pt_conversions', rushingTwo: 'rushing_2pt_conversions',

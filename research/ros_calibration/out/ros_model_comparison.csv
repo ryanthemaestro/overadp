@@ -1,0 +1,17 @@
+position,model,weeks 2-5,weeks 6-14
+QB,observed,5.259,4.52
+QB,preseason,4.959,5.435
+QB,shrink,4.311,4.269
+QB,shrink+usage,3.738,3.918
+RB,observed,3.547,2.866
+RB,preseason,3.038,3.313
+RB,shrink,2.778,2.644
+RB,shrink+usage,2.61,2.649
+TE,observed,2.443,2.014
+TE,preseason,1.903,2.131
+TE,shrink,1.772,1.779
+TE,shrink+usage,1.579,1.73
+WR,observed,3.121,2.526
+WR,preseason,2.445,2.715
+WR,shrink,2.22,2.291
+WR,shrink+usage,2.131,2.272
