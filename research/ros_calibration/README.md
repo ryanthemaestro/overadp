@@ -105,3 +105,15 @@ How long fantasy-relevant QB/RB/WR/TE (5+ half-PPR pts/game) actually miss, from
 | Doubtful | plays 25% | plays 1% |
 
 Held-out Brier on "plays the game j games from now" (j = 1–8): **0.178** vs 0.272 for the previous assumptions. Injury-specific curves are used when a group has 40+ episodes (knee, ankle, hamstring, concussion, shoulder, other); 40 scored best held-out (0.1782 vs 0.1814 at 150).
+
+## Defense rotation (`def_rotation.py`)
+
+Is the value of adding a second defense (start the better matchup each week) overstated? For 2019–2025 (models fit without the tested season), from decision weeks 2, 5, 8 and 11, every ordered pair (held A, added B) was scored: predicted gain = Σ max(pred A, pred B) − pred A over the remaining weeks, realized gain = actual points of the defense started − actual points of A. Weekly matchup deviations were shrunk by λ toward each team's season mean.
+
+| λ (matchup strength) | All pairs: predicted / realized | Top 3 adds: predicted / realized | Top 3 ratio |
+|---|---|---|---|
+| 0 (season means only) | 8.8 / 7.2 | 20.5 / 15.6 | 0.76 |
+| 0.5 | 9.7 / 9.5 | 21.0 / 17.0 | 0.81 |
+| **1 (page)** | 11.8 / **10.1** | 22.7 / **17.6** | 0.78 |
+
+Full-strength matchups give the highest realized gain, so weekly start/sit is unchanged. But the defenses that rank at the top of the list deliver ~78% of their projected gain at every λ (picking the largest estimates overstates them), so damping doesn't close the gap. The page discounts defense add values by that measured share (`defense.add_value_factor` = 0.78).
