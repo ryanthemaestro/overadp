@@ -60,3 +60,19 @@ Pairs of same-position, fantasy-relevant players who both played the following w
 | 5+ | 69% | 79% | 75% | 74% |
 
 Under one point the page calls it a toss-up. When the two players play different positions (a FLEX decision), it uses the lower of the two rates.
+
+## Kickers (`kickers.py`)
+
+Yahoo default kicker scoring, leave-one-season-out on 2019–2025.
+
+| Kicker projection | Rest-of-season MAE (pts/game) | Next-week start/sit right |
+|---|---|---|
+| Page's previous method (last season blended with this season, this season up to 50%) | 1.75 | 52.8% |
+| Last season only | 1.66 | 50.7% |
+| This season only | 2.28 | 52.6% |
+| Calibrated blend | 1.39 | 52.5% |
+| **Blend + share of remaining games indoors (shipped, rest of season)** | **1.37** | 53.2% |
+| Blend + team scoring + indoors | 1.37 | 53.2% |
+| **Blend + team scoring + betting-line implied team total + roof (shipped, next week)** | — | **55.3%** |
+
+Rest-of-season kicker scoring is close to a constant (~6.4 pts/game) plus an indoor-schedule bonus; a kicker's own history carries little forward, which is why trusting it (the previous method) did worst. Next-week pick accuracy by projected gap: 52% under 1 pt, 58% at 1–2, 63% at 2+. Team scoring alone added noise to the rest-of-season model and was dropped there.
