@@ -252,17 +252,18 @@ export function dropsNeeded(roster, league, adds = 0) {
   return Math.max(0, roster.filter(occupiesSpot).length + adds - rosterCapacity(league));
 }
 // Every droppable player, cheapest first: rest-of-season lineup points you'd lose.
-export function dropOrder({ roster, league, weeks, value }) {
+export function dropOrder({ roster, league, weeks, value, keep = new Set() }) {
   const fillsAll = requiredFill(league), base = seasonValue(roster, league, weeks, value);
-  return roster.filter(occupiesSpot).filter(p => fillsAll(roster.filter(x => x !== p))).map(p => ({
+  return roster.filter(occupiesSpot).filter(p => !keep.has(p.playerKey) && fillsAll(roster.filter(x => x !== p))).map(p => ({
     player: p, cost: Math.round((base.total - seasonValue(roster.filter(x => x !== p), league, weeks, value).total) * 10) / 10,
     starts: weeks.filter(w => base.byWeek.get(w.week)?.has(p.playerKey)).length, raw: rawValue(p, weeks, value),
   })).sort((a, b) => a.cost - b.cost || a.raw - b.raw);
 }
-export function addValue({ roster, candidate, league, weeks, value }) {
+export function addValue({ roster, candidate, league, weeks, value, keep = new Set() }) {
   const base = seasonValue(roster, league, weeks, value);
-  const chosen = chooseDrops(roster.concat(candidate), dropsNeeded(roster, league, 1), league, weeks, value, new Set([candidate.playerKey]));
-  if (!chosen) return null;
+  const chosen = chooseDrops(roster.concat(candidate), dropsNeeded(roster, league, 1), league, weeks, value, new Set([candidate.playerKey, ...keep]));
+  // Nobody left who can be dropped (everyone else is locked or fills a required spot).
+  if (!chosen) return { blocked: true, gain: 0, of: weeks.length, starts: 0, playoffStarts: 0, drops: [], drop: null, dropDetails: [], byeWeeks: [], displaced: null };
   const result = seasonValue(chosen.roster, league, weeks, value), drops = chosen.drops;
   const dropped = new Set(drops.map(p => p.playerKey));
   const startWeeks = weeks.filter(w => result.byWeek.get(w.week)?.has(candidate.playerKey));
@@ -282,6 +283,7 @@ export function addValue({ roster, candidate, league, weeks, value }) {
 }
 export function describeAdd(r) {
   if (!r) return 'No rest-of-season estimate for this player yet.';
+  if (r.blocked) return "No room: everyone you could drop is locked or needed to fill a required spot.";
   if (r.gain <= 0) return r.starts ? `Would start ${r.starts} of ${r.of} weeks, but costs more than it adds after the drop.` : `Wouldn't crack your lineup in any of the remaining ${r.of} weeks.`;
   const parts = [`Starts for you in ${r.starts} of ${r.of} weeks${r.playoffStarts ? `, including ${r.playoffStarts} playoff week${r.playoffStarts === 1 ? '' : 's'}` : ''}`];
   if (r.displaced) parts.push(`mostly over ${r.displaced.name}`);

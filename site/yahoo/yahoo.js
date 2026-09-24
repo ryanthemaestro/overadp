@@ -4,6 +4,7 @@ import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
 import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
 import { rosPerGame, kickerPerGame, defensePerGame } from './ros.mjs';
+import { loadKeeps, saveKeeps } from './keeps.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
 const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
@@ -34,7 +35,7 @@ const denialMessages = Object.freeze({
 });
 const POS_CLASS = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', K: 'K', DEF: 'DEF', 'D/ST': 'DEF' };
 let generation = 0, controller, expiry, command = null, availableGeneration = 0, availableController;
-let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null, comparePicks = [];
+let candidates = [], pickupPosition = 'ALL', addsShown = 6, demo = null, comparePicks = [], keeps = new Set();
 let cooldownUntil = 0, rateLimitCount = 0;
 let publicSnapshot = null, publicIndex = new Map(), priorSnapshot = null, priorPlayers = null, contextReady = null;
 let v6Index = new Map(), rosModel = null;
@@ -194,7 +195,7 @@ function plan() {
   const fresh = publicCurrent();
   const lineup = mine?.rosterAvailable ? (fresh ? optimizeLineup(mine, command.league, weekly) : currentLineup(mine)) : null;
   const weeks = fantasyWeeks(command.league);
-  const drops = mine?.rosterAvailable && weeks.length ? dropOrder({ roster: mine.roster, league: command.league, weeks, value: seasonPoints }) : [];
+  const drops = mine?.rosterAvailable && weeks.length ? dropOrder({ roster: mine.roster, league: command.league, weeks, value: seasonPoints, keep: keeps }) : [];
   const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), drops, links: yahooLinks(mine.teamKey) }) : [];
   return { mine, lineup, moves, fresh, drops };
 }
@@ -272,8 +273,9 @@ function renderLineup(mine, lineup) {
   const bench = mine.roster.filter(isBench);
   const incoming = new Set((lineup?.moves || []).map(m => m.player.playerKey));
   const outgoing = new Set((lineup?.moves || []).map(m => m.replaces?.playerKey).filter(Boolean));
-  $('starters').replaceChildren(...starters.map(p => playerRow(p, { extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
-  $('bench').replaceChildren(...(bench.length ? bench.map(p => playerRow(p, { extraTag: mustLeaveIR(p) ? { text: 'OFF IR', tone: 'bad' } : incoming.has(p.playerKey) ? { text: 'START', tone: 'good' } : null }))
+  const withLock = (row, p) => { row.insertBefore(lockButton(p), row.lastChild); return row; };
+  $('starters').replaceChildren(...starters.map(p => withLock(playerRow(p, { extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null }), p)));
+  $('bench').replaceChildren(...(bench.length ? bench.map(p => withLock(playerRow(p, { extraTag: mustLeaveIR(p) ? { text: 'OFF IR', tone: 'bad' } : incoming.has(p.playerKey) ? { text: 'START', tone: 'good' } : null }), p))
     : [el('p', 'No bench players.', 'empty')]));
   $('glance').replaceChildren(...starters.map(p => playerRow(p, { compact: true, extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
   const asSet = starterTotal(mine, weekly), best = lineup?.knownPoints;
@@ -339,6 +341,9 @@ function renderCalls(mine, lineup) {
   }) : [el('p', publicCurrent() ? 'No close calls: every starter projects at least 3 points ahead of your best bench option.' : 'Projections are paused until the public stats update.', 'empty')]));
 }
 function renderDrops(drops) {
+  const locked = (ownTeam()?.roster || []).filter(p => keeps.has(p.playerKey)).map(p => p.name);
+  $('kept-list').textContent = locked.length ? `Locked: ${locked.join(', ')}.` : '';
+  $('clear-keeps').hidden = !locked.length;
   $('drop-order').replaceChildren(...(drops.length ? drops.slice(0, 4).map((d, i) => {
     const row = el('div', null, 'row compact');
     row.append(el('span', String(i + 1), 'add-rank'), el('span', d.player.name, 'name drop-name'),
@@ -394,6 +399,26 @@ function selectView(view, scroll = true) {
   if (scroll) window.scrollTo({ top: 0 });
 }
 
+// Season value of an add against this roster, respecting locked players.
+function valueCandidate(c) {
+  const mine = ownTeam(), weeks = fantasyWeeks(command.league);
+  return { ...c, ros: Number.isFinite(c.rosPg) && mine?.rosterAvailable && weeks.length
+    ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints, keep: keeps }) : null };
+}
+// ---- Locks: keep players out of drop suggestions (saved on this device only) ----
+const LOCK = 'M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z';
+function lockButton(p) {
+  const on = keeps.has(p.playerKey), b = el('button', null, 'keep-btn'); b.type = 'button';
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), path = document.createElementNS(ns, 'path');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); path.setAttribute('d', LOCK); svg.append(path); b.append(svg);
+  b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', `${on ? 'Unlock' : 'Lock'} ${p.name} ${on ? '(may be suggested as a drop)' : '(never suggest dropping)'}`);
+  b.addEventListener('click', () => { if (on) keeps.delete(p.playerKey); else keeps.add(p.playerKey); applyKeeps(); });
+  return b;
+}
+function applyKeeps() {
+  saveKeeps(command.team.teamKey, keeps);
+  candidates = candidates.map(valueCandidate); renderPlan(); renderAdds();
+}
 function rankedCandidates() {
   return [...candidates].sort((a, b) => (b.ros?.gain ?? -Infinity) - (a.ros?.gain ?? -Infinity)
     || (b.rosPg ?? -Infinity) - (a.rosPg ?? -Infinity) || a.player.name.localeCompare(b.player.name));
@@ -456,12 +481,10 @@ async function findPlayers() {
   }
   try {
     const mine = ownTeam(), lineup = publicCurrent() ? optimizeLineup(mine, command.league, weekly) : null;
-    const weeks = fantasyWeeks(command.league);
     mine.roster.forEach(rosPoints);
     candidates = pickupCandidates(mergeAvailablePages(pages), mine, command.league, actualScore).map(c => {
       const estimate = weekly(c.player), r = rosPoints(c.player);
-      return { ...c, estimate, impact: lineup ? candidateImpact(c.player, lineup, estimate) : null, rosPg: r?.points ?? null, rosBasis: r?.basis || null,
-        ros: r && mine.rosterAvailable && weeks.length ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints }) : null };
+      return valueCandidate({ ...c, estimate, impact: lineup ? candidateImpact(c.player, lineup, estimate) : null, rosPg: r?.points ?? null, rosBasis: r?.basis || null });
     });
     addsShown = 6; renderAdds();
     $('pickup-status').textContent = `${candidates.length} available ${position === 'ALL' ? 'players' : position + 's'} checked · read ${new Date(pages.at(-1).fetchedAt).toLocaleTimeString()}` +
@@ -507,7 +530,7 @@ async function loadLeague() {
   try {
     const data = await request('command', { teamKey: $('team').value }, controller.signal);
     await contextReady; if (id !== generation) return;
-    command = data; rosCache.clear(); defenseWeekCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
+    command = data; keeps = loadKeeps(command.team.teamKey); rosCache.clear(); defenseWeekCache.clear(); renderCommand(); status(demo ? 'SYNTHETIC LOCAL PREVIEW. No live Yahoo league data loaded.' : '');
     findPlayers();
   } catch (e) { if (id === generation) { $('teams-section').hidden = false; error(e); } }
   finally { if (id === generation) $('load').disabled = !$('team').value; }
@@ -575,6 +598,7 @@ document.querySelectorAll('.chip[data-pos]').forEach(chip => chip.addEventListen
 }));
 $('more-adds').addEventListener('click', () => { addsShown += 6; renderAdds(); });
 $('tray-clear').addEventListener('click', () => { comparePicks = []; renderCompare(); });
+$('clear-keeps').addEventListener('click', () => { keeps = new Set(); applyKeeps(); });
 $('player-search').addEventListener('input', renderSearch);
 async function init() {
   const reason = new URL(location.href).searchParams.get('error');

@@ -257,3 +257,15 @@ test('two defenses rotated by matchup both earn starts, so neither reads as "nev
   assert(broncos.cost > 0 && bills.cost > 0, 'dropping either one loses the rotation');
   assert.equal(order[0].player.name, 'TEbench');
 });
+test('locked players are never suggested as drops, and an add with no one left to drop says so', () => {
+  const t = team();
+  const keep = new Set(t.roster.filter(p => ['TEbench', 'WRbench'].includes(p.name)).map(p => p.playerKey));
+  const order = dropOrder({ roster: t.roster, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf(), keep });
+  assert(!order.some(d => ['TEbench', 'WRbench'].includes(d.player.name)));
+  const candidate = { name: 'New WR', position: 'WR', eligible: ['WR'], playerKey: '461.p.500', slot: '', status: '' };
+  const r = addValue({ roster: t.roster, candidate, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf({ 'New WR': 11 }), keep });
+  assert(!r.drops.some(p => keep.has(p.playerKey)));
+  const everyone = new Set(t.roster.map(p => p.playerKey));
+  const blocked = addValue({ roster: t.roster, candidate, league: lateLeague, weeks: fantasyWeeks(lateLeague), value: valueOf({ 'New WR': 11 }), keep: everyone });
+  assert(blocked.blocked); assert.match(describeAdd(blocked), /No room: everyone you could drop is locked/);
+});
