@@ -55,3 +55,42 @@ export function rosPerGame({ position, current, prior, v6, league, model }) {
   const ratio = scoringRatio(pos, [...games, ...(prior?.games || [])], league) ?? 1;
   return { points: round(pg * ratio), halfPpr: round(pg), basis, games: n };
 }
+
+// ---- Kickers (research/ros_calibration/kickers.py) ----
+// Calibrated on Yahoo's default kicker scoring, then converted to the league's.
+export const DEFAULT_K = [['FG 0-19', 3], ['FG 20-29', 3], ['FG 30-39', 3], ['FG 40-49', 4], ['FG 50+', 5], ['PAT Made', 1]]
+  .map(([name, value]) => ({ name, value: String(value) }));
+function kickerInputs(current, prior, model) {
+  const pts = g => scoreGame(g, 'K', DEFAULT_K)?.points;
+  const games = current?.games || [], priorPg = prior?.games?.length >= 4 ? perGame(prior.games, pts) : null;
+  return { n: games.length, base: Number.isFinite(priorPg) ? priorPg : model.kicker.fallback_base, obs: perGame(games, pts) ?? 0, priorPg };
+}
+function applyKicker(part, features, values, n) {
+  const key = bucketFor(part, n), coef = key && part.by_bucket[key];
+  return coef ? Math.max(0, features.reduce((sum, f, i) => sum + coef[i] * values[f], 0)) : null;
+}
+/**
+ * kind 'season': rest-of-season points per game (waivers, drops).
+ * kind 'week': next game, using the betting line's implied team total and roof (start/sit).
+ */
+export function kickerPerGame({ kind, current, prior, team, context, game, league, model }) {
+  if (!model?.kicker) return null;
+  const { n, base, obs, priorPg } = kickerInputs(current, prior, model);
+  const ctx = context?.[team] || {};
+  const values = { intercept: 1, base, obs0: obs, indoor_share: ctx.remainingIndoorShare ?? 0,
+    team_ppg: ctx.pointsPerGame ?? ctx.priorPointsPerGame, team_prior: ctx.priorPointsPerGame,
+    implied: game?.impliedTotal, indoor_next: game?.indoor ? 1 : 0 };
+  const part = kind === 'week' ? model.kicker.next_week : model.kicker.rest_of_season;
+  if (part.features.some(f => !Number.isFinite(values[f]))) return null;
+  const pg = applyKicker(part, part.features, values, n);
+  if (!Number.isFinite(pg)) return null;
+  let lg = 0, dflt = 0;
+  for (const g of [...(current?.games || []), ...(prior?.games || [])]) {
+    const a = scoreGame(g, 'K', league.scoring)?.points, b = scoreGame(g, 'K', DEFAULT_K)?.points;
+    if (Number.isFinite(a) && Number.isFinite(b)) { lg += a; dflt += b; }
+  }
+  const ratio = dflt >= 10 ? Math.min(2, Math.max(0.5, lg / dflt)) : 1;
+  const basis = kind === 'week' ? `kicker model with this week's betting line${game?.indoor ? ', indoors' : ''}` :
+    `kicker model: ${Number.isFinite(priorPg) ? 'last season' : 'league-average start'}${n ? ` + ${n} game${n === 1 ? '' : 's'}` : ''}, ${Math.round(100 * (ctx.remainingIndoorShare ?? 0))}% of remaining games indoors`;
+  return { points: Math.round(pg * ratio * 100) / 100, basis, games: n };
+}

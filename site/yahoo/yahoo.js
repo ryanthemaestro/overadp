@@ -3,7 +3,7 @@ import { indexPublicPlayers, matchPublicPlayer, normalTeam, normalName } from '.
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
 import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
-import { rosPerGame } from './ros.mjs';
+import { rosPerGame, kickerPerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
 const fmt = n => Number.isFinite(n) ? n.toFixed(1) : '—';
@@ -53,8 +53,15 @@ function weekly(player) {
   const prior = priorSnapshot?.season === publicSnapshot.season - 1 ? matchPrior(matched, player, priorPlayers) : null;
   const estimate = estimatePlayer(player, command.league, pub, prior);
   // One model everywhere: the calibrated projection replaces the older this-week average.
-  if (estimate.playable && ['QB', 'RB', 'WR', 'TE'].includes(String(player.position || '').toUpperCase().split(/[,/]/)[0])) {
+  const pos = String(player.position || '').toUpperCase().split(/[,/]/)[0];
+  if (estimate.playable && ['QB', 'RB', 'WR', 'TE'].includes(pos)) {
     const r = rosPoints(player);
+    if (r) return { ...estimate, points: r.points, basis: r.basis };
+  }
+  // Kickers this week: the next-week kicker model, which uses the betting line.
+  if (estimate.playable && pos === 'K' && rosModel) {
+    const r = kickerPerGame({ kind: 'week', current: matched, prior, team: normalTeam(player.team), context: publicSnapshot.teamContext,
+      game: pub.nextGame, league: command.league, model: rosModel });
     if (r) return { ...estimate, points: r.points, basis: r.basis };
   }
   return estimate;
@@ -74,6 +81,9 @@ function rosPoints(p) {
   const current = publicSnapshot ? publicMatch(p) : null, v6 = current ? v6Index.get(current.id) : null;
   if (!Number.isInteger(p.byeWeek) && Number.isInteger(v6?.bye)) p.byeWeek = v6.bye;
   let r = rosModel ? rosPerGame({ position: pos, current, prior: priorPlayers ? matchPrior(current, p, priorPlayers) : null, v6, league: command.league, model: rosModel }) : null;
+  if (!r && pos === 'K' && rosModel && publicSnapshot)
+    r = kickerPerGame({ kind: 'season', current, prior: priorPlayers ? matchPrior(current, p, priorPlayers) : null, team: normalTeam(p.team),
+      context: publicSnapshot.teamContext, game: nextGame(p), league: command.league, model: rosModel });
   if (!r && ['K', 'DEF'].includes(pos)) { const e = weekly(p); r = Number.isFinite(e.points) ? { points: e.points, basis: e.basis } : null; }
   rosCache.set(key, r); return r;
 }

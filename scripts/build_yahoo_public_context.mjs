@@ -58,10 +58,31 @@ const now = new Date();
 const futureGames = gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && !r.home_score && !r.away_score && new Date(`${r.gameday}T23:59:59Z`) >= now).sort((a, b) => a.gameday.localeCompare(b.gameday) || a.gametime.localeCompare(b.gametime));
 const nextWeek = Math.min(...futureGames.map(r => Number(r.week)));
 const nextGames = futureGames.filter(r => Number(r.week) === nextWeek);
+// Kicker context (research/ros_calibration/kickers.py): the betting line's implied team
+// total and whether the game is indoors (unknown retractable roofs count as outdoors).
+const indoor = r => ['dome', 'closed'].includes(r.roof);
+const implied = (r, home) => {
+  const total = num(r.total_line), spread = num(r.spread_line);
+  return Number.isFinite(total) && Number.isFinite(spread) ? Number(((total + (home ? spread : -spread)) / 2).toFixed(2)) : null;
+};
 const schedule = Object.fromEntries(nextGames.flatMap(r => [
-  [r.home_team, { opponent: r.away_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id }],
-  [r.away_team, { opponent: r.home_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id }],
+  [r.home_team, { opponent: r.away_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, true), indoor: indoor(r) }],
+  [r.away_team, { opponent: r.home_team, gameDate: r.gameday, gameTime: r.gametime, gameId: r.game_id, impliedTotal: implied(r, false), indoor: indoor(r) }],
 ]));
+const regular = gameInput.rows.filter(r => r.game_type === 'REG');
+const pointsPerGame = season => {
+  const scored = {};
+  for (const r of regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== ''))
+    for (const [team, pts] of [[r.home_team, r.home_score], [r.away_team, r.away_score]]) (scored[team] ||= []).push(Number(pts));
+  return Object.fromEntries(Object.entries(scored).map(([team, v]) => [team, Number((v.reduce((a, b) => a + b, 0) / v.length).toFixed(2))]));
+};
+const currentPpg = pointsPerGame('2026'), priorPpg = pointsPerGame('2025');
+const remaining = regular.filter(r => r.season === '2026' && Number(r.week) >= nextWeek && Number(r.week) <= 17);
+const teamContext = Object.fromEntries([...new Set(remaining.flatMap(r => [r.home_team, r.away_team]))].map(team => {
+  const games = remaining.filter(r => r.home_team === team || r.away_team === team);
+  return [team, { pointsPerGame: currentPpg[team] ?? null, priorPointsPerGame: priorPpg[team] ?? null,
+    remainingIndoorShare: games.length ? Number((games.filter(indoor).length / games.length).toFixed(3)) : null }];
+}));
 const players = [...playerMap.values()].map(p => {
   p.games.sort((a, b) => a.week - b.week);
   const scored = p.games.filter(g => Number.isFinite(g.points));
@@ -92,7 +113,7 @@ const output = {
   },
   hashes: { playerStats: playerInput.hash, teamStats: teamInput.hash, injuries: injuryInput.hash, schedule: gameInput.hash },
   coverage: { playerRows: regularPlayers.length, teamRows: teamRows.length, injuryRows: injuryInput.rows.length, scheduledGames: nextGames.length },
-  players, schedule, teamStats,
+  players, schedule, teamStats, teamContext,
 };
 const target = resolve('site/yahoo/nflverse-2026.json');
 writeFileSync(target, JSON.stringify(output));
