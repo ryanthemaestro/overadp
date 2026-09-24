@@ -105,6 +105,8 @@ const teamContext = Object.fromEntries([...new Set(remaining.flatMap(r => [r.hom
   const opponents = games.map(r => r.home_team === team ? r.away_team : r.home_team);
   const pd = priorDefense[team];
   return [team, { pointsPerGame: currentPpg[team] ?? null, priorPointsPerGame: priorPpg[team] ?? null,
+    offenseStrength: Number(strength(team).toFixed(2)),
+    remainingSchedule: games.map(r => ({ week: Number(r.week), opponent: r.home_team === team ? r.away_team : r.home_team, home: r.home_team === team })),
     remainingIndoorShare: games.length ? Number((games.filter(indoor).length / games.length).toFixed(3)) : null,
     remainingOpponentOffense: opponents.length ? Number((opponents.reduce((a, t) => a + strength(t), 0) / opponents.length).toFixed(2)) : null,
     priorDefensePointsPerGame: pd?.length >= 8 ? Number((pd.reduce((a, b) => a + b, 0) / pd.length).toFixed(2)) : null }];

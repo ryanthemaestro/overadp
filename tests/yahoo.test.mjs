@@ -21,7 +21,8 @@ test('authenticated encryption rejects tampering, wrong purpose and expiry', () 
   assert.equal(unseal(value, 'state', secret, time), null);
   assert.equal(unseal(value, 'session', 'cd'.repeat(32), time), null);
   assert.equal(unseal(value, 'session', secret, time + 1), null);
-  assert.equal(unseal(value.slice(0, 20) + 'A' + value.slice(21), 'session', secret, time), null);
+  // Flip one character to a *different* one (overwriting with 'A' was a no-op 1 time in 64).
+  assert.equal(unseal(value.slice(0, 20) + (value[20] === 'A' ? 'B' : 'A') + value.slice(21), 'session', secret, time), null);
 });
 test('start uses state, S256 PKCE, exact callback and read-only scope', async () => {
   const r = await handle('start', post(), deps), body = await r.json();

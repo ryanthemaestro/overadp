@@ -92,3 +92,13 @@ test('next week: facing a lower-scoring opponent projects more', () => {
   assert(season.points > 2 && season.points < 12, String(season.points));
   assert.equal(defensePerGame({ kind: 'week', team: 'BAL', snapshot: defSnap(null), league: { scoring: DEFAULT_DEF }, model }), null);
 });
+test('later weeks: each defense is valued against that week\'s opponent, and byes are zero', () => {
+  const snap = defSnap(20);
+  snap.teamContext.BAL.remainingSchedule = [{ week: 4, opponent: 'WEAK', home: true }, { week: 5, opponent: 'STRONG', home: false }];
+  snap.teamContext.WEAK = { offenseStrength: 15 }; snap.teamContext.STRONG = { offenseStrength: 31 };
+  const args = week => ({ kind: 'future', team: 'BAL', week, snapshot: snap, league: { scoring: DEFAULT_DEF }, model });
+  const weak = defensePerGame(args(4)), strong = defensePerGame(args(5));
+  assert(weak.points > strong.points, `${weak.points} vs ${strong.points}`);
+  assert.match(weak.basis, /week 4 opponent scoring 15\.0 points a game/);
+  assert.deepEqual(defensePerGame(args(6)), { points: 0, basis: 'bye week', games: 2 });
+});
