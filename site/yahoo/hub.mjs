@@ -59,9 +59,21 @@ function bestCover(team, slot, estimate, week, starting) {
 }
 
 // Ranked, plain-English actions for this week. `lineup` is optimizeLineup()'s result.
-export function buildMoves({ team, league, lineup, estimate, pickups = [], links = yahooLinks(team?.teamKey) }) {
+export function buildMoves({ team, league, lineup, estimate, pickups = [], drops = [], links = yahooLinks(team?.teamKey) }) {
   if (!team?.rosterAvailable || !lineup || lineup.unavailable) return [];
   const week = league.currentWeek, moves = [];
+  // An IR player whose status improved (Out -> Doubtful) must come back, which may force a drop.
+  const over = dropsNeeded(team.roster, league);
+  for (const p of team.roster.filter(mustLeaveIR)) {
+    const cut = drops.slice(0, over), tag = statusTag(p, week);
+    const cost = cut.reduce((sum, d) => sum + d.cost, 0);
+    moves.push({ kind: 'roster', priority: 5, headline: `Take ${p.name} off IR`,
+      why: `${p.name} is ${tag ? tag.label : 'no longer injured'}, so Yahoo won't allow an IR spot and will block other moves until this is fixed. Move ${p.name} to your bench` +
+        (cut.length ? ` and drop ${cut.map(d => d.player.name).join(' and ')} to make room. ` + (cost <= 0.05
+          ? `${cut.length > 1 ? "They don't" : "That player doesn't"} start for you in any remaining week, so it costs you nothing.`
+          : `That costs about ${cost.toFixed(1)} lineup points through your playoffs, the least of anyone on your roster.`) : '.'),
+      impact: 'Required', action: 'Fix in Yahoo', href: links.team, basis: null });
+  }
   const moved = new Set();
   for (const move of lineup.moves || []) {
     const incoming = move.player, outgoing = move.replaces;
@@ -98,7 +110,7 @@ export function buildMoves({ team, league, lineup, estimate, pickups = [], links
   const best = pickups.filter(c => c.ros && c.ros.gain >= Math.max(6, c.ros.of)).sort((a, b) => b.ros.gain - a.ros.gain)[0];
   if (best) {
     const p = best.player, pool = p.ownership === 'waivers' ? `On waivers${p.waiverDate ? ` until ${p.waiverDate}` : ''}` : 'Free agent';
-    moves.push({ kind: 'pickup', priority: 1, headline: `Add ${p.name}${best.ros.drop ? `, drop ${best.ros.drop.name}` : ''}`,
+    moves.push({ kind: 'pickup', priority: 1, headline: `Add ${p.name}${best.ros.drops?.length ? `, drop ${best.ros.drops.map(d => d.name).join(' and ')}` : ''}`,
       why: `${pool}. ${describeAdd(best.ros)}`,
       impact: `+${best.ros.gain.toFixed(1)} pts ROS`, action: p.ownership === 'waivers' ? 'Claim in Yahoo' : 'Add in Yahoo',
       href: links.add(p.playerKey) || links.league, basis: best.rosBasis || null });
@@ -160,10 +172,19 @@ export function fantasyWeeks(league) {
     return { week, playoff: week >= playoff, weight: week >= playoff ? PLAYOFF_WEIGHT : 1 };
   });
 }
+// Yahoo only lets these statuses sit in an IR spot. Out qualifies; Doubtful and
+// Questionable don't, so a player upgraded to D must come back to the roster.
+const IR_ELIGIBLE = new Set(['IR', 'IR-R', 'IR-NR', 'O', 'PUP', 'PUP-R', 'PUP-P', 'NFI', 'NFI-R', 'COVID-19', 'NA']);
+const inReserve = p => SLOT_OUT.has(String(p.slot || '').toUpperCase());
+export const mustLeaveIR = p => inReserve(p) && !IR_ELIGIBLE.has(String(p.status || '').toUpperCase());
+// Takes a roster spot: everyone outside IR, plus IR players who no longer qualify for it.
+export const occupiesSpot = p => !inReserve(p) || mustLeaveIR(p);
 export function availabilityShare(player, week, currentWeek) {
   if (player.byeWeek === week) return 0;
   const status = String(player.status || '').toUpperCase();
-  if (LONG_OUT.has(status) || SLOT_OUT.has(String(player.slot || '').toUpperCase()))
+  // A reserve player marked only Out (or with no tag) is treated as a multi-week absence;
+  // one upgraded to D/Q is judged by that status like anyone else.
+  if (LONG_OUT.has(status) || (inReserve(player) && (status === 'O' || !status)))
     return week < currentWeek + LONG_OUT_WEEKS ? 0 : 0.8;
   if (week !== currentWeek) return 1;
   return status === 'O' ? 0 : status === 'D' ? 0.25 : status === 'Q' ? 0.75 : 1;
@@ -198,39 +219,64 @@ export function seasonValue(roster, league, weeks, value) {
   }
   return { total, byWeek };
 }
-export function addValue({ roster, candidate, league, weeks, value }) {
-  const base = seasonValue(roster, league, weeks, value);
-  // Never suggest a drop that leaves a required slot (a lone K or DEF, say) unfillable,
-  // even when public stats can't score that player.
+function requiredFill(league) {
   const need = {};
   for (const slot of starterSlots(league)) if (['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(slot)) need[slot] = (need[slot] || 0) + 1;
-  const fillsAll = players => Object.entries(need).every(([slot, n]) => players.filter(p => canFill(p, slot)).length >= n);
-  const droppable = roster.filter(p => !SLOT_OUT.has(String(p.slot || '').toUpperCase()))
-    .filter(p => fillsAll(roster.filter(x => x !== p).concat(candidate)));
-  const active = roster.filter(p => !SLOT_OUT.has(String(p.slot || '').toUpperCase()));
-  const options = active.length < rosterCapacity(league) ? [null] : droppable;
-  if (!options.length) return null;
-  // Among equally good drops, let go of the player with the least projected value.
-  const raw = p => p ? weeks.reduce((sum, w) => sum + value(p, w.week), 0) : 0;
-  let best = null;
-  for (const drop of options) {
-    const next = roster.filter(p => p !== drop).concat(candidate);
-    const result = seasonValue(next, league, weeks, value);
-    const better = !best || result.total > best.result.total + 1e-9 ||
-      (Math.abs(result.total - best.result.total) <= 1e-9 && raw(drop) < raw(best.drop));
-    if (better) best = { drop, result };
+  // Never suggest a drop that leaves a required slot (a lone K or DEF, say) unfillable,
+  // even when public stats can't score that player.
+  return players => Object.entries(need).every(([slot, n]) => players.filter(p => canFill(p, slot)).length >= n);
+}
+// Tie-break between drops that cost the same: skill-position backups are injury
+// insurance the weekly model doesn't count, so spare kickers and defenses go first.
+const rawValue = (p, weeks, value) => ['K', 'DEF', 'D/ST'].includes(String(p.position || '').toUpperCase()) ? 0
+  : weeks.reduce((sum, w) => sum + value(p, w.week), 0);
+// Drop the players who cost the least, one at a time, until the roster fits.
+function chooseDrops(roster, count, league, weeks, value, keep = new Set()) {
+  const fillsAll = requiredFill(league), drops = [];
+  let current = roster;
+  for (let i = 0; i < count; i++) {
+    let best = null;
+    for (const p of current.filter(x => occupiesSpot(x) && !keep.has(x.playerKey))) {
+      const next = current.filter(x => x !== p);
+      if (!fillsAll(next)) continue;
+      const total = seasonValue(next, league, weeks, value).total, raw = rawValue(p, weeks, value);
+      if (!best || total > best.total + 1e-9 || (Math.abs(total - best.total) <= 1e-9 && raw < best.raw)) best = { p, next, total, raw };
+    }
+    if (!best) return null;
+    drops.push(best.p); current = best.next;
   }
-  const startWeeks = weeks.filter(w => best.result.byWeek.get(w.week)?.has(candidate.playerKey));
+  return { drops, roster: current };
+}
+// How many players must go now (e.g. someone who has to come off IR) and after adding `adds`.
+export function dropsNeeded(roster, league, adds = 0) {
+  return Math.max(0, roster.filter(occupiesSpot).length + adds - rosterCapacity(league));
+}
+// Every droppable player, cheapest first: rest-of-season lineup points you'd lose.
+export function dropOrder({ roster, league, weeks, value }) {
+  const fillsAll = requiredFill(league), base = seasonValue(roster, league, weeks, value);
+  return roster.filter(occupiesSpot).filter(p => fillsAll(roster.filter(x => x !== p))).map(p => ({
+    player: p, cost: Math.round((base.total - seasonValue(roster.filter(x => x !== p), league, weeks, value).total) * 10) / 10,
+    starts: weeks.filter(w => base.byWeek.get(w.week)?.has(p.playerKey)).length, raw: rawValue(p, weeks, value),
+  })).sort((a, b) => a.cost - b.cost || a.raw - b.raw);
+}
+export function addValue({ roster, candidate, league, weeks, value }) {
+  const base = seasonValue(roster, league, weeks, value);
+  const chosen = chooseDrops(roster.concat(candidate), dropsNeeded(roster, league, 1), league, weeks, value, new Set([candidate.playerKey]));
+  if (!chosen) return null;
+  const result = seasonValue(chosen.roster, league, weeks, value), drops = chosen.drops;
+  const dropped = new Set(drops.map(p => p.playerKey));
+  const startWeeks = weeks.filter(w => result.byWeek.get(w.week)?.has(candidate.playerKey));
   const displaced = new Map();
   for (const w of startWeeks) for (const key of base.byWeek.get(w.week) || [])
-    if (!best.result.byWeek.get(w.week).has(key) && key !== best.drop?.playerKey) displaced.set(key, (displaced.get(key) || 0) + 1);
+    if (!result.byWeek.get(w.week).has(key) && !dropped.has(key)) displaced.set(key, (displaced.get(key) || 0) + 1);
   const topKey = [...displaced.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   // Byes covered: the add starts in a week when a usual starter at its position is off.
   const usual = p => weeks.filter(w => base.byWeek.get(w.week)?.has(p.playerKey)).length >= weeks.length / 2;
   const byeWeeks = startWeeks.filter(w => roster.some(p => p.byeWeek === w.week && String(p.position) === String(candidate.position) && usual(p)))
     .map(w => w.week);
-  const dropStarts = best.drop ? weeks.filter(w => base.byWeek.get(w.week)?.has(best.drop.playerKey)).length : 0;
-  return { gain: Math.round((best.result.total - base.total) * 10) / 10, drop: best.drop, dropStarts,
+  const startsOf = p => weeks.filter(w => base.byWeek.get(w.week)?.has(p.playerKey)).length;
+  return { gain: Math.round((result.total - base.total) * 10) / 10, drops, drop: drops[0] || null, dropStarts: drops[0] ? startsOf(drops[0]) : 0,
+    dropDetails: drops.map(p => ({ player: p, starts: startsOf(p) })),
     starts: startWeeks.length, playoffStarts: startWeeks.filter(w => w.playoff).length, of: weeks.length,
     displaced: roster.find(p => p.playerKey === topKey) || null, byeWeeks };
 }

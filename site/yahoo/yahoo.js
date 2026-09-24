@@ -2,7 +2,7 @@ import { isBench, isStarter, pickupCandidates, mergeAvailablePages } from './ins
 import { indexPublicPlayers, matchPublicPlayer, normalTeam, normalName } from './public-context.mjs';
 import { scorePlayer } from './league-scoring.mjs';
 import { priorIndex, matchPrior, estimatePlayer, optimizeLineup, candidateImpact } from './weekly-advice.mjs';
-import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls } from './hub.mjs';
+import { yahooLinks, statusTag, gameLine, starterTotal, buildMoves, movesGain, positionRanks, tradeIdea, fantasyWeeks, availabilityShare, addValue, describeAdd, PLAYOFF_WEIGHT, startSit, closestCalls, dropOrder, mustLeaveIR } from './hub.mjs';
 import { rosPerGame } from './ros.mjs';
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = String(text); if (cls) n.className = cls; return n; };
@@ -112,7 +112,7 @@ function resetCandidates() {
 function clearWorkspace() {
   command = null; document.body.classList.remove('loaded'); resetCandidates(); comparePicks = []; renderCompare();
   $('hub').hidden = true; $('tabbar').hidden = true;
-  for (const id of ['matchup', 'moves', 'glance', 'starters', 'bench', 'ranks', 'trade', 'settings', 'warnings']) $(id).replaceChildren();
+  for (const id of ['matchup', 'moves', 'glance', 'starters', 'bench', 'drop-order', 'ranks', 'trade', 'settings', 'warnings']) $(id).replaceChildren();
 }
 function clearData() {
   generation++; controller?.abort(); controller = null; clearTimeout(expiry); clearWorkspace();
@@ -156,8 +156,10 @@ function plan() {
   const mine = ownTeam();
   const fresh = publicCurrent();
   const lineup = mine?.rosterAvailable ? (fresh ? optimizeLineup(mine, command.league, weekly) : currentLineup(mine)) : null;
-  const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), links: yahooLinks(mine.teamKey) }) : [];
-  return { mine, lineup, moves, fresh };
+  const weeks = fantasyWeeks(command.league);
+  const drops = mine?.rosterAvailable && weeks.length ? dropOrder({ roster: mine.roster, league: command.league, weeks, value: seasonPoints }) : [];
+  const moves = lineup ? buildMoves({ team: mine, league: command.league, lineup, estimate: weekly, pickups: rankedCandidates(), drops, links: yahooLinks(mine.teamKey) }) : [];
+  return { mine, lineup, moves, fresh, drops };
 }
 
 function renderMatchup(mine, moves) {
@@ -202,7 +204,7 @@ function renderMoves(moves, fresh) {
   }
   $('moves').replaceChildren(...moves.map(m => {
     const card = el('article', null, 'move'), top = el('div', null, 'move-top');
-    top.append(el('span', m.kind === 'lineup' ? 'Start / sit' : m.kind === 'pickup' ? 'Pick up' : 'Watch', 'kind ' + m.kind), el('span', m.impact, 'impact'));
+    top.append(el('span', m.kind === 'lineup' ? 'Start / sit' : m.kind === 'pickup' ? 'Pick up' : m.kind === 'roster' ? 'Roster fix' : 'Watch', 'kind ' + m.kind), el('span', m.impact, 'impact'));
     const actions = el('div', null, 'move-actions');
     actions.append(yahooButton(m.action, m.href));
     card.append(top, el('p', m.headline, 'move-title'), el('p', m.why, 'move-why'), actions);
@@ -234,7 +236,7 @@ function renderLineup(mine, lineup) {
   const incoming = new Set((lineup?.moves || []).map(m => m.player.playerKey));
   const outgoing = new Set((lineup?.moves || []).map(m => m.replaces?.playerKey).filter(Boolean));
   $('starters').replaceChildren(...starters.map(p => playerRow(p, { extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
-  $('bench').replaceChildren(...(bench.length ? bench.map(p => playerRow(p, { extraTag: incoming.has(p.playerKey) ? { text: 'START', tone: 'good' } : null }))
+  $('bench').replaceChildren(...(bench.length ? bench.map(p => playerRow(p, { extraTag: mustLeaveIR(p) ? { text: 'OFF IR', tone: 'bad' } : incoming.has(p.playerKey) ? { text: 'START', tone: 'good' } : null }))
     : [el('p', 'No bench players.', 'empty')]));
   $('glance').replaceChildren(...starters.map(p => playerRow(p, { compact: true, extraTag: outgoing.has(p.playerKey) ? { text: 'SIT', tone: 'bad' } : null })));
   const asSet = starterTotal(mine, weekly), best = lineup?.knownPoints;
@@ -299,6 +301,14 @@ function renderCalls(mine, lineup) {
     return b;
   }) : [el('p', publicCurrent() ? 'No close calls: every starter projects at least 3 points ahead of your best bench option.' : 'Projections are paused until the public stats update.', 'empty')]));
 }
+function renderDrops(drops) {
+  $('drop-order').replaceChildren(...(drops.length ? drops.slice(0, 4).map((d, i) => {
+    const row = el('div', null, 'row compact');
+    row.append(el('span', String(i + 1), 'add-rank'), el('span', d.player.name, 'name drop-name'),
+      el('span', d.cost <= 0.05 ? 'never starts' : `−${fmt(d.cost)} pts`, 'pts drop-cost'));
+    return row;
+  }) : [el('p', 'Rest-of-season projections are needed to rank drops.', 'empty')]));
+}
 function renderLeague() {
   const { ranks, byTeam } = positionRanks(command, weekly);
   $('ranks').replaceChildren(...ranks.map(r => {
@@ -333,8 +343,8 @@ function renderCommand() {
   $('hub').hidden = false; $('tabbar').hidden = false; $('teams-section').hidden = $('team').options.length <= 2;
 }
 function renderPlan() {
-  const { mine, lineup, moves, fresh } = plan();
-  renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup); renderCalls(mine, lineup); renderCompare();
+  const { mine, lineup, moves, fresh, drops } = plan();
+  renderMatchup(mine, moves); renderMoves(moves, fresh); renderLineup(mine, lineup); renderDrops(drops); renderCalls(mine, lineup); renderCompare();
 }
 const VIEWS = ['week', 'lineup', 'waivers', 'league'];
 // The tab lives in the address (#waivers), so a refresh or pull-to-refresh returns to it.
@@ -368,7 +378,11 @@ function renderAdds() {
       : c.estimate?.playable === false && c.estimate?.reason ? c.estimate.reason : 'No rest-of-season estimate for this player yet.';
     if (Number.isFinite(c.impact?.gain) && c.impact.gain > 0 && c.impact.replaced) why += ` This week: +${fmt(c.impact.gain)} over ${c.impact.replaced}.`;
     const foot = el('div', null, 'add-foot'), dropText = el('span');
-    if (helps && c.ros.drop) dropText.append('Drop ', el('strong', c.ros.drop.name), c.ros.dropStarts ? ` (starts ${c.ros.dropStarts} wk${c.ros.dropStarts === 1 ? '' : 's'})` : ' (never starts)');
+    if (helps && c.ros.dropDetails?.length) {
+      dropText.append('Drop ');
+      const samePos = d => String(d.player.position).split(',')[0] === String(p.position).split(',')[0];
+      c.ros.dropDetails.forEach((d, j) => { if (j) dropText.append(' and '); dropText.append(el('strong', d.player.name), !d.starts ? ' (never starts)' : samePos(d) ? ' (replaced)' : ` (starts ${d.starts} wk${d.starts === 1 ? '' : 's'})`); });
+    }
     else dropText.textContent = helps ? 'You have an open roster spot' : '';
     const actions = el('div', null, 'add-actions');
     actions.append(compareButton(p), yahooButton(p.ownership === 'waivers' ? 'Claim' : 'Add', links.add(p.playerKey) || links.league));
