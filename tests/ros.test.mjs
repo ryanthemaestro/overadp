@@ -131,3 +131,7 @@ test('IR, Questionable and Doubtful use measured rates; healthy players are unaf
   assert.equal(availabilityShare({ status: 'O', byeWeek: 5 }, 5, 3, avail), 0);
   assert.equal(likelyReturn({ status: '' }, avail), null);
 });
+test('defense add values carry the measured discount for top-ranked pickups', () => {
+  const f = model.defense.add_value_factor;
+  assert(f > 0.5 && f < 1, String(f));
+});

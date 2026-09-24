@@ -414,8 +414,14 @@ function selectView(view, scroll = true) {
 // Season value of an add against this roster, respecting locked players.
 function valueCandidate(c) {
   const mine = ownTeam(), weeks = fantasyWeeks(command.league);
-  return { ...c, ros: Number.isFinite(c.rosPg) && mine?.rosterAvailable && weeks.length
-    ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints, keep: keeps }) : null };
+  let ros = Number.isFinite(c.rosPg) && mine?.rosterAvailable && weeks.length
+    ? addValue({ roster: mine.roster, candidate: c.player, league: command.league, weeks, value: seasonPoints, keep: keeps }) : null;
+  // The top-ranked defense pickups delivered 78% of their projected gain in 2019-2025
+  // (research/ros_calibration/def_rotation.py), so defense add values are discounted to match.
+  const factor = rosModel?.defense?.add_value_factor;
+  if (ros && !ros.blocked && factor && /^(DEF|D\/ST)$/i.test(String(c.player.position)) && ros.gain > 0)
+    ros = { ...ros, gain: Math.round(ros.gain * factor * 10) / 10, discounted: factor };
+  return { ...c, ros };
 }
 // ---- Locks: keep players out of drop suggestions for this visit ----
 // Kept in memory only. The Yahoo API agreement (2(c)(vii)) bars storing, caching or
@@ -452,6 +458,7 @@ function renderAdds() {
     let why = c.ros ? describeAdd(c.ros) : isDef ? "No projection for this defense yet (its season data or betting line is missing)."
       : c.estimate?.playable === false && c.estimate?.reason ? c.estimate.reason : 'No rest-of-season estimate for this player yet.';
     if (Number.isFinite(c.impact?.gain) && c.impact.gain > 0 && c.impact.replaced) why += ` This week: +${fmt(c.impact.gain)} over ${c.impact.replaced}.`;
+    if (c.ros?.discounted) why += ` Counted at ${Math.round(c.ros.discounted * 100)}%: top-ranked defense pickups have delivered about that share of their projected gain.`;
     const back = likelyReturn(annotateInjury(p), rosModel?.availability);
     if (back) why += ` ${p.injuryGroup && p.injuryGroup !== 'Other' ? `${p.injuryGroup} injury: ` : ''}players in this spot have usually been back about ${back} game${back === 1 ? '' : 's'} from now, and the value above counts that.`;
     const foot = el('div', null, 'add-foot'), dropText = el('span');
