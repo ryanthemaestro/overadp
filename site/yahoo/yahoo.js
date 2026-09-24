@@ -80,6 +80,8 @@ function rosPoints(p) {
 function seasonPoints(p, week) { const r = rosPoints(p); return r ? r.points * availabilityShare(p, week, command.league.currentWeek) : 0; }
 function nextGame(player) { return publicMatch(player)?.nextGame || publicSnapshot?.schedule?.[normalTeam(player.team)] || null; }
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
+// A confirmation that clears itself unless something else replaced it meanwhile.
+function notice(text) { status(text); setTimeout(() => { if ($('status').textContent === text) status(''); }, 4000); }
 // `where` names the step for errors on our side; `target` shows the message there
 // instead of in the page-wide banner. Only fixed text and short error codes are shown.
 function error(e, where = '', target = null) {
@@ -445,7 +447,24 @@ async function teams() {
     else if (data.teams.length > 1) { $('teams-section').hidden = false; status('Connected. Choose the team you want to open.'); }
     else status('Connected, but Yahoo returned no current NFL teams for this account.');
   } catch (e) { if (id === generation) error(e); }
-  finally { if (id === generation) $('refresh').disabled = false; }
+  // Always re-enable: loading the league bumps `generation`, so a generation check here
+  // used to leave Refresh disabled after every page load.
+  finally { $('refresh').disabled = false; }
+}
+// Refresh in place: re-read the league from Yahoo without clearing the page, so the
+// reader keeps their tab and scroll position and sees that something happened.
+async function refresh() {
+  if (!command) return teams();
+  const button = $('refresh'), id = ++generation;
+  controller?.abort(); controller = new AbortController();
+  button.disabled = true; button.textContent = 'Refreshing…'; status('Reading your league from Yahoo…');
+  try {
+    const data = await request('command', { teamKey: command.team.teamKey }, controller.signal);
+    if (id !== generation) return;
+    command = data; rosCache.clear(); renderCommand(); resetCandidates(); findPlayers();
+    notice(`Updated from Yahoo at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
+  } catch (e) { if (id === generation) error(e, 'refreshing your league'); }
+  finally { button.disabled = false; button.textContent = 'Refresh'; }
 }
 async function loadLeague() {
   const id = ++generation; controller?.abort(); controller = new AbortController(); clearWorkspace(); $('load').disabled = true;
@@ -509,7 +528,7 @@ $('disconnect').addEventListener('click', async () => {
   try { await request('disconnect'); connected(false); status('Disconnected. Displayed Yahoo data was cleared.'); }
   catch (e) { error(e); } finally { $('disconnect').disabled = false; }
 });
-$('refresh').addEventListener('click', teams);
+$('refresh').addEventListener('click', refresh);
 $('team').addEventListener('change', () => { generation++; controller?.abort(); clearWorkspace(); $('load').disabled = !$('team').value; });
 $('load').addEventListener('click', loadLeague);
 document.querySelectorAll('button[data-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.view)));
