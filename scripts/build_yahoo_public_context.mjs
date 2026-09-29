@@ -23,7 +23,13 @@ function csv(path) {
   return { hash: createHash('sha256').update(source).digest('hex'), rows: rows.filter(r => r.length === header.length).map(r => Object.fromEntries(header.map((h, i) => [h, r[i]]))) };
 }
 const playerInput = csv(playersPath), teamInput = csv(teamsPath), injuryInput = csv(injuriesPath), gameInput = csv(gamesPath);
-const regularPlayers = playerInput.rows.filter(r => r.season === '2026' && r.season_type === 'REG' && ['QB', 'RB', 'WR', 'TE', 'K'].includes(r.position) && r.player_id && r.player_display_name);
+// The upcoming week, or the week in progress: the first with a game still to play. Stats count
+// only from the weeks before it, so a Thursday game waits until the rest of its week is played.
+const now = new Date();
+const futureGames = gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && !r.home_score && !r.away_score && new Date(`${r.gameday}T23:59:59Z`) >= now);
+const nextWeek = Math.min(...futureGames.map(r => Number(r.week)));
+const counted = r => Number(r.week) < nextWeek;
+const regularPlayers = playerInput.rows.filter(r => r.season === '2026' && r.season_type === 'REG' && counted(r) && ['QB', 'RB', 'WR', 'TE', 'K'].includes(r.position) && r.player_id && r.player_display_name);
 const completedWeeks = [...new Set(regularPlayers.map(r => Number(r.week)))].sort((a, b) => a - b);
 const latestCompletedWeek = completedWeeks.at(-1);
 const playerMap = new Map();
@@ -54,10 +60,8 @@ for (const r of injuryInput.rows.filter(x => x.season === '2026' && x.season_typ
     injuryMap.set(r.gsis_id, { week, reportStatus: r.report_status || null, practiceStatus: r.practice_status || null, injury: r.report_primary_injury || r.practice_primary_injury || null });
   }
 }
-const now = new Date();
-const futureGames = gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && !r.home_score && !r.away_score && new Date(`${r.gameday}T23:59:59Z`) >= now).sort((a, b) => a.gameday.localeCompare(b.gameday) || a.gametime.localeCompare(b.gametime));
-const nextWeek = Math.min(...futureGames.map(r => Number(r.week)));
-const nextGames = futureGames.filter(r => Number(r.week) === nextWeek);
+// Every game of that week, including ones already played, so each team keeps its opponent all week.
+const nextGames = gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && Number(r.week) === nextWeek);
 // Kicker context (research/ros_calibration/kickers.py): the betting line's implied team
 // total and whether the game is indoors (unknown retractable roofs count as outdoors).
 const indoor = r => ['dome', 'closed'].includes(r.roof);
@@ -72,7 +76,7 @@ const schedule = Object.fromEntries(nextGames.flatMap(r => [
 const regular = gameInput.rows.filter(r => r.game_type === 'REG');
 const pointsPerGame = season => {
   const scored = {};
-  for (const r of regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== ''))
+  for (const r of regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== '' && (season !== '2026' || counted(r))))
     for (const [team, pts] of [[r.home_team, r.home_score], [r.away_team, r.away_score]]) (scored[team] ||= []).push(Number(pts));
   return Object.fromEntries(Object.entries(scored).map(([team, v]) => [team, Number((v.reduce((a, b) => a + b, 0) / v.length).toFixed(2))]));
 };
@@ -81,7 +85,7 @@ const remaining = regular.filter(r => r.season === '2026' && Number(r.week) >= n
 // Defense context (research/ros_calibration/defenses.py): opponents' scoring so far,
 // shrunk toward last season with four games of weight, averaged over the remaining schedule;
 // and last season's defense points per game under Yahoo's default scoring.
-const scoredGames = season => regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== '');
+const scoredGames = season => regular.filter(r => r.season === season && r.home_score !== '' && r.away_score !== '' && (season !== '2026' || counted(r)));
 const offense = {};
 for (const r of scoredGames('2026')) for (const [team, pts] of [[r.home_team, r.home_score], [r.away_team, r.away_score]]) (offense[team] ||= []).push(Number(pts));
 const leaguePrior = Object.values(priorPpg).reduce((a, b) => a + b, 0) / Math.max(1, Object.keys(priorPpg).length);
@@ -119,7 +123,7 @@ const players = [...playerMap.values()].map(p => {
   p.nextGame = schedule[p.team] || null;
   return p;
 });
-const teamRows = teamInput.rows.filter(r => r.season === '2026' && r.season_type === 'REG');
+const teamRows = teamInput.rows.filter(r => r.season === '2026' && r.season_type === 'REG' && counted(r));
 // Final scores give each defense's points allowed (the opponent's score).
 const allowedThisSeason = {};
 for (const r of gameInput.rows.filter(r => r.season === '2026' && r.game_type === 'REG' && r.home_score !== '' && r.away_score !== '')) {
